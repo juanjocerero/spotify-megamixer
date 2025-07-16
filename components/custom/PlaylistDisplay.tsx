@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useInView } from 'react-intersection-observer';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 import { SpotifyPlaylist } from '@/types/spotify';
-import { fetchMorePlaylists } from '@/lib/action';
+import { fetchMorePlaylists, createMegaPlaylist } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 
 // Componentes UI y Íconos
@@ -44,6 +44,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
   const [showOnlySelected, setShowOnlySelected] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [isMixing, setIsMixing] = useState(false); 
   
   const { ref, inView } = useInView({ threshold: 0 });
   
@@ -86,17 +87,31 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     return items;
   }, [playlists, searchTerm, showOnlySelected, selectedPlaylistIds, fuseOptions]);
   
-  const handleConfirmMix = () => {
+  const handleConfirmMix = async () => {
     if (!newPlaylistName.trim()) {
-      console.error("El nombre de la playlist no puede estar vacío.");
+      alert("El nombre de la playlist no puede estar vacío.");
       return;
     }
-    console.log("----- INICIANDO MEZCLA (Simulación Frontend) -----");
-    console.log("Nombre de la Megalista:", newPlaylistName);
-    console.log("IDs de playlists a mezclar:", selectedPlaylistIds);
-    console.log("-------------------------------------------------");
-    setIsDialogOpen(false);
-    setNewPlaylistName('');
+    
+    setIsMixing(true); // Activar estado de carga
+    
+    try {
+      const result = await createMegaPlaylist(selectedPlaylistIds, newPlaylistName);
+      
+      if (result.success) {
+        alert(result.message); // Usamos alert temporalmente para mostrar el resultado
+      } else {
+        alert(`Error: ${result.message}`);
+      }
+      
+    } catch (error) {
+      console.error("Error al llamar la acción createMegaPlaylist:", error);
+      alert("Ocurrió un error inesperado al contactar con el servidor.");
+    } finally {
+      setIsMixing(false); // Desactivar estado de carga
+      setIsDialogOpen(false); // Cerrar diálogo
+      setNewPlaylistName(''); // Limpiar nombre
+    }
   };
   
   return (
@@ -202,15 +217,36 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     <DialogContent className="sm:max-w-[425px] bg-gray-900 border-gray-700">
     <DialogHeader>
     <DialogTitle className="text-white">Crear tu Megalista</DialogTitle>
-    <DialogDescription>Elige un nombre para tu nueva playlist combinada.</DialogDescription>
+    <DialogDescription>
+    Elige un nombre para tu nueva playlist combinada.
+    </DialogDescription>
     </DialogHeader>
+    
     <div className="grid gap-4 py-4">
-    <Label htmlFor="playlist-name" className="text-left text-gray-300">Nombre de la playlist</Label>
-    <Input id="playlist-name" value={newPlaylistName} onChange={(e) => setNewPlaylistName(e.target.value)} placeholder="Ej: Mix Definitivo de Lunes" className="bg-gray-800 border-gray-600 text-white"/>
+    <Label htmlFor="playlist-name" className="text-left text-gray-300">
+    Nombre de la playlist
+    </Label>
+    <Input
+    id="playlist-name"
+    value={newPlaylistName}
+    onChange={(e) => setNewPlaylistName(e.target.value)}
+    placeholder="Ej: Mix Definitivo de Lunes"
+    className="bg-gray-800 border-gray-600 text-white"
+    disabled={isMixing} // Deshabilitar mientras se mezcla
+    />
     </div>
+    
     <DialogFooter>
-    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-    <Button onClick={handleConfirmMix} disabled={!newPlaylistName.trim()}>Confirmar y Mezclar</Button>
+    <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isMixing}>
+    Cancelar
+    </Button>
+    <Button 
+    onClick={handleConfirmMix}
+    disabled={!newPlaylistName.trim() || isMixing}
+    >
+    {isMixing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+    {isMixing ? 'Mezclando...' : 'Confirmar y Mezclar'}
+    </Button>
     </DialogFooter>
     </DialogContent>
     </Dialog>
