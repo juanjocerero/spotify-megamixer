@@ -7,8 +7,10 @@ import {
     getAllPlaylistTracks, 
     findUserPlaylistByName, 
     createNewPlaylist, 
-    clearPlaylistTracks
+    clearPlaylistTracks,
+    addTracksToPlaylist
 } from './spotify';
+import { shuffleArray } from './utils';
 
 interface PlaylistsApiResponse {
     items: SpotifyPlaylist[];
@@ -55,39 +57,31 @@ export async function createMegaPlaylist(
     console.log(`[ACCIÓN] Iniciando proceso para Megamix "${newPlaylistName}"...`);
     
     try {
-        // ---- PASO 1 (sin cambios): OBTENER Y UNIFICAR CANCIONES ----
         const trackPromises = playlistIds.map(id => getAllPlaylistTracks(accessToken, id));
         const tracksPerPlaylist = await Promise.all(trackPromises);
         const uniqueTrackUris = [...new Set(tracksPerPlaylist.flat())];
-        console.log(`[ACCIÓN] ${uniqueTrackUris.length} canciones únicas encontradas.`);
         
-        // ---- PASO 2: BUSCAR PLAYLIST EXISTENTE ----
         const existingPlaylist = await findUserPlaylistByName(accessToken, newPlaylistName);
         
         if (existingPlaylist) {
-            console.log(`[ACCIÓN] Playlist existente encontrada: ${existingPlaylist.name} (ID: ${existingPlaylist.id})`);
-            // Devolvemos un estado que requiere confirmación del frontend
             return {
                 success: false,
                 requiresConfirmation: true,
                 existingPlaylistId: existingPlaylist.id,
                 message: `Ya existe una playlist llamada "${existingPlaylist.name}".`,
+                trackUris: uniqueTrackUris, // <<<<<<< Devolvemos las URIs para el siguiente paso
             };
         }
         
-        // ---- PASO 3: CREAR NUEVA PLAYLIST SI NO EXISTE ----
-        console.log(`[ACCIÓN] No se encontró playlist existente. Creando una nueva...`);
         const newPlaylist = await createNewPlaylist(accessToken, user.id, newPlaylistName);
-        console.log(`[ACCIÓN] Nueva playlist creada: ${newPlaylist.name} (ID: ${newPlaylist.id})`);
         
-        // --- PUNTO DE CONTROL ---
-        // Todavía no añadimos las canciones.
+        const shuffledTracks = shuffleArray(uniqueTrackUris);
+        await addTracksToPlaylist(accessToken, newPlaylist.id, shuffledTracks);
         
         return {
             success: true,
             requiresConfirmation: false,
-            message: `¡Éxito! Se ha creado la nueva playlist (vacía) "${newPlaylist.name}".`,
-            newPlaylistId: newPlaylist.id, // Devolvemos el ID para el siguiente paso
+            message: `¡Éxito! Se ha creado y llenado la playlist "${newPlaylist.name}" con ${shuffledTracks.length} canciones.`,
         };
         
     } catch (error) {
@@ -104,25 +98,27 @@ export async function createMegaPlaylist(
 * Por ahora, solo la vaciará.
 * @param playlistId - El ID de la playlist a sobrescribir.
 */
-export async function overwritePlaylist(playlistId: string) {
+export async function overwritePlaylist(
+    playlistId: string,
+    trackUris: string[]
+) {
     const session = await auth();
     if (!session?.accessToken) {
         return { success: false, message: 'No estás autenticado.' };
     }
+    const { accessToken } = session;
     
     console.log(`[SOBREESCRIBIR] Iniciando limpieza de la playlist ID: ${playlistId}`);
     
     try {
-        await clearPlaylistTracks(session.accessToken, playlistId);
+        await clearPlaylistTracks(accessToken, playlistId);
         
-        console.log(`[SOBREESCRIBIR] Playlist limpiada con éxito.`);
-        
-        // --- PUNTO DE CONTROL ---
-        // Aquí es donde, en el futuro, añadiremos las nuevas canciones.
+        const shuffledTracks = shuffleArray(trackUris);
+        await addTracksToPlaylist(accessToken, playlistId, shuffledTracks);
         
         return {
             success: true,
-            message: 'La playlist existente ha sido vaciada con éxito.',
+            message: `La playlist ha sido sobrescrita con ${shuffledTracks.length} canciones.`,
         };
     } catch (error) {
         console.error(`[SOBREESCRIBIR] Error limpiando la playlist:`, error);

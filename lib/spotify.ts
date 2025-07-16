@@ -178,3 +178,40 @@ export async function clearPlaylistTracks(
     throw new Error("Fallo al limpiar la playlist.");
   }
 }
+
+/**
+* Añade canciones a una playlist en lotes de 100.
+* @param accessToken - El token de acceso del usuario.
+* @param playlistId - El ID de la playlist a la que se añadirán las canciones.
+* @param trackUris - Un array de URIs de las canciones a añadir.
+*/
+export async function addTracksToPlaylist(
+  accessToken: string,
+  playlistId: string,
+  trackUris: string[]
+): Promise<void> {
+  const spotifyApiUrl = `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks`;
+  
+  // La API de Spotify solo permite añadir 100 canciones a la vez.
+  const batchSize = 100;
+  
+  for (let i = 0; i < trackUris.length; i += batchSize) {
+    const batch = trackUris.slice(i, i + batchSize);
+    
+    const response = await fetch(spotifyApiUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ uris: batch }),
+    });
+    
+    if (!response.ok) {
+      console.error(`Fallo al añadir un lote de canciones a la playlist ${playlistId}`);
+      throw new Error('Fallo al añadir canciones a la playlist.');
+    }
+    
+    console.log(`[SPOTIFY_API] Añadido un lote de ${batch.length} canciones.`);
+  }
+}

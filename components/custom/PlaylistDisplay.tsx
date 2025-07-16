@@ -47,6 +47,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
   const [isMixing, setIsMixing] = useState(false);
   const [confirmingOverwrite, setConfirmingOverwrite] = useState(false);
   const [existingPlaylistId, setExistingPlaylistId] = useState<string | null>(null);
+  const [tracksToMix, setTracksToMix] = useState<string[]>([]);
   
   const { ref, inView } = useInView({ threshold: 0 });
   
@@ -102,6 +103,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       
       if (result.requiresConfirmation) {
         setExistingPlaylistId(result.existingPlaylistId!);
+        setTracksToMix(result.trackUris!);
         setIsDialogOpen(false); // Cierra el primer diálogo
         setConfirmingOverwrite(true); // Abre el segundo diálogo
       } else if (result.success) {
@@ -123,12 +125,14 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     setIsMixing(true); // Reutilizamos el estado de carga
     
     try {
-      const result = await overwritePlaylist(existingPlaylistId);
-      alert(result.message); // Muestra el mensaje de éxito o error
+      // Pasamos las URIs de las canciones guardadas para sobrescribir
+      const result = await overwritePlaylist(existingPlaylistId, tracksToMix);
+      alert(result.message);
     } catch (error) {
       alert("Ocurrió un error inesperado al sobrescribir.");
     } finally {
       // Resetea todos los estados relevantes
+      setTracksToMix([]);
       setIsMixing(false);
       setConfirmingOverwrite(false);
       setExistingPlaylistId(null);
