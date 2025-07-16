@@ -15,7 +15,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Loader2, Music, Search, ListChecks } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent, DialogFooter } from '@/components/ui/dialog';
+import { Loader2, Music, Search, ListChecks, Shuffle } from 'lucide-react';
 
 // Props del componente
 interface PlaylistDisplayProps {
@@ -43,6 +45,8 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showOnlySelected, setShowOnlySelected] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
   
   // ---- HOOKS PARA SCROLL INFINITO ----
   const { ref, inView } = useInView({ threshold: 0 });
@@ -93,6 +97,23 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     return items;
   }, [playlists, searchTerm, showOnlySelected, selectedPlaylistIds, fuseOptions]);
   
+  const handleConfirmMix = () => {
+    if (!newPlaylistName.trim()) {
+      // Por ahora solo log, en el futuro podría ser un toast de error.
+      console.error("El nombre de la playlist no puede estar vacío.");
+      return;
+    }
+    
+    console.log("----- INICIANDO MEZCLA (Simulación Frontend) -----");
+    console.log("Nombre de la Megalista:", newPlaylistName);
+    console.log("IDs de playlists a mezclar:", selectedPlaylistIds);
+    console.log("-------------------------------------------------");
+    
+    // Resetear y cerrar el diálogo
+    setIsDialogOpen(false);
+    setNewPlaylistName('');
+  };
+  
   return (
     <div>
     {/* ---- CONTROLES DE FILTRADO ---- */}
@@ -126,6 +147,15 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     Mostrar solo seleccionadas ({selectedPlaylistIds.length})
     </Label>
     </div>
+    
+    <Button
+    onClick={() => setIsDialogOpen(true)}
+    disabled={selectedPlaylistIds.length < 2}
+    >
+    <Shuffle className="mr-2 h-4 w-4" />
+    Crear Megalista
+    </Button>
+    
     </div>
     
     {/* ---- TABLA DE PLAYLISTS ---- */}
@@ -180,6 +210,41 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       {isLoading && <Loader />}
       </div>
     )}
+    
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+    <DialogContent className="sm:max-w-[425px] bg-gray-900 border-gray-700">
+    <DialogHeader>
+    <DialogTitle className="text-white">Crear tu Megalista</DialogTitle>
+    <DialogDescription>
+    Elige un nombre para tu nueva playlist combinada. Este nombre se usará para crearla en tu cuenta de Spotify.
+    </DialogDescription>
+    </DialogHeader>
+    
+    <div className="grid gap-4 py-4">
+    <Label htmlFor="playlist-name" className="text-left text-gray-300">
+    Nombre de la playlist
+    </Label>
+    <Input
+    id="playlist-name"
+    value={newPlaylistName}
+    onChange={(e) => setNewPlaylistName(e.target.value)}
+    placeholder="Ej: Mix Definitivo de Lunes"
+    className="bg-gray-800 border-gray-600 text-white"
+    />
+    </div>
+    
+    <DialogFooter>
+    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+    <Button 
+    onClick={handleConfirmMix}
+    disabled={!newPlaylistName.trim()}
+    >
+    Confirmar y Mezclar
+    </Button>
+    </DialogFooter>
+    </DialogContent>
+    </Dialog>
+    
     </div>
   );
 }

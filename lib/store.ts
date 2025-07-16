@@ -6,6 +6,7 @@ interface PlaylistStore {
   selectedPlaylistIds: string[];
   togglePlaylist: (id: string) => void;
   isSelected: (id: string) => boolean;
+  clearSelection: () => void;
 }
 
 export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
@@ -30,5 +31,9 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   isSelected: (id: string) => {
     // 'get()' nos permite leer el estado actual fuera del 'set'
     return get().selectedPlaylistIds.includes(id);
+  },
+
+  clearSelection: () => {
+    set({ selectedPlaylistIds: [] });
   },
 }));
