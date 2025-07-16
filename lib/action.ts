@@ -3,7 +3,12 @@
 
 import { auth } from '@/auth';
 import { SpotifyPlaylist } from '@/types/spotify';
-import { getAllPlaylistTracks } from './spotify';
+import { 
+    getAllPlaylistTracks, 
+    findUserPlaylistByName, 
+    createNewPlaylist, 
+    clearPlaylistTracks
+} from './spotify';
 
 interface PlaylistsApiResponse {
     items: SpotifyPlaylist[];
@@ -42,45 +47,88 @@ export async function createMegaPlaylist(
     newPlaylistName: string
 ) {
     const session = await auth();
-    if (!session?.accessToken) {
-        return { success: false, message: 'No estás autenticado.', trackCount: 0 };
+    if (!session?.accessToken || !session.user?.id) {
+        return { success: false, message: 'No estás autenticado.' };
     }
-    const { accessToken } = session;
+    const { accessToken, user } = session;
     
-    console.log(`[ACCIÓN DE SERVIDOR] Iniciando la creación de la Megamix "${newPlaylistName}"...`);
-    console.log(`[ACCIÓN DE SERVIDOR] Obteniendo canciones de ${playlistIds.length} playlists.`);
+    console.log(`[ACCIÓN] Iniciando proceso para Megamix "${newPlaylistName}"...`);
     
     try {
-        // 1. Obtener todas las canciones de todas las playlists en paralelo
-        const trackPromises = playlistIds.map(id => 
-            getAllPlaylistTracks(accessToken, id)
-        );
+        // ---- PASO 1 (sin cambios): OBTENER Y UNIFICAR CANCIONES ----
+        const trackPromises = playlistIds.map(id => getAllPlaylistTracks(accessToken, id));
         const tracksPerPlaylist = await Promise.all(trackPromises);
+        const uniqueTrackUris = [...new Set(tracksPerPlaylist.flat())];
+        console.log(`[ACCIÓN] ${uniqueTrackUris.length} canciones únicas encontradas.`);
         
-        // 2. Combinar todas las canciones en un único array
-        const allTrackUris = tracksPerPlaylist.flat();
-        console.log(`[ACCIÓN DE SERVIDOR] Total de canciones obtenidas (con duplicados): ${allTrackUris.length}`);
+        // ---- PASO 2: BUSCAR PLAYLIST EXISTENTE ----
+        const existingPlaylist = await findUserPlaylistByName(accessToken, newPlaylistName);
         
-        // 3. Eliminar duplicados de forma eficiente
-        const uniqueTrackUris = [...new Set(allTrackUris)];
-        console.log(`[ACCIÓN DE SERVIDOR] Canciones únicas encontradas: ${uniqueTrackUris.length}`);
+        if (existingPlaylist) {
+            console.log(`[ACCIÓN] Playlist existente encontrada: ${existingPlaylist.name} (ID: ${existingPlaylist.id})`);
+            // Devolvemos un estado que requiere confirmación del frontend
+            return {
+                success: false,
+                requiresConfirmation: true,
+                existingPlaylistId: existingPlaylist.id,
+                message: `Ya existe una playlist llamada "${existingPlaylist.name}".`,
+            };
+        }
+        
+        // ---- PASO 3: CREAR NUEVA PLAYLIST SI NO EXISTE ----
+        console.log(`[ACCIÓN] No se encontró playlist existente. Creando una nueva...`);
+        const newPlaylist = await createNewPlaylist(accessToken, user.id, newPlaylistName);
+        console.log(`[ACCIÓN] Nueva playlist creada: ${newPlaylist.name} (ID: ${newPlaylist.id})`);
         
         // --- PUNTO DE CONTROL ---
-        // Por ahora, solo devolvemos éxito y la cuenta.
-        // En el siguiente paso, usaremos 'uniqueTrackUris' para modificar Spotify.
+        // Todavía no añadimos las canciones.
         
         return {
             success: true,
-            message: `Se han recopilado ${uniqueTrackUris.length} canciones únicas para "${newPlaylistName}".`,
-            trackCount: uniqueTrackUris.length,
+            requiresConfirmation: false,
+            message: `¡Éxito! Se ha creado la nueva playlist (vacía) "${newPlaylist.name}".`,
+            newPlaylistId: newPlaylist.id, // Devolvemos el ID para el siguiente paso
         };
         
     } catch (error) {
-        console.error('[ACCIÓN DE SERVIDOR] Error creando la Megamix:', error);
+        console.error('[ACCIÓN] Error crítico creando la Megamix:', error);
         return {
             success: false,
-            message: 'Ha ocurrido un error al obtener las canciones de las playlists.',
-            trackCount: 0,
+            message: 'Ha ocurrido un error en el servidor al procesar tu solicitud.',
+        };
+    }
+}
+
+/**
+* Acción para sobrescribir una playlist existente.
+* Por ahora, solo la vaciará.
+* @param playlistId - El ID de la playlist a sobrescribir.
+*/
+export async function overwritePlaylist(playlistId: string) {
+    const session = await auth();
+    if (!session?.accessToken) {
+        return { success: false, message: 'No estás autenticado.' };
+    }
+    
+    console.log(`[SOBREESCRIBIR] Iniciando limpieza de la playlist ID: ${playlistId}`);
+    
+    try {
+        await clearPlaylistTracks(session.accessToken, playlistId);
+        
+        console.log(`[SOBREESCRIBIR] Playlist limpiada con éxito.`);
+        
+        // --- PUNTO DE CONTROL ---
+        // Aquí es donde, en el futuro, añadiremos las nuevas canciones.
+        
+        return {
+            success: true,
+            message: 'La playlist existente ha sido vaciada con éxito.',
+        };
+    } catch (error) {
+        console.error(`[SOBREESCRIBIR] Error limpiando la playlist:`, error);
+        return {
+            success: false,
+            message: 'Ha ocurrido un error al intentar vaciar la playlist existente.',
         };
     }
 }
