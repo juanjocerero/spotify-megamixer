@@ -5,10 +5,17 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useInView } from 'react-intersection-observer';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 import { SpotifyPlaylist } from '@/types/spotify';
-import { fetchMorePlaylists, createMegaPlaylist, overwritePlaylist } from '@/lib/action';
+import { fetchMorePlaylists, 
+  createMegaPlaylist, 
+  overwritePlaylist,
+  getTrackUris,
+  findOrCreateAndPreparePlaylist,
+  addTracksBatch
+} from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 
 // Componentes UI y Íconos
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -43,13 +50,18 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
   const [searchTerm, setSearchTerm] = useState('');
   const [showOnlySelected, setShowOnlySelected] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newPlaylistName, setNewPlaylistName] = useState('');
   const [isMixing, setIsMixing] = useState(false);
   const [confirmingOverwrite, setConfirmingOverwrite] = useState(false);
   const [existingPlaylistId, setExistingPlaylistId] = useState<string | null>(null);
+  const [step, setStep] = useState<'idle' | 'fetching' | 'confirming' | 'processing'>('idle');
+  const [progress, setProgress] = useState({ added: 0, total: 0 });
   const [tracksToMix, setTracksToMix] = useState<string[]>([]);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [targetPlaylistId, setTargetPlaylistId] = useState<string | null>(null);
   
   const { ref, inView } = useInView({ threshold: 0 });
+  
+  const isProcessing = step === 'fetching' || step === 'processing';
   
   const loadMorePlaylists = useCallback(async () => {
     if (isLoading || !nextUrl || showOnlySelected) return;
@@ -89,6 +101,65 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     }
     return items;
   }, [playlists, searchTerm, showOnlySelected, selectedPlaylistIds, fuseOptions]);
+  
+  // <<<<<<< FUNCIÓN 1: Inicia el proceso, obtiene las canciones >>>>>>>
+  const handleInitiateMix = async () => {
+    const toastId = toast.loading('Calculando canciones únicas...');
+    setStep('fetching');
+    
+    try {
+      const uris = await getTrackUris(selectedPlaylistIds);
+      if (uris.length === 0) {
+        toast.error('No se encontraron canciones en las playlists seleccionadas.', { id: toastId });
+        setStep('idle');
+        return;
+      }
+      
+      toast.success(`Se encontraron ${uris.length} canciones únicas.`, { id: toastId });
+      setTracksToMix(uris);
+      setProgress({ added: 0, total: uris.length });
+      setStep('confirming'); // Esto abrirá el diálogo de confirmación
+    } catch (error) {
+      toast.error('Error al obtener las canciones.', { id: toastId });
+      setStep('idle');
+    }
+  };
+  
+  // <<<<<<< FUNCIÓN 2: Ejecuta la mezcla tras la confirmación del usuario >>>>>>>
+  const handleExecuteMix = async () => {
+    if (!newPlaylistName.trim()) {
+      toast.error("El nombre de la playlist no puede estar vacío.");
+      return;
+    }
+    setStep('processing');
+    const toastId = toast.loading('Preparando la playlist de destino...');
+    
+    try {
+      // Prepara la playlist (crea o vacía)
+      const playlistId = await findOrCreateAndPreparePlaylist(newPlaylistName);
+      setTargetPlaylistId(playlistId);
+      
+      // Bucle para añadir canciones en lotes
+      const batchSize = 100;
+      for (let i = 0; i < tracksToMix.length; i += batchSize) {
+        const batch = tracksToMix.slice(i, i + batchSize);
+        toast.loading(`Añadiendo canciones... ${i + batch.length} / ${progress.total}`, { id: toastId });
+        await addTracksBatch(playlistId, batch);
+        setProgress(prev => ({ ...prev, added: prev.added + batch.length }));
+      }
+      
+      toast.success('¡Megalista creada con éxito!', { id: toastId, duration: 5000 });
+    } catch (error) {
+      toast.error('Ocurrió un error durante la mezcla.', { id: toastId });
+    } finally {
+      // Resetear todo al finalizar
+      setStep('idle');
+      setTracksToMix([]);
+      setProgress({ added: 0, total: 0 });
+      setNewPlaylistName('');
+      setTargetPlaylistId(null);
+    }
+  };
   
   const handleConfirmMix = async () => {
     if (!newPlaylistName.trim()) {
@@ -187,12 +258,9 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       Limpiar Selección
       </Button>
       {/* Botón primario para mezclar */}
-      <Button
-      onClick={() => setIsDialogOpen(true)}
-      disabled={selectedPlaylistIds.length < 2}
-      >
-      <Shuffle className="mr-2 h-4 w-4" />
-      Crear Megalista
+      <Button onClick={handleInitiateMix} disabled={isProcessing || selectedPlaylistIds.length < 2}>
+      {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shuffle className="mr-2 h-4 w-4" />}
+      {step === 'idle' ? 'Crear Megalista' : 'Procesando...'}
       </Button>
       </div>
       </div>
@@ -239,44 +307,38 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     )}
     
     {/* ---- DIÁLOGO 1: NOMBRAR PLAYLIST ---- */}
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-    <DialogContent className="sm:max-w-[425px] bg-gray-900 border-gray-700">
+    <Dialog open={step === 'confirming'} onOpenChange={(isOpen) => !isOpen && setStep('idle')}>
+    <DialogContent>
     <DialogHeader>
-    <DialogTitle className="text-white">Crear tu Megalista</DialogTitle>
-    <DialogDescription>Elige un nombre para tu nueva playlist combinada.</DialogDescription>
+    <DialogTitle>Confirmar Creación</DialogTitle>
+    <DialogDescription>
+    Vas a crear una Megalista con un total de <strong>{progress.total}</strong> canciones únicas.
+    </DialogDescription>
     </DialogHeader>
     <div className="grid gap-4 py-4">
-    <Label htmlFor="playlist-name" className="text-left text-gray-300">Nombre de la playlist</Label>
-    <Input id="playlist-name" value={newPlaylistName} onChange={(e) => setNewPlaylistName(e.target.value)} placeholder="Ej: Mix Definitivo de Lunes" className="bg-gray-800 border-gray-600 text-white" disabled={isMixing}/>
+    <Label htmlFor="playlist-name">Nombre de la Megalista</Label>
+    <Input id="playlist-name" value={newPlaylistName} onChange={(e) => setNewPlaylistName(e.target.value)} placeholder="Ej: Mix Definitivo"/>
     </div>
     <DialogFooter>
-    <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isMixing}>Cancelar</Button>
-    <Button onClick={handleConfirmMix} disabled={!newPlaylistName.trim() || isMixing}>
-    {isMixing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-    {isMixing ? 'Procesando...' : 'Confirmar y Mezclar'}
-    </Button>
+    <Button variant="outline" onClick={() => setStep('idle')}>Cancelar</Button>
+    <Button onClick={handleExecuteMix}>Confirmar y Empezar</Button>
     </DialogFooter>
     </DialogContent>
     </Dialog>
     
-    {/* <<<<<<< DIÁLOGO 2: MOVIDO AQUÍ PARA SER HERMANO DEL DIÁLOGO 1 >>>>>>> */}
-    <Dialog open={confirmingOverwrite} onOpenChange={setConfirmingOverwrite}>
-    <DialogContent className="sm:max-w-[425px] bg-red-950/80 backdrop-blur-sm border-red-500">
+    {/* <<<<<<< DIÁLOGO DE PROGRESO */}
+    <Dialog open={step === 'processing'}>
+    <DialogContent>
     <DialogHeader>
-    <DialogTitle className="text-red-200">Confirmar Sobrescritura</DialogTitle>
-    <DialogDescription className="text-red-300">
-    Ya existe una playlist con este nombre. Si continúas, su contenido actual será **eliminado permanentemente**. Esta acción no se puede deshacer.
-    </DialogDescription>
+    <DialogTitle>Creando tu Megalista...</DialogTitle>
+    <DialogDescription>Añadiendo canciones a "{newPlaylistName}".</DialogDescription>
     </DialogHeader>
-    <DialogFooter>
-    <Button variant="secondary" onClick={() => setConfirmingOverwrite(false)} disabled={isMixing}>
-    Cancelar
-    </Button>
-    <Button variant="destructive" onClick={handleConfirmOverwrite} disabled={isMixing}>
-    {isMixing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-    {isMixing ? 'Vaciando...' : 'Sí, sobrescribir'}
-    </Button>
-    </DialogFooter>
+    <div className="py-4">
+    <div className="w-full bg-gray-700 rounded-full h-2.5">
+    <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${(progress.added / progress.total) * 100}%` }}></div>
+    </div>
+    <p className="text-center text-sm text-gray-400 mt-2">{progress.added} / {progress.total} canciones añadidas</p>
+    </div>
     </DialogContent>
     </Dialog>
     </div>
