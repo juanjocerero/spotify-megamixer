@@ -33,7 +33,10 @@ export default async function DashboardPage() {
     <CardTitle>Mis Playlists</CardTitle>
     </CardHeader>
     <CardContent>
-    <PlaylistDisplay playlists={playlists} />
+    <PlaylistDisplay 
+    initialPlaylists={playlistsData.items} 
+    initialNextUrl={playlistsData.next}
+    />
     </CardContent>
     </Card>
     </div>
