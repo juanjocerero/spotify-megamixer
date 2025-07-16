@@ -9,6 +9,17 @@ import LogoutButton from '@/components/custom/LogoutButton';
 export default async function DashboardPage() {
   const session = await auth();
   
+  // NUEVA LÓGICA DE VALIDACIÓN:
+  // Si la sesión tiene el error de refresco O si no hay token, la consideramos inválida.
+  if (session?.error === 'RefreshAccessTokenError' || !session?.accessToken) {
+    // Opcional pero recomendado: Forzar el cierre de la sesión en el backend
+    // para limpiar la cookie problemática.
+    // await signOut({ redirect: false }); // Descomentar si la redirección sola no es suficiente
+    
+    // Redirigir al usuario a la página de inicio para que se vuelva a autenticar.
+    redirect('/');
+  }
+  
   // Aunque el middleware protege esta ruta, esta es una doble comprobación.
   // También nos asegura que el tipo de session.accessToken no es nulo.
   if (!session || !session.accessToken) {

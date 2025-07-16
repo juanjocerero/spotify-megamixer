@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useInView } from 'react-intersection-observer';
+import Fuse, { type IFuseOptions } from 'fuse.js';
 import { SpotifyPlaylist } from '@/types/spotify';
 import { fetchMorePlaylists } from '@/lib/action'; // CORRECCIÓN 1: Ruta de importación corregida.
 import { usePlaylistStore } from '@/lib/store';
@@ -69,6 +70,13 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     }
   }, [inView, loadMorePlaylists]);
   
+  const fuseOptions: IFuseOptions<SpotifyPlaylist> = useMemo(() => ({
+    keys: ['name', 'owner.display_name'],
+    threshold: 0.4,
+    ignoreLocation: true,
+    useExtendedSearch: true,
+  }), []);
+  
   // ---- LÓGICA DE FILTRADO ----
   const filteredPlaylists = useMemo(() => {
     let items = playlists;
@@ -77,12 +85,13 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       items = items.filter(p => selectedPlaylistIds.includes(p.id));
     }
     
-    if (searchTerm) {
-      items = items.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (searchTerm.trim() !== '') {
+      const fuseInstance = new Fuse(items, fuseOptions);
+      items = fuseInstance.search(searchTerm).map(result => result.item);
     }
     
     return items;
-  }, [playlists, searchTerm, showOnlySelected, selectedPlaylistIds]);
+  }, [playlists, searchTerm, showOnlySelected, selectedPlaylistIds, fuseOptions]);
   
   return (
     <div>
@@ -102,7 +111,15 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     <Switch
     id="show-selected"
     checked={showOnlySelected}
-    onCheckedChange={setShowOnlySelected}
+    onCheckedChange={(isChecked) => {
+      // Actualizamos el estado del interruptor en cualquier caso
+      setShowOnlySelected(isChecked);
+      
+      // Si el interruptor se está ACTIVANDO, limpiamos la búsqueda
+      if (isChecked) {
+        setSearchTerm('');
+      }
+    }}
     />
     <Label htmlFor="show-selected" className="flex items-center gap-2 cursor-pointer">
     <ListChecks className="h-5 w-5" />

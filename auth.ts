@@ -20,28 +20,28 @@ const scopes = "user-read-email playlist-read-private playlist-read-collaborativ
 const authorization = `https://accounts.spotify.com/authorize?scope=${scopes}`;
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
-    // ... esta función no necesita cambios
-    try {
-        const params = new URLSearchParams();
-        params.append("grant_type", "refresh_token");
-        params.append("refresh_token", token.refreshToken as string);
-        const response = await fetch("https://accounts.spotify.com/api/token", {
-          method: "POST",
-          headers: { "Authorization": "Basic " + Buffer.from(spotifyClientId + ":" + spotifyClientSecret).toString("base64") },
-          body: params,
-        });
-        const refreshedTokens = await response.json();
-        if (!response.ok) throw refreshedTokens;
-        return {
-          ...token,
-          accessToken: refreshedTokens.access_token,
-          accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
-          refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
-        };
-      } catch (error) {
-        console.error("Error al refrescar el token de acceso", error);
-        return { ...token, error: "RefreshAccessTokenError" };
-      }
+  // ... esta función no necesita cambios
+  try {
+    const params = new URLSearchParams();
+    params.append("grant_type", "refresh_token");
+    params.append("refresh_token", token.refreshToken as string);
+    const response = await fetch("https://accounts.spotify.com/api/token", {
+      method: "POST",
+      headers: { "Authorization": "Basic " + Buffer.from(spotifyClientId + ":" + spotifyClientSecret).toString("base64") },
+      body: params,
+    });
+    const refreshedTokens = await response.json();
+    if (!response.ok) throw refreshedTokens;
+    return {
+      ...token,
+      accessToken: refreshedTokens.access_token,
+      accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
+      refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
+    };
+  } catch (error) {
+    console.error("Error al refrescar el token de acceso", error);
+    return { ...token, error: "RefreshAccessTokenError" };
+  }
 }
 
 
@@ -57,25 +57,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, account }): Promise<JWT> {
-        if (account) {
-            return {
-              accessToken: account.access_token,
-              accessTokenExpires: Date.now() + (account.expires_in as number) * 1000,
-              refreshToken: account.refresh_token,
-              user: account.providerAccountId,
-            } as JWT;
-          }
-          if (Date.now() < (token.accessTokenExpires as number)) {
-            return token;
-          }
-          return refreshAccessToken(token);
+    async jwt({ token, account }) {
+      // En el primer inicio de sesión
+      if (account) {
+        return {
+          accessToken: account.access_token,
+          accessTokenExpires: Date.now() + (account.expires_in as number) * 1000,
+          refreshToken: account.refresh_token,
+          user: account.providerAccountId,
+        };
+      }
+      
+      // Si el token ya tiene un error, no hacemos nada más.
+      if (token.error) {
+        return token;
+      }
+      
+      // Si el token de acceso todavía es válido, lo devolvemos.
+      if (Date.now() < (token.accessTokenExpires as number)) {
+        return token;
+      }
+      
+      // Si el token ha expirado, lo refrescamos.
+      console.log("El token de acceso ha expirado, refrescando...");
+      return refreshAccessToken(token);
     },
-    async session({ session, token }): Promise<Session> {
-        if (session.user) { (session.user as any).id = token.user; }
-        (session as any).accessToken = token.accessToken;
-        (session as any).error = token.error;
-        return session;
+    
+    async session({ session, token }) {
+      session.accessToken = token.accessToken as string;
+      session.error = token.error as string; // Propagamos el error a la sesión del cliente
+      if (session.user) {
+        session.user.id = token.user as string;
+      }
+      return session;
     },
   },
 });
