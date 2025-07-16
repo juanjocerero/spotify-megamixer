@@ -11,11 +11,11 @@ export default function LoginButton() {
     // Le indicamos que, tras un inicio de sesión exitoso, redirija al usuario a '/dashboard'.
     await signIn('spotify', { redirectTo: '/dashboard' });
   };
-
+  
   return (
     <Button size="lg" onClick={handleLogin}>
-      <LogIn className="mr-2 h-5 w-5" />
-      Iniciar sesión con Spotify
+    <LogIn className="mr-2 h-5 w-5" />
+    Iniciar sesión con Spotify
     </Button>
   );
 }
