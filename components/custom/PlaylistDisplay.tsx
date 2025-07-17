@@ -214,10 +214,10 @@ export default function PlaylistDisplay({
     <TableHeader>
     <TableRow className="hover:bg-transparent">
     <TableHead className="w-[50px]"></TableHead>
-    <TableHead className="w-[80px] text-muted-foreground">Cover</TableHead>
+    <TableHead className="w-[60px] sm:w-[80px] text-muted-foreground">Cover</TableHead>
     <TableHead className="text-muted-foreground">Nombre</TableHead>
-    <TableHead className="text-muted-foreground">Propietario</TableHead>
-    <TableHead className="w-[100px] text-right text-muted-foreground">Canciones</TableHead>
+    <TableHead className="text-muted-foreground hidden sm:table-cell w-[120px]">Propietario</TableHead>
+    <TableHead className="w-[80px] sm:w-[100px] text-right text-muted-foreground">Canciones</TableHead>
     <TableHead className="w-[50px]"></TableHead>
     </TableRow>
     </TableHeader>
@@ -264,9 +264,13 @@ export default function PlaylistDisplay({
         </Avatar>
         </TableCell>
         
-        <TableCell className="font-medium break-words">
-        <div className="flex items-center gap-2">
-        <span>{playlist.name}</span>
+        <TableCell className="font-medium">
+        <div className="flex flex-col">
+        <span className="truncate break-words">{playlist.name}</span>
+        {/* El propietario se muestra debajo solo en pantallas pequeñas */}
+        <span className="text-xs text-muted-foreground sm:hidden break-words">
+        {playlist.owner.display_name}
+        </span>
         {isMegalista && (
           <Badge variant="outline" className="border-green-500 text-green-500 whitespace-nowrap">
           Megalista
@@ -275,7 +279,11 @@ export default function PlaylistDisplay({
         </div>
         </TableCell>
         
-        <TableCell className="break-words">{playlist.owner.display_name}</TableCell>
+        {/* La celda de Propietario ahora se oculta en móvil */}
+        <TableCell className="hidden sm:table-cell break-words">
+        {playlist.owner.display_name}
+        </TableCell>
+        
         <TableCell className="text-right">{playlist.tracks.total}</TableCell>
         
         <TableCell>
