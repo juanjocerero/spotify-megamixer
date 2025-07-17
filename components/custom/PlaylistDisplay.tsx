@@ -209,7 +209,7 @@ export default function PlaylistDisplay({
     <div>
     {/* Tabla de Playlists */}
     <div className="rounded-md border border-gray-700">
-    <Table>
+    <Table className="table-fixed">
     
     <TableHeader>
     <TableRow className="hover:bg-transparent">
@@ -217,7 +217,7 @@ export default function PlaylistDisplay({
     <TableHead className="w-[80px] text-muted-foreground">Cover</TableHead>
     <TableHead className="text-muted-foreground">Nombre</TableHead>
     <TableHead className="text-muted-foreground">Propietario</TableHead>
-    <TableHead className="text-right text-muted-foreground">Canciones</TableHead>
+    <TableHead className="w-[100px] text-right text-muted-foreground">Canciones</TableHead>
     <TableHead className="w-[50px]"></TableHead>
     </TableRow>
     </TableHeader>
@@ -264,18 +264,18 @@ export default function PlaylistDisplay({
         </Avatar>
         </TableCell>
         
-        <TableCell className="font-medium">
+        <TableCell className="font-medium break-words">
         <div className="flex items-center gap-2">
         <span>{playlist.name}</span>
         {isMegalista && (
-          <Badge variant="outline" className="border-green-500 text-green-500">
+          <Badge variant="outline" className="border-green-500 text-green-500 whitespace-nowrap">
           Megalista
           </Badge>
         )}
         </div>
         </TableCell>
         
-        <TableCell>{playlist.owner.display_name}</TableCell>
+        <TableCell className="break-words">{playlist.owner.display_name}</TableCell>
         <TableCell className="text-right">{playlist.tracks.total}</TableCell>
         
         <TableCell>
