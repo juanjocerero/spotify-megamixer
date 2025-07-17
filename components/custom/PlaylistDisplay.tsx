@@ -256,7 +256,8 @@ export default function PlaylistDisplay({
         />
         </TableCell>
         
-        <TableCell>
+        {/* Añadir padding a la celda del cover solo en el móvil */}
+        <TableCell className="pl-4 sm:pl-0">
         <Avatar>
         <AvatarImage src={playlist.images?.[0]?.url} alt={playlist.name} />
         <AvatarFallback>
