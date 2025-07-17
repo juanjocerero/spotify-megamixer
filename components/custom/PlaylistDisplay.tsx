@@ -250,8 +250,8 @@ export default function PlaylistDisplay({
         </TableCell>
         
         {/* Añadir padding a la celda del cover solo en el móvil */}
-        <TableCell className="pl-4 sm:pl-0">
-        <Avatar>
+        <TableCell className="pl-4 sm:pl-0 py-2">
+        <Avatar className="h-12 w-12">
         <AvatarImage src={playlist.images?.[0]?.url} alt={playlist.name} />
         <AvatarFallback>
         <Music />
@@ -259,7 +259,7 @@ export default function PlaylistDisplay({
         </Avatar>
         </TableCell>
         
-        <TableCell className="font-medium">
+        <TableCell className="font-medium py-2">
         <div className="flex flex-col">
         <span className="truncate break-words">{playlist.name}</span>
         {/* El propietario se muestra debajo solo en pantallas pequeñas */}
@@ -275,13 +275,13 @@ export default function PlaylistDisplay({
         </TableCell>
         
         {/* La celda de Propietario ahora se oculta en móvil */}
-        <TableCell className="hidden sm:table-cell break-words">
+        <TableCell className="hidden sm:table-cell py-2 break-words">
         {playlist.owner.display_name}
         </TableCell>
         
-        <TableCell className="text-right">{playlist.tracks.total}</TableCell>
+        <TableCell className="py-2 text-right">{playlist.tracks.total}</TableCell>
         
-        <TableCell>
+        <TableCell className="py-2">
         {isMegalista && (
           <DropdownMenu>
           <DropdownMenuTrigger asChild>
