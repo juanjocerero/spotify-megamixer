@@ -50,7 +50,8 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     clearSelection, 
     setPlaylistCache, 
     addMoreToCache, 
-    megamixCache
+    megamixCache, 
+    addPlaylistToCache
   } = usePlaylistStore();
   
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>(initialPlaylists);
@@ -177,18 +178,23 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     const playlistId: string | null = null;
     
     try {
-      const { playlistId, exists } = await findOrCreatePlaylist(newPlaylistName);
+      const { playlist, exists } = await findOrCreatePlaylist(newPlaylistName);
       
       if (exists) {
         setStep('idle');
         toast.dismiss(toastId);
         setOverwriteDialog({
           open: true,
-          playlistId: playlistId, // Ahora playlistId es un string
+          playlistId: playlist.id,
           playlistName: newPlaylistName,
         });
         return;
       }
+      
+      // Si la playlist no existía, significa que se acaba de crear.
+      // La añadimos a nuestro estado local para que la UI se actualice.
+      setPlaylists((prev) => [playlist, ...prev]);
+      addPlaylistToCache(playlist);
       
       // Guardamos el ID de la playlist en el estado inmediatamente.
       setPlaylistIdForResume(playlistId);
@@ -198,7 +204,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       for (let i = 0; i < tracksToMix.length; i += batchSize) {
         const batch = tracksToMix.slice(i, i + batchSize);
         toast.loading(`Añadiendo canciones... ${i + batch.length} / ${progress.total}`, { id: toastId });
-        await addTracksBatch(playlistId, batch);
+        await addTracksBatch(playlist.id, batch);
         setProgress((prev) => ({ ...prev, added: prev.added + batch.length }));
       }
       

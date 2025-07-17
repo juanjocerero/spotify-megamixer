@@ -51,7 +51,7 @@ export async function getTrackUris(playlistIds: string[]) {
 */
 export async function findOrCreatePlaylist(
   name: string
-): Promise<{ playlistId: string; exists: boolean }> {
+): Promise<{ playlist: SpotifyPlaylist; exists: boolean }> {
   try {
     const session = await auth();
     if (!session?.accessToken || !session.user?.id) {
@@ -62,10 +62,10 @@ export async function findOrCreatePlaylist(
     const existingPlaylist = await findUserPlaylistByName(accessToken, name);
     
     if (existingPlaylist) {
-      return { playlistId: existingPlaylist.id, exists: true };
+      return { playlist: existingPlaylist, exists: true };
     } else {
       const newPlaylist = await createNewPlaylist(accessToken, user.id, name);
-      return { playlistId: newPlaylist.id, exists: false };
+      return { playlist: newPlaylist, exists: false };
     }
   } catch (error) {
     console.error('[ACTION_ERROR:findOrCreatePlaylist] Fallo al buscar o crear la playlist.', error);

@@ -14,6 +14,7 @@ interface PlaylistStore {
   megamixCache: SpotifyPlaylist[]; // Un subconjunto de la caché para solo nuestras megalistas
   setPlaylistCache: (playlists: SpotifyPlaylist[]) => void;
   addMoreToCache: (playlists: SpotifyPlaylist[]) => void;
+  addPlaylistToCache: (playlist: SpotifyPlaylist) => void;
 }
 
 export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
@@ -60,4 +61,16 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
     );
     set({ playlistCache: newCache, megamixCache: newMegamixes });
   },
+
+  addPlaylistToCache: (playlist) => {
+    const existingCache = get().playlistCache;
+    // Evitamos añadir duplicados si por alguna razón ya estuviera
+    if (existingCache.some(p => p.id === playlist.id)) return;
+
+    const newCache = [playlist, ...existingCache]; // La añadimos al principio
+    const newMegamixes = newCache.filter(
+      (p) => p.description?.includes('<!-- MEGAMIXER_APP_V1 -->')
+    );
+    set({ playlistCache: newCache, megamixCache: newMegamixes });
+  }
 }));
