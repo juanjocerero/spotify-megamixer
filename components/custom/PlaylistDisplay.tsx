@@ -52,7 +52,8 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     addMoreToCache, 
     megamixCache, 
     addPlaylistToCache, 
-    updatePlaylistInCache
+    updatePlaylistInCache, 
+    addMultipleToSelection
   } = usePlaylistStore();
   
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>(initialPlaylists);
@@ -127,6 +128,21 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     }
     return items;
   }, [playlists, searchTerm, showOnlySelected, selectedPlaylistIds, fuseOptions]);
+  
+  const areAllFilteredSelected = useMemo(() => {
+    if (searchTerm.trim() === '' || filteredPlaylists.length === 0) {
+      return false; // No hay búsqueda o no hay resultados
+    }
+    // Devuelve true si CADA playlist filtrada ya está en la selección
+    return filteredPlaylists.every(p => selectedPlaylistIds.includes(p.id));
+  }, [filteredPlaylists, selectedPlaylistIds, searchTerm]);
+  
+  const handleSelectAllFiltered = () => {
+    if (areAllFilteredSelected) return; // No hacer nada si ya están todas seleccionadas
+    const filteredIds = filteredPlaylists.map(p => p.id);
+    addMultipleToSelection(filteredIds);
+    toast.info(`${filteredIds.length} playlists de la búsqueda han sido añadidas a la selección.`);
+  };
   
   const handleInitiateMix = async () => {
     // Asegurarse de que cada nueva mezcla empiece de forma limpia.
@@ -427,16 +443,31 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
   return (
     <div>
     {/* CONTROLES DE VISTA */}
+    {/* 4. MODIFICAR LA SECCIÓN DE CONTROLES DE VISTA */}
     <div className="flex flex-col sm:flex-row gap-4 mb-4">
     <div className="relative flex-grow">
-    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
     <Input
     type="text"
     placeholder="Filtrar por nombre..."
-    className="pl-10"
+    // Se añade padding a la derecha para que el texto no quede debajo del botón
+    className="pl-10 pr-32"
     value={searchTerm}
     onChange={(e) => setSearchTerm(e.target.value)}
     />
+    {/* El nuevo botón, condicional y posicionado de forma absoluta */}
+    {searchTerm.trim() !== '' && filteredPlaylists.length > 0 && (
+      <Button
+      variant="ghost"
+      size="sm"
+      className="absolute right-1 top-1/2 -translate-y-1/2 h-8"
+      onClick={handleSelectAllFiltered}
+      disabled={areAllFilteredSelected}
+      >
+      <ListChecks className="mr-2 h-4 w-4" />
+      {areAllFilteredSelected ? 'Seleccionado' : 'Seleccionar'}
+      </Button>
+    )}
     </div>
     <div className="flex items-center space-x-2">
     <Switch

@@ -8,6 +8,7 @@ interface PlaylistStore {
   togglePlaylist: (id: string) => void;
   isSelected: (id: string) => boolean;
   clearSelection: () => void;
+  addMultipleToSelection: (playlistIds: string[]) => void;
   
   // Estado para la caché de playlists
   playlistCache: SpotifyPlaylist[];
@@ -39,6 +40,14 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   
   clearSelection: () => {
     set({ selectedPlaylistIds: [] });
+  },
+
+  addMultipleToSelection: (playlistIds) => {
+    set((state) => {
+      // Usamos un Set para fusionar y eliminar duplicados de forma eficiente
+      const combinedIds = new Set([...state.selectedPlaylistIds, ...playlistIds]);
+      return { selectedPlaylistIds: Array.from(combinedIds) };
+    });
   },
   
   // Lógica de la caché ---
