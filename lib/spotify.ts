@@ -191,11 +191,10 @@ export async function addTracksToPlaylist(
   trackUris: string[]
 ): Promise<void> {
   const spotifyApiUrl = `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks`;
+  const batchSize = 100; // La API de Spotify solo permite añadir 100 canciones a la vez.
   
-  // La API de Spotify solo permite añadir 100 canciones a la vez.
-  const batchSize = 100;
-  
-  for (let i = 0; i < trackUris.length; i += batchSize) {
+  let i = 0;
+  while (i < trackUris.length) {
     const batch = trackUris.slice(i, i + batchSize);
     
     const response = await fetch(spotifyApiUrl, {
@@ -207,11 +206,44 @@ export async function addTracksToPlaylist(
       body: JSON.stringify({ uris: batch }),
     });
     
-    if (!response.ok) {
-      console.error(`Fallo al añadir un lote de canciones a la playlist ${playlistId}`);
-      throw new Error('Fallo al añadir canciones a la playlist.');
+    if (response.ok) {
+      console.log(
+        `[SPOTIFY_API] Añadido un lote de ${batch.length} canciones.`
+      );
+      i += batchSize; // El lote fue exitoso, avanzamos al siguiente.
+      
+      // NUEVO: Throttling proactivo. Pequeña pausa para no saturar la API.
+      await new Promise((resolve) => setTimeout(resolve, 100)); // 100ms de espera
+      continue; // Pasamos a la siguiente iteración del bucle
     }
     
-    console.log(`[SPOTIFY_API] Añadido un lote de ${batch.length} canciones.`);
+    // NUEVO: Manejo del error de Rate Limiting
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After');
+      // Si el header no viene, esperamos 5 segundos por defecto.
+      const waitSeconds = retryAfter ? parseInt(retryAfter, 10) : 5;
+      
+      console.warn(
+        `[SPOTIFY_API] Rate limited. Esperando ${waitSeconds} segundos para reintentar.`
+      );
+      
+      // Esperamos el tiempo indicado más un pequeño margen
+      await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000 + 500));
+      
+      // NO incrementamos 'i', para que el bucle reintente el MISMO lote.
+      continue;
+    }
+    
+    // NUEVO: Manejo de otros errores de la API
+    const errorData = await response.json();
+    console.error(
+      `[SPOTIFY_API] Fallo al añadir un lote de canciones a la playlist ${playlistId}`,
+      { status: response.status, error: errorData }
+    );
+    throw new Error(
+      `Fallo al añadir canciones. Spotify respondió con ${response.status}: ${
+        errorData.error?.message || 'Error desconocido'
+      }`
+    );
   }
 }
