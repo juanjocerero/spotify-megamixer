@@ -176,10 +176,13 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     setStep('processing');
     const toastId = toast.loading('Preparando la playlist de destino...');
     
-    const playlistId: string | null = null;
+    // Usamos una variable `let` en el ámbito de la función.
+    // Esto nos permitirá capturar el ID de la playlist creada y usarlo en el bloque `catch`.
+    let createdPlaylistId: string | null = null;
     
     try {
       const { playlist, exists } = await findOrCreatePlaylist(newPlaylistName);
+      createdPlaylistId = playlist.id;
       
       if (exists) {
         setStep('idle');
@@ -198,7 +201,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       addPlaylistToCache(playlist);
       
       // Guardamos el ID de la playlist en el estado inmediatamente.
-      setPlaylistIdForResume(playlistId);
+      setPlaylistIdForResume(playlist.id);
       toast.loading('Playlist preparada, iniciando adición de canciones...', { id: toastId });
       
       const batchSize = 100;
@@ -220,21 +223,21 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     } catch (error: unknown) { // CAMBIO 2: Tipado correcto del error
       console.error('[UI_ERROR:handleExecuteMix] Ocurrió un error durante la mezcla:', error);
       
-      // CAMBIO 3: Comprobar el tipo de error
+      // Comprobar el tipo de error
       let errorMessage = 'Ocurrió un error durante la mezcla.';
       if (error instanceof Error) {
         errorMessage = error.message;
       }
       toast.error(errorMessage, { id: toastId });
       
-      // Si tenemos un ID de playlist, activamos el modo de reanudación.
-      if (playlistId) {
+      // La condición ahora usa la variable local `createdPlaylistId`.
+      // Si el error ocurrió después de crear la playlist, esta variable tendrá un valor
+      // y activaremos correctamente el modo de reanudación.
+      if (createdPlaylistId) {
         setIsResumable(true);
       }
     } finally {
-      // Ahora el bloque finally solo se encarga de resetear el paso de la UI.
-      // La limpieza de estado se maneja al inicio o al final con éxito.
-      // Si la mezcla fue exitosa, limpiamos todo para el próximo uso.
+      // Si la mezcla fue completamente exitosa, limpiamos el estado.
       if (progress.added > 0 && progress.added === progress.total) {
         setTracksToMix([]);
         setNewPlaylistName('');
