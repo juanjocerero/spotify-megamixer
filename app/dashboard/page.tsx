@@ -4,12 +4,13 @@ import { redirect } from 'next/navigation';
 import { getUserPlaylists } from '@/lib/spotify';
 import PlaylistDisplay from '@/components/custom/PlaylistDisplay';
 import LogoutButton from '@/components/custom/LogoutButton';
+import DashboardClient from '@/components/custom/DashboardClient';
 import FloatingActionBar from '@/components/custom/FloatingActionBar';
 
 export default async function DashboardPage() {
   const session = await auth();
   
-  // NUEVA LÓGICA DE VALIDACIÓN:
+  // Nueva lógica de validación:
   // Si la sesión tiene el error de refresco O si no hay token, la consideramos inválida.
   if (session?.error === 'RefreshAccessTokenError' || !session?.accessToken) {
     // Opcional pero recomendado: Forzar el cierre de la sesión en el backend
@@ -38,15 +39,12 @@ export default async function DashboardPage() {
     </h1>
     <LogoutButton />
     </header>
-    
-    {/* El componente PlaylistDisplay ahora está directamente en el layout. */}
-    {/* Se añade un padding superior para compensar el espacio del CardHeader eliminado. */}
-    <div className="pt-6">
-    <PlaylistDisplay 
-    initialPlaylists={playlistsData.items} 
-    initialNextUrl={playlistsData.next}
+
+    {/* 2. Renderizamos el componente cliente y le pasamos los datos iniciales */}
+    <DashboardClient
+      initialPlaylists={playlistsData.items}
+      initialNextUrl={playlistsData.next}
     />
-    </div>
     
     <FloatingActionBar />
     

@@ -22,6 +22,9 @@ import { Loader2, Search, ListChecks, Music } from 'lucide-react';
 interface PlaylistDisplayProps {
   initialPlaylists: SpotifyPlaylist[];
   initialNextUrl: string | null;
+  searchTerm: string;
+  showOnlySelected: boolean;
+  onClearSearch: () => void;
 }
 
 function Loader() {
@@ -33,7 +36,13 @@ function Loader() {
   );
 }
 
-export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: PlaylistDisplayProps) {
+export default function PlaylistDisplay({ 
+  initialPlaylists, 
+  initialNextUrl, 
+  searchTerm,           
+  showOnlySelected,
+  onClearSearch
+}: PlaylistDisplayProps) {
   const { 
     togglePlaylist, 
     isSelected, 
@@ -46,8 +55,6 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
   
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoading, setIsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showOnlySelected, setShowOnlySelected] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map());
   
@@ -87,6 +94,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     []
   );
   
+  // El filtrado depende de las props
   const filteredPlaylists = useMemo(() => {
     let items = playlistCache;
     if (showOnlySelected) {
@@ -146,7 +154,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       case 'Escape':
       event.preventDefault();
       setFocusedIndex(null);
-      setSearchTerm('');
+      onClearSearch();
       break;
     }
   }, [focusedIndex, filteredPlaylists, togglePlaylist]);
@@ -160,47 +168,6 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
   
   return (
     <div>
-    {/* Controles de Vista (Búsqueda y Filtro) */}
-    <div className="flex flex-col sm:flex-row gap-4 mb-4">
-    <div className="relative flex-grow">
-    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
-    <Input
-    type="text"
-    placeholder="Filtrar por nombre..."
-    className="pl-10 pr-32"
-    value={searchTerm}
-    onChange={(e) => setSearchTerm(e.target.value)}
-    />
-    {searchTerm.trim() !== '' && filteredPlaylists.length > 0 && (
-      <Button
-      variant="ghost"
-      size="sm"
-      className="absolute right-1 top-1/2 -translate-y-1/2 h-8"
-      onClick={handleSelectAllFiltered}
-      disabled={areAllFilteredSelected}
-      >
-      <ListChecks className="mr-2 h-4 w-4" />
-      {areAllFilteredSelected ? 'Seleccionado' : 'Seleccionar'}
-      </Button>
-    )}
-    </div>
-    <div className="flex items-center space-x-2">
-    <Switch
-    id="show-selected"
-    checked={showOnlySelected}
-    onCheckedChange={(isChecked) => {
-      setShowOnlySelected(isChecked);
-      if (isChecked) setSearchTerm('');
-    }}
-    />
-    <Label htmlFor="show-selected" className="flex items-center gap-2 cursor-pointer">
-    <ListChecks className="h-5 w-5" />
-    Mostrar solo seleccionadas ({selectedPlaylistIds.length})
-    </Label>
-    </div>
-    </div>
-    
-    
     {/* Tabla de Playlists */}
     <div className="rounded-md border border-gray-700">
     <Table>
