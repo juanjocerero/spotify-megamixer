@@ -134,8 +134,27 @@ export async function findUserPlaylistByName(
 export async function createNewPlaylist(
   accessToken: string,
   userId: string,
-  name: string
+  name: string,
+  sourcePlaylistIds: string[] 
 ): Promise<SpotifyPlaylist> {
+  const DESCRIPTION_CHAR_LIMIT = 4000; // Límite de seguridad para la descripción de Spotify.
+  const baseDescription = `Generada por Spotify Megamixer el ${new Date().toLocaleDateString()}. <!-- MEGAMIXER_APP_V1 -->`;
+  const sourcesTag = sourcePlaylistIds.length > 0 
+  ? ` <!-- MEGAMIXER_SOURCES:[${sourcePlaylistIds.join(',')}] -->` 
+  : '';
+  
+  const fullDescription = baseDescription + sourcesTag;
+  let finalDescription = baseDescription;
+  
+  if (fullDescription.length < DESCRIPTION_CHAR_LIMIT) {
+    finalDescription = fullDescription;
+    console.log('[SPOTIFY_API] Creando playlist con metadatos de sincronización.');
+  } else {
+    // Si la descripción es demasiado larga, la creamos sin los metadatos de las fuentes.
+    // La playlist seguirá funcionando, pero no será sincronizable.
+    console.warn('[SPOTIFY_API] La descripción es demasiado larga. Creando playlist sin metadatos de sincronización.');
+  }
+  
   const response = await fetch(`${SPOTIFY_API_BASE}/users/${userId}/playlists`, {
     method: 'POST',
     headers: {
@@ -145,7 +164,7 @@ export async function createNewPlaylist(
     body: JSON.stringify({
       name: name,
       // Añadimos un identificador único en la descripción para poder identificarla después como propia
-      description: `Megalista generada por Spotify Megamixer el ${new Date().toLocaleDateString()}. <!-- MEGAMIXER_APP_V1 -->`,
+      description: finalDescription,
       public: false, // Las creamos como privadas por defecto
     }),
   });

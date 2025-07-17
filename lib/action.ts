@@ -50,7 +50,8 @@ export async function getTrackUris(playlistIds: string[]) {
 * @returns Un objeto con el ID de la playlist y un booleano 'exists'.
 */
 export async function findOrCreatePlaylist(
-  name: string
+  name: string,
+  sourcePlaylistIds: string[]
 ): Promise<{ playlist: SpotifyPlaylist; exists: boolean }> {
   try {
     const session = await auth();
@@ -64,7 +65,7 @@ export async function findOrCreatePlaylist(
     if (existingPlaylist) {
       return { playlist: existingPlaylist, exists: true };
     } else {
-      const newPlaylist = await createNewPlaylist(accessToken, user.id, name);
+      const newPlaylist = await createNewPlaylist(accessToken, user.id, name, sourcePlaylistIds);
       return { playlist: newPlaylist, exists: false };
     }
   } catch (error) {

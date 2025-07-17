@@ -103,7 +103,7 @@ export default function FloatingActionBar() {
     let createdPlaylistId: string | null = null;
     
     try {
-      const { playlist, exists } = await findOrCreatePlaylist(newPlaylistName);
+      const { playlist, exists } = await findOrCreatePlaylist(newPlaylistName, selectedPlaylistIds);
       createdPlaylistId = playlist.id;
       
       if (exists) {
