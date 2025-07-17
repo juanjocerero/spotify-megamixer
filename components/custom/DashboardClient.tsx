@@ -26,10 +26,14 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
   // El estado se levanta aquí
   // El estado para la búsqueda y el filtro ahora vive en este componente padre.
   const [searchTerm, setSearchTerm] = useState('');
-  const [showOnlySelected, setShowOnlySelected] = useState(false);
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
   
-  const { selectedPlaylistIds, addMultipleToSelection } = usePlaylistStore();
+  const { 
+    selectedPlaylistIds, 
+    addMultipleToSelection, 
+    showOnlySelected, 
+    setShowOnlySelected 
+  } = usePlaylistStore();
   
   const handleFilteredChange = useCallback((ids: string[]) => {
     setFilteredIds(ids);

@@ -9,6 +9,8 @@ interface PlaylistStore {
   isSelected: (id: string) => boolean;
   clearSelection: () => void;
   addMultipleToSelection: (playlistIds: string[]) => void;
+  showOnlySelected: boolean;
+  setShowOnlySelected: (value: boolean) => void;
   
   // Estado para la caché de playlists
   playlistCache: SpotifyPlaylist[];
@@ -23,6 +25,7 @@ interface PlaylistStore {
 export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   // --- Estado existente ---
   selectedPlaylistIds: [],
+  showOnlySelected: false,
   
   togglePlaylist: (id: string) => {
     set((state) => {
@@ -40,7 +43,11 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   },
   
   clearSelection: () => {
-    set({ selectedPlaylistIds: [] });
+    set({ 
+      selectedPlaylistIds: [],
+      showOnlySelected: false,
+    })
+    
   },
   
   addMultipleToSelection: (playlistIds) => {
@@ -49,6 +56,10 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
       const combinedIds = new Set([...state.selectedPlaylistIds, ...playlistIds]);
       return { selectedPlaylistIds: Array.from(combinedIds) };
     });
+  },
+  
+  setShowOnlySelected: (value) => {
+    set({ showOnlySelected: value })
   },
   
   // Lógica de la caché ---

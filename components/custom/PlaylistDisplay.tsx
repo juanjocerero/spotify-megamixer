@@ -207,7 +207,7 @@ export default function PlaylistDisplay({
     <TableHeader>
     <TableRow className="hover:bg-transparent">
     <TableHead className="w-[50px] hidden sm:table-cell"></TableHead>
-    <TableHead className="w-[60px] sm:w-[80px] text-muted-foreground">Cover</TableHead>
+    <TableHead className="w-[60px] sm:w-[80px] text-muted-foreground"></TableHead>
     <TableHead className="text-muted-foreground">Nombre</TableHead>
     <TableHead className="text-muted-foreground hidden sm:table-cell w-[120px]">Propietario</TableHead>
     <TableHead className="w-[80px] sm:w-[100px] text-right text-muted-foreground">Canciones</TableHead>
