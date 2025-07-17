@@ -109,7 +109,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
   const fuseOptions: IFuseOptions<SpotifyPlaylist> = useMemo(
     () => ({
       keys: ['name', 'owner.display_name'],
-      threshold: 0.4,
+      threshold: 0.7,
       ignoreLocation: true,
       useExtendedSearch: true,
     }),
