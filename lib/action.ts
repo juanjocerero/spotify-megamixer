@@ -162,7 +162,15 @@ export async function fetchMorePlaylists(
       throw new Error('Not authenticated');
     }
     
-    const response = await fetch(url, {
+    // --- Modificamos la URL para asegurarnos de que incluye los campos ---
+    // Esto es crucial porque la URL 'next' de Spotify no hereda los parámetros 'fields'.
+    const urlObject = new URL(url);
+    const fields = "items(id,name,description,owner(display_name),images,tracks(total)),next";
+    
+    // Usamos .set() para añadir o sobreescribir el parámetro de campos.
+    urlObject.searchParams.set('fields', fields);
+    
+    const response = await fetch(urlObject.toString(), {
       headers: {
         Authorization: `Bearer ${session.accessToken}`,
       },

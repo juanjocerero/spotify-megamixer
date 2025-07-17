@@ -74,7 +74,9 @@ export async function getPlaylistDetails(
   accessToken: string,
   playlistId: string
 ): Promise<SpotifyPlaylist> {
-  const response = await fetch(`${SPOTIFY_API_BASE}/playlists/${playlistId}`, {
+  const fields = "id,name,description,owner(display_name),images,tracks(total)";
+  const url = `${SPOTIFY_API_BASE}/playlists/${playlistId}?fields=${encodeURIComponent(fields)}`;
+  const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
