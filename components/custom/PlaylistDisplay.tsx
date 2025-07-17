@@ -213,7 +213,7 @@ export default function PlaylistDisplay({
     
     <TableHeader>
     <TableRow className="hover:bg-transparent">
-    <TableHead className="w-[50px]"></TableHead>
+    <TableHead className="w-[50px] hidden sm:table-cell"></TableHead>
     <TableHead className="w-[60px] sm:w-[80px] text-muted-foreground">Cover</TableHead>
     <TableHead className="text-muted-foreground">Nombre</TableHead>
     <TableHead className="text-muted-foreground hidden sm:table-cell w-[120px]">Propietario</TableHead>
@@ -246,7 +246,8 @@ export default function PlaylistDisplay({
         )}
         >
         
-        <TableCell>
+        {/* Ocultar celda de checkbox en móvil */}
+        <TableCell className="hidden sm:table-cell">
         <Checkbox
         id={`select-${playlist.id}`}
         checked={selected}
