@@ -169,7 +169,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       setStep('processing');
       const toastId = toast.loading('Preparando la playlist de destino...');
       
-      let playlistId: string | null = null;
+      const playlistId: string | null = null;
       
       try {
         const { playlistId, exists } = await findOrCreatePlaylist(newPlaylistName);
@@ -532,7 +532,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
         <DialogHeader>
         <DialogTitle>Playlist Existente</DialogTitle>
         <DialogDescription>
-        La playlist llamada "{overwriteDialog.playlistName}" ya existe. ¿Qué te gustaría hacer?
+        La playlist llamada &quot;{overwriteDialog.playlistName}&quot; ya existe. ¿Qué te gustaría hacer?
         </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
