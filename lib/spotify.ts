@@ -32,7 +32,7 @@ export async function getAllPlaylistTracks(
   accessToken: string,
   playlistId: string
 ): Promise<string[]> {
-  let allTrackUris: string[] = [];
+  const allTrackUris: string[] = [];
   // Hacemos la petición inicial más ligera pidiendo solo los campos que necesitamos.
   let nextUrl: string | null = `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?fields=items(track(uri)),next&limit=100`;
   

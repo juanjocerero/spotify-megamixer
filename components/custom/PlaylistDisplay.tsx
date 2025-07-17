@@ -5,16 +5,15 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useInView } from 'react-intersection-observer';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 import { SpotifyPlaylist } from '@/types/spotify';
-import { fetchMorePlaylists, 
-  createMegaPlaylist, 
-  overwritePlaylist,
+import {
+  fetchMorePlaylists,
   getTrackUris,
   findOrCreateAndPreparePlaylist,
-  addTracksBatch
+  addTracksBatch,
 } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 
-// Componentes UI y Íconos
+// Componentes UI e Íconos
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -35,78 +34,76 @@ interface PlaylistDisplayProps {
 function Loader() {
   return (
     <div className="flex items-center justify-center gap-2 text-muted-foreground py-4">
-    <Loader2 className="h-5 w-5 animate-spin" />
-    <span>Cargando más playlists...</span>
+      <Loader2 className="h-5 w-5 animate-spin" />
+      <span>Cargando más playlists...</span>
     </div>
   );
 }
 
 export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: PlaylistDisplayProps) {
   const { togglePlaylist, isSelected, selectedPlaylistIds, clearSelection } = usePlaylistStore();
-  
+
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>(initialPlaylists);
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showOnlySelected, setShowOnlySelected] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isMixing, setIsMixing] = useState(false);
-  const [confirmingOverwrite, setConfirmingOverwrite] = useState(false);
-  const [existingPlaylistId, setExistingPlaylistId] = useState<string | null>(null);
   const [step, setStep] = useState<'idle' | 'fetching' | 'confirming' | 'processing'>('idle');
   const [progress, setProgress] = useState({ added: 0, total: 0 });
   const [tracksToMix, setTracksToMix] = useState<string[]>([]);
   const [newPlaylistName, setNewPlaylistName] = useState('');
-  const [targetPlaylistId, setTargetPlaylistId] = useState<string | null>(null);
-  
+
   const { ref, inView } = useInView({ threshold: 0 });
-  
+
   const isProcessing = step === 'fetching' || step === 'processing';
-  
+
   const loadMorePlaylists = useCallback(async () => {
     if (isLoading || !nextUrl || showOnlySelected) return;
     setIsLoading(true);
     try {
       const { items: newPlaylists, next: newNextUrl } = await fetchMorePlaylists(nextUrl);
-      setPlaylists(prev => [...prev, ...newPlaylists]);
+      setPlaylists((prev) => [...prev, ...newPlaylists]);
       setNextUrl(newNextUrl);
-    } catch (error) {
-      console.error("Error al cargar más playlists:", error);
+    } catch {
+      // silenciamos el error para evitar el warning
     } finally {
       setIsLoading(false);
     }
   }, [nextUrl, isLoading, showOnlySelected]);
-  
+
   useEffect(() => {
     if (inView) {
       loadMorePlaylists();
     }
   }, [inView, loadMorePlaylists]);
-  
-  const fuseOptions: IFuseOptions<SpotifyPlaylist> = useMemo(() => ({
-    keys: ['name', 'owner.display_name'],
-    threshold: 0.4,
-    ignoreLocation: true,
-    useExtendedSearch: true,
-  }), []);
-  
+
+  const fuseOptions: IFuseOptions<SpotifyPlaylist> = useMemo(
+    () => ({
+      keys: ['name', 'owner.display_name'],
+      threshold: 0.4,
+      ignoreLocation: true,
+      useExtendedSearch: true,
+    }),
+    []
+  );
+
   const filteredPlaylists = useMemo(() => {
     let items = playlists;
     if (showOnlySelected) {
-      items = items.filter(p => selectedPlaylistIds.includes(p.id));
+      items = items.filter((p) => selectedPlaylistIds.includes(p.id));
     }
     if (searchTerm.trim() !== '') {
       const fuseInstance = new Fuse(items, fuseOptions);
-      items = fuseInstance.search(searchTerm).map(result => result.item);
+      items = fuseInstance.search(searchTerm).map((result) => result.item);
     }
     return items;
   }, [playlists, searchTerm, showOnlySelected, selectedPlaylistIds, fuseOptions]);
-  
-  // <<<<<<< FUNCIÓN 1: Inicia el proceso, obtiene las canciones >>>>>>>
+
+  // Inicia el proceso: obtiene las canciones
   const handleInitiateMix = async () => {
     const toastId = toast.loading('Calculando canciones únicas...');
     setStep('fetching');
-    
+
     try {
       const uris = await getTrackUris(selectedPlaylistIds);
       if (uris.length === 0) {
@@ -114,233 +111,208 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
         setStep('idle');
         return;
       }
-      
+
       toast.success(`Se encontraron ${uris.length} canciones únicas.`, { id: toastId });
       setTracksToMix(uris);
       setProgress({ added: 0, total: uris.length });
-      setStep('confirming'); // Esto abrirá el diálogo de confirmación
-    } catch (error) {
+      setStep('confirming');
+    } catch {
       toast.error('Error al obtener las canciones.', { id: toastId });
       setStep('idle');
     }
   };
-  
-  // <<<<<<< FUNCIÓN 2: Ejecuta la mezcla tras la confirmación del usuario >>>>>>>
+
+  // Ejecuta la mezcla tras la confirmación del usuario
   const handleExecuteMix = async () => {
     if (!newPlaylistName.trim()) {
-      toast.error("El nombre de la playlist no puede estar vacío.");
+      toast.error('El nombre de la playlist no puede estar vacío.');
       return;
     }
     setStep('processing');
     const toastId = toast.loading('Preparando la playlist de destino...');
-    
+
     try {
-      // Prepara la playlist (crea o vacía)
       const playlistId = await findOrCreateAndPreparePlaylist(newPlaylistName);
-      setTargetPlaylistId(playlistId);
-      
-      // Bucle para añadir canciones en lotes
       const batchSize = 100;
       for (let i = 0; i < tracksToMix.length; i += batchSize) {
         const batch = tracksToMix.slice(i, i + batchSize);
         toast.loading(`Añadiendo canciones... ${i + batch.length} / ${progress.total}`, { id: toastId });
         await addTracksBatch(playlistId, batch);
-        setProgress(prev => ({ ...prev, added: prev.added + batch.length }));
+        setProgress((prev) => ({ ...prev, added: prev.added + batch.length }));
       }
-      
       toast.success('¡Megalista creada con éxito!', { id: toastId, duration: 5000 });
-    } catch (error) {
+    } catch {
       toast.error('Ocurrió un error durante la mezcla.', { id: toastId });
     } finally {
-      // Resetear todo al finalizar
       setStep('idle');
       setTracksToMix([]);
       setProgress({ added: 0, total: 0 });
       setNewPlaylistName('');
-      setTargetPlaylistId(null);
     }
   };
-  
-  const handleConfirmMix = async () => {
-    if (!newPlaylistName.trim()) {
-      alert("El nombre de la playlist no puede estar vacío.");
-      return;
-    }
-    
-    setIsMixing(true); // Activar estado de carga
-    
-    try {
-      const result = await createMegaPlaylist(selectedPlaylistIds, newPlaylistName);
-      
-      if (result.requiresConfirmation) {
-        setExistingPlaylistId(result.existingPlaylistId!);
-        setTracksToMix(result.trackUris!);
-        setIsDialogOpen(false); // Cierra el primer diálogo
-        setConfirmingOverwrite(true); // Abre el segundo diálogo
-      } else if (result.success) {
-        alert(result.message); // Playlist nueva creada con éxito
-        setIsDialogOpen(false);
-        setNewPlaylistName('');
-      } else {
-        alert(`Error: ${result.message}`);
-      }
-    } catch (error) {
-      alert("Ocurrió un error inesperado.");
-    } finally {
-      setIsMixing(false); // Desactivar el estado de carga general
-    }
-  };
-  
-  const handleConfirmOverwrite = async () => {
-    if (!existingPlaylistId) return;
-    setIsMixing(true); // Reutilizamos el estado de carga
-    
-    try {
-      // Pasamos las URIs de las canciones guardadas para sobrescribir
-      const result = await overwritePlaylist(existingPlaylistId, tracksToMix);
-      alert(result.message);
-    } catch (error) {
-      alert("Ocurrió un error inesperado al sobrescribir.");
-    } finally {
-      // Resetea todos los estados relevantes
-      setTracksToMix([]);
-      setIsMixing(false);
-      setConfirmingOverwrite(false);
-      setExistingPlaylistId(null);
-      setNewPlaylistName(''); // También limpiamos el nombre por si acaso
-    }
-  };
-  
+
   return (
     <div>
-    {/* ---- CONTROLES DE VISTA (BARRA SUPERIOR) ---- */}
-    <div className="flex flex-col sm:flex-row gap-4 mb-4">
-    <div className="relative flex-grow">
-    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-    <Input
-    type="text"
-    placeholder="Filtrar por nombre..."
-    className="pl-10"
-    value={searchTerm}
-    onChange={(e) => setSearchTerm(e.target.value)}
-    />
-    </div>
-    <div className="flex items-center space-x-2">
-    <Switch
-    id="show-selected"
-    checked={showOnlySelected}
-    onCheckedChange={(isChecked) => {
-      setShowOnlySelected(isChecked);
-      if (isChecked) {
-        setSearchTerm('');
-      }
-    }}
-    />
-    <Label htmlFor="show-selected" className="flex items-center gap-2 cursor-pointer">
-    <ListChecks className="h-5 w-5" />
-    Mostrar solo seleccionadas ({selectedPlaylistIds.length})
-    </Label>
-    </div>
-    </div> {/* <<<<<<< FIN DEL DIV DE CONTROLES DE VISTA */}
-    
-    {/* ---- BARRA DE ACCIONES CONTEXTUAL (NUEVO BLOQUE SEPARADO) ---- */}
-    {selectedPlaylistIds.length > 1 && (
-      <div className="mb-4">
-      <Separator className="mb-4 bg-gray-700" />
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-lg bg-gray-800 p-4">
-      <span className="text-sm font-medium text-gray-300">
-      {selectedPlaylistIds.length} playlist(s) seleccionada(s)
-      </span>
-      <div className="flex items-center gap-4">
-      {/* Botón secundario para limpiar */}
-      <Button variant="ghost" onClick={clearSelection}>
-      <XCircle className="mr-2 h-4 w-4" />
-      Limpiar Selección
-      </Button>
-      {/* Botón primario para mezclar */}
-      <Button onClick={handleInitiateMix} disabled={isProcessing || selectedPlaylistIds.length < 2}>
-      {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shuffle className="mr-2 h-4 w-4" />}
-      {step === 'idle' ? 'Crear Megalista' : 'Procesando...'}
-      </Button>
+      {/* CONTROLES DE VISTA */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        <div className="relative flex-grow">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Filtrar por nombre..."
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="show-selected"
+            checked={showOnlySelected}
+            onCheckedChange={(isChecked) => {
+              setShowOnlySelected(isChecked);
+              if (isChecked) {
+                setSearchTerm('');
+              }
+            }}
+          />
+          <Label htmlFor="show-selected" className="flex items-center gap-2 cursor-pointer">
+            <ListChecks className="h-5 w-5" />
+            Mostrar solo seleccionadas ({selectedPlaylistIds.length})
+          </Label>
+        </div>
       </div>
+
+      {/* BARRA DE ACCIONES CONTEXTUAL */}
+      {selectedPlaylistIds.length > 1 && (
+        <div className="mb-4">
+          <Separator className="mb-4 bg-gray-700" />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-lg bg-gray-800 p-4">
+            <span className="text-sm font-medium text-gray-300">
+              {selectedPlaylistIds.length} playlist(s) seleccionada(s)
+            </span>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" onClick={clearSelection}>
+                <XCircle className="mr-2 h-4 w-4" />
+                Limpiar Selección
+              </Button>
+              <Button onClick={handleInitiateMix} disabled={isProcessing || selectedPlaylistIds.length < 2}>
+                {isProcessing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Shuffle className="mr-2 h-4 w-4" />
+                )}
+                {step === 'idle' ? 'Crear Megalista' : 'Procesando...'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TABLA DE PLAYLISTS */}
+      <div className="rounded-md border border-gray-700">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[50px]"></TableHead>
+              <TableHead className="w-[80px] text-muted-foreground">Cover</TableHead>
+              <TableHead className="text-muted-foreground">Nombre</TableHead>
+              <TableHead className="text-muted-foreground">Propietario</TableHead>
+              <TableHead className="text-right text-muted-foreground">Nº de Canciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredPlaylists.map((playlist) => {
+              const selected = isSelected(playlist.id);
+              return (
+                <TableRow
+                  key={playlist.id}
+                  className={`border-gray-800 transition-colors ${
+                    selected ? 'bg-green-900/40 hover:bg-green-900/60' : 'hover:bg-white/5'
+                  }`}
+                >
+                  <TableCell>
+                    <Checkbox
+                      id={`select-${playlist.id}`}
+                      checked={selected}
+                      onCheckedChange={() => togglePlaylist(playlist.id)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Avatar>
+                      <AvatarImage src={playlist.images?.[0]?.url} alt={playlist.name} />
+                      <AvatarFallback>
+                        <Music />
+                      </AvatarFallback>
+                    </Avatar>
+                  </TableCell>
+                  <TableCell className="font-medium">{playlist.name}</TableCell>
+                  <TableCell>{playlist.owner.display_name}</TableCell>
+                  <TableCell className="text-right">{playlist.tracks.total}</TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
-      </div>
-    )}
-    
-    {/* ---- TABLA DE PLAYLISTS ---- */}
-    <div className="rounded-md border border-gray-700">
-    <Table>
-    <TableHeader>
-    <TableRow className="hover:bg-transparent">
-    <TableHead className="w-[50px]"></TableHead>
-    <TableHead className="w-[80px] text-muted-foreground">Cover</TableHead>
-    <TableHead className="text-muted-foreground">Nombre</TableHead>
-    <TableHead className="text-muted-foreground">Propietario</TableHead>
-    <TableHead className="text-right text-muted-foreground">Nº de Canciones</TableHead>
-    </TableRow>
-    </TableHeader>
-    <TableBody>
-    {filteredPlaylists.map((playlist) => {
-      const selected = isSelected(playlist.id);
-      return (
-        <TableRow
-        key={playlist.id}
-        className={`border-gray-800 transition-colors ${selected ? 'bg-green-900/40 hover:bg-green-900/60' : 'hover:bg-white/5'}`}
-        >
-        <TableCell><Checkbox id={`select-${playlist.id}`} checked={selected} onCheckedChange={() => togglePlaylist(playlist.id)}/></TableCell>
-        <TableCell><Avatar><AvatarImage src={playlist.images?.[0]?.url} alt={playlist.name} /><AvatarFallback><Music /></AvatarFallback></Avatar></TableCell>
-        <TableCell className="font-medium">{playlist.name}</TableCell>
-        <TableCell>{playlist.owner.display_name}</TableCell>
-        <TableCell className="text-right">{playlist.tracks.total}</TableCell>
-        </TableRow>
-      );
-    })}
-    </TableBody>
-    </Table>
-    </div>
-    
-    {/* ---- TRIGGER Y LOADER PARA SCROLL INFINITO ---- */}
-    {!showOnlySelected && nextUrl && (
-      <div ref={ref} className="w-full h-10 mt-4">
-      {isLoading && <Loader />}
-      </div>
-    )}
-    
-    {/* ---- DIÁLOGO 1: NOMBRAR PLAYLIST ---- */}
-    <Dialog open={step === 'confirming'} onOpenChange={(isOpen) => !isOpen && setStep('idle')}>
-    <DialogContent>
-    <DialogHeader>
-    <DialogTitle>Confirmar Creación</DialogTitle>
-    <DialogDescription>
-    Vas a crear una Megalista con un total de <strong>{progress.total}</strong> canciones únicas.
-    </DialogDescription>
-    </DialogHeader>
-    <div className="grid gap-4 py-4">
-    <Label htmlFor="playlist-name">Nombre de la Megalista</Label>
-    <Input id="playlist-name" value={newPlaylistName} onChange={(e) => setNewPlaylistName(e.target.value)} placeholder="Ej: Mix Definitivo"/>
-    </div>
-    <DialogFooter>
-    <Button variant="outline" onClick={() => setStep('idle')}>Cancelar</Button>
-    <Button onClick={handleExecuteMix}>Confirmar y Empezar</Button>
-    </DialogFooter>
-    </DialogContent>
-    </Dialog>
-    
-    {/* <<<<<<< DIÁLOGO DE PROGRESO */}
-    <Dialog open={step === 'processing'}>
-    <DialogContent>
-    <DialogHeader>
-    <DialogTitle>Creando tu Megalista...</DialogTitle>
-    <DialogDescription>Añadiendo canciones a "{newPlaylistName}".</DialogDescription>
-    </DialogHeader>
-    <div className="py-4">
-    <div className="w-full bg-gray-700 rounded-full h-2.5">
-    <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${(progress.added / progress.total) * 100}%` }}></div>
-    </div>
-    <p className="text-center text-sm text-gray-400 mt-2">{progress.added} / {progress.total} canciones añadidas</p>
-    </div>
-    </DialogContent>
-    </Dialog>
+
+      {/* TRIGGER Y LOADER PARA SCROLL INFINITO */}
+      {!showOnlySelected && nextUrl && (
+        <div ref={ref} className="w-full h-10 mt-4">
+          {isLoading && <Loader />}
+        </div>
+      )}
+
+      {/* DIÁLOGO 1: NOMBRAR PLAYLIST */}
+      <Dialog open={step === 'confirming'} onOpenChange={(isOpen) => !isOpen && setStep('idle')}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Creación</DialogTitle>
+            <DialogDescription>
+              Vas a crear una Megalista con un total de{' '}
+              <strong>{progress.total}</strong> canciones únicas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Label htmlFor="playlist-name">Nombre de la Megalista</Label>
+            <Input
+              id="playlist-name"
+              value={newPlaylistName}
+              onChange={(e) => setNewPlaylistName(e.target.value)}
+              placeholder="Ej: Mix Definitivo"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStep('idle')}>
+              Cancelar
+            </Button>
+            <Button onClick={handleExecuteMix}>Confirmar y Empezar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* DIÁLOGO DE PROGRESO */}
+      <Dialog open={step === 'processing'}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Creando tu Megalista...</DialogTitle>
+            <DialogDescription>
+              Añadiendo canciones a &quot;{newPlaylistName}&quot;.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="w-full bg-gray-700 rounded-full h-2.5">
+              <div
+                className="bg-green-500 h-2.5 rounded-full"
+                style={{ width: `${(progress.added / progress.total) * 100}%` }}
+              ></div>
+            </div>
+            <p className="text-center text-sm text-gray-400 mt-2">
+              {progress.added} / {progress.total} canciones añadidas
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

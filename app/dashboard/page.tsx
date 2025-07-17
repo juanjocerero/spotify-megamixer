@@ -27,7 +27,7 @@ export default async function DashboardPage() {
   }
   
   const playlistsData = await getUserPlaylists(session.accessToken);
-  const playlists = playlistsData.items;
+  // const playlists = playlistsData.items;
   
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
