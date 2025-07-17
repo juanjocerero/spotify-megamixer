@@ -165,7 +165,7 @@ export async function fetchMorePlaylists(
     // --- Modificamos la URL para asegurarnos de que incluye los campos ---
     // Esto es crucial porque la URL 'next' de Spotify no hereda los parámetros 'fields'.
     const urlObject = new URL(url);
-    const fields = "items(id,name,description,owner(display_name),images,tracks(total)),next";
+    const fields = "items(id,name,description,images,owner,tracks(total)),next";
     
     // Usamos .set() para añadir o sobreescribir el parámetro de campos.
     urlObject.searchParams.set('fields', fields);
