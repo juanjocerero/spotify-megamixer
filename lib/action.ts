@@ -68,6 +68,11 @@ export async function findOrCreatePlaylist(
       return { playlist: existingPlaylist, exists: true };
     } else {
       const newPlaylist = await createNewPlaylist(accessToken, user.id, name, sourcePlaylistIds);
+      
+      if (!newPlaylist.owner) {
+        newPlaylist.owner = { display_name: session.user.name || 'Tú' };
+      }
+      
       return { playlist: newPlaylist, exists: false };
     }
   } catch (error) {
@@ -220,7 +225,6 @@ export async function unfollowPlaylist(playlistId: string): Promise<void> {
 * @returns Un objeto con el resultado de la sincronización.
 */
 export async function syncMegalist(playlistId: string) {
-  const toastId = `sync-${playlistId}`; // Identificador único para los toasts
   console.log(`[ACTION:syncMegalist] Iniciando sincronización para ${playlistId}`);
   
   try {

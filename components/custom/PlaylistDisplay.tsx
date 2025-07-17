@@ -294,25 +294,30 @@ export default function PlaylistDisplay({
         </Avatar>
         </TableCell>
         
-        <TableCell className="font-medium py-2 pl-4">
-        <div className="flex flex-col">
+        <TableCell className="font-medium py-2">
+        {/* El contenedor principal ahora es flex y alinea verticalmente */}
+        <div className="flex items-start gap-x-3">
+        {/* Contenedor para el texto (nombre y propietario) */}
+        <div className="flex-grow">
         <span className="truncate break-words">{playlist.name}</span>
         {/* El propietario se muestra debajo solo en pantallas pequeñas */}
         <span className="text-xs text-muted-foreground sm:hidden break-words">
         {playlist.owner.display_name}
         </span>
+        </div>
         
+        {/* Contenedor para el Badge */}
         {isMegalista && (
           <Badge variant="outline" className={cn(
-            "whitespace-nowrap w-fit", // w-fit para que no ocupe todo el ancho
+            "whitespace-nowrap shrink-0", // shrink-0 para que no se encoja
+            "mt-1 sm:mt-0", // Margen superior en móvil, reseteado en escritorio
             isSyncable 
-            ? "border-green-500 text-green-500" // Verde si es sincronizable
-            : "border-yellow-500 text-yellow-500"  // Amarillo si no lo es
+            ? "border-green-500 text-green-500"
+            : "border-yellow-500 text-yellow-500"
           )}>
           Megalista
           </Badge>
         )}
-        
         </div>
         </TableCell>
         

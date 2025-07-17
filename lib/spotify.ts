@@ -113,7 +113,10 @@ export function getSourcePlaylistIds(playlist: SpotifyPlaylist): string[] | null
 
 
 export async function getUserPlaylists(accessToken: string): Promise<PlaylistsApiResponse> {
-  const response = await fetch(`${SPOTIFY_API_BASE}/me/playlists?limit=50`, {
+  const fields = "items(id,name,description,owner(display_name),images,tracks(total)),next";
+  const url = `${SPOTIFY_API_BASE}/me/playlists?limit=50&fields=${encodeURIComponent(fields)}`;
+
+  const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
