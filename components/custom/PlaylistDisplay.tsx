@@ -1,7 +1,7 @@
 // /components/custom/PlaylistDisplay.tsx
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useInView } from 'react-intersection-observer';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 import { SpotifyPlaylist } from '@/types/spotify';
@@ -14,6 +14,7 @@ import {
   updateAndReorderPlaylist
 } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
+import { cn } from '@/lib/utils';
 
 // Componentes UI e Íconos
 import { toast } from 'sonner';
@@ -74,6 +75,8 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
   });
   const [addToDialog, setAddToDialog] = useState({ open: false });
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map());
   
   const { ref, inView } = useInView({ threshold: 0 });
   
@@ -129,6 +132,11 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     return items;
   }, [playlists, searchTerm, showOnlySelected, selectedPlaylistIds, fuseOptions]);
   
+  // Limpiar foco si el filtro cambia
+  useEffect(() => {
+    setFocusedIndex(null);
+  }, [searchTerm, showOnlySelected]);
+  
   const areAllFilteredSelected = useMemo(() => {
     if (searchTerm.trim() === '' || filteredPlaylists.length === 0) {
       return false; // No hay búsqueda o no hay resultados
@@ -143,6 +151,48 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     addMultipleToSelection(filteredIds);
     toast.info(`${filteredIds.length} playlists de la búsqueda han sido añadidas a la selección.`);
   };
+  
+  // Manejo de la navegación por teclado de la lista de playlists
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (filteredPlaylists.length === 0) return; // No hacer nada si no hay filas
+    
+    switch (event.key) {
+      case 'ArrowDown':
+      event.preventDefault();
+      const nextIndex = focusedIndex === null ? 0 : Math.min(focusedIndex + 1, filteredPlaylists.length - 1);
+      setFocusedIndex(nextIndex);
+      rowRefs.current.get(nextIndex)?.scrollIntoView({ block: 'nearest' });
+      break;
+      
+      case 'ArrowUp':
+      event.preventDefault();
+      const prevIndex = focusedIndex === null ? 0 : Math.max(focusedIndex - 1, 0);
+      setFocusedIndex(prevIndex);
+      rowRefs.current.get(prevIndex)?.scrollIntoView({ block: 'nearest' });
+      break;
+      
+      case ' ': // Barra espaciadora
+      if (focusedIndex !== null) {
+        event.preventDefault();
+        const focusedPlaylistId = filteredPlaylists[focusedIndex].id;
+        togglePlaylist(focusedPlaylistId);
+      }
+      break;
+      
+      case 'Escape':
+      event.preventDefault();
+      setFocusedIndex(null); // Quitar el foco
+      setSearchTerm(''); // Limpiar búsqueda para volver a la vista general
+      break;
+    }
+  }, [focusedIndex, filteredPlaylists, togglePlaylist]);
+  
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
   
   const handleInitiateMix = async () => {
     // Asegurarse de que cada nueva mezcla empiece de forma limpia.
@@ -553,19 +603,38 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       </TableRow>
       </TableHeader>
       <TableBody>
-      {filteredPlaylists.map((playlist) => {
+      {filteredPlaylists.map((playlist, index) => { // <-- Añadimos el 'index'
         const selected = isSelected(playlist.id);
+        const focused = index === focusedIndex;
+        
         return (
           <TableRow
           key={playlist.id}
-          className={`border-gray-800 transition-colors ${
-            selected ? 'bg-green-900/40 hover:bg-green-900/60' : 'hover:bg-white/5'
-          }`}
+          // Guardar la referencia del DOM para poder hacer scroll hacia ella
+          ref={(node) => {
+            if (node) rowRefs.current.set(index, node);
+            else rowRefs.current.delete(index);
+          }}
+          // Añadir el manejador onClick a toda la fila
+          onClick={() => togglePlaylist(playlist.id)}
+          // Añadir clases dinámicas para selección, foco y cursor
+          className={cn(
+            'border-gray-800 transition-colors cursor-pointer',
+            {
+              'bg-green-900/40 hover:bg-green-900/60': selected,
+              'hover:bg-white/5': !selected,
+              // Estilo de foco: un anillo de color visible que no interfiere con el fondo
+              'outline outline-2 outline-offset-[-2px] outline-blue-500': focused,
+            }
+          )}
           >
           <TableCell>
           <Checkbox
           id={`select-${playlist.id}`}
           checked={selected}
+          // Detener la propagación del evento para evitar el doble disparo
+          onClick={(e) => e.stopPropagation()}
+          // El onCheckedChange sigue funcionando para accesibilidad y clics directos
           onCheckedChange={() => togglePlaylist(playlist.id)}
           />
           </TableCell>
