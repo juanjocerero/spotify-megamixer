@@ -355,9 +355,9 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     
     try {
       const { finalCount } = await updateAndReorderPlaylist(playlistId, tracksToMix);
-
+      
       updatePlaylistInCache(playlistId, finalCount);
-
+      
       toast.success(`¡Playlist actualizada con éxito! Ahora tiene ${finalCount} canciones.`, { id: toastId });
       // Actualizamos el progreso para reflejar el estado final
       setProgress({ added: finalCount, total: finalCount });
@@ -451,7 +451,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     }
     if (selectedPlaylistIds.length !== 1) return;
     
-    const sourcePlaylistId = selectedPlaylistIds[0];
+    const sourcePlaylistIds = selectedPlaylistIds;
     const targetPlaylistId = selectedTargetId;
     
     setAddToDialog({ open: false }); // Cierra el diálogo de selección
@@ -460,7 +460,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     const toastId = toast.loading('Obteniendo canciones de la playlist de origen...');
     
     try {
-      const trackUris = await getTrackUris([sourcePlaylistId]);
+      const trackUris = await getTrackUris(sourcePlaylistIds);
       
       // Reseteamos el estado de progreso con los datos de ESTA operación.
       setProgress({ added: 0, total: trackUris.length });
@@ -498,7 +498,6 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
   return (
     <div>
     {/* CONTROLES DE VISTA */}
-    {/* 4. MODIFICAR LA SECCIÓN DE CONTROLES DE VISTA */}
     <div className="flex flex-col sm:flex-row gap-4 mb-4">
     <div className="relative flex-grow">
     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
@@ -553,9 +552,9 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
         : `${selectedPlaylistIds.length} playlist(s) seleccionada(s)`}
         </span>
         
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
         {isResumable ? (
-          // --- Escenario 1: Reanudar una mezcla fallida ---
+          // --- Escenario 1: Reanudar mezcla (sin cambios) ---
           <>
           <Button variant="ghost" onClick={handleCancelResume}>
           <XCircle className="mr-2 h-4 w-4" />
@@ -566,28 +565,24 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
           {step === 'idle' ? 'Reanudar Mezcla' : 'Procesando...'}
           </Button>
           </>
-        ) : selectedPlaylistIds.length === 1 ? (
-          // --- NUEVO Escenario 2: Una sola playlist seleccionada ---
+        ) : (
+          // --- Escenario 2: Lógica unificada para selección (1 o más playlists) ---
           <>
           <Button variant="ghost" onClick={clearSelection}>
           <XCircle className="mr-2 h-4 w-4" />
           Limpiar Selección
           </Button>
-          <Button onClick={handleInitiateAddToExisting} disabled={isProcessing}>
+          {/* Botón "Añadir a..." - Siempre visible si hay selección */}
+          <Button variant="outline" onClick={handleInitiateAddToExisting} disabled={isProcessing}>
           Añadir a Megalista...
           </Button>
-          </>
-        ) : (
-          // --- Escenario 3: Múltiples playlists seleccionadas ---
-          <>
-          <Button variant="ghost" onClick={clearSelection}>
-          <XCircle className="mr-2 h-4 w-4" />
-          Limpiar Selección
-          </Button>
-          <Button onClick={handleInitiateMix} disabled={isProcessing || selectedPlaylistIds.length < 2}>
-          {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shuffle className="mr-2 h-4 w-4" />}
-          {step === 'idle' ? 'Crear Megalista' : 'Procesando...'}
-          </Button>
+          {/* Botón "Crear" - Visible solo si hay 2 o más playlists seleccionadas */}
+          {selectedPlaylistIds.length >= 2 && (
+            <Button onClick={handleInitiateMix} disabled={isProcessing}>
+            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Shuffle className="mr-2 h-4 w-4" />}
+            {step === 'idle' ? 'Crear Megalista' : 'Procesando...'}
+            </Button>
+          )}
           </>
         )}
         </div>
@@ -755,12 +750,11 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       <DialogHeader>
       <DialogTitle>Añadir a Megalista Existente</DialogTitle>
       <DialogDescription>
-      Selecciona una de tus Megalistas para añadirle las canciones de la playlist seleccionada. Las canciones duplicadas se omitirán y el orden final será aleatorio.
+      Selecciona una de tus Megalistas para añadirle las canciones de la(s) playlist(s) seleccionada(s). Las canciones duplicadas se omitirán y el orden final será aleatorio.
       </DialogDescription>
       </DialogHeader>
       <div className="grid gap-4 py-4">
       <Label htmlFor="megalista-target">Megalista de Destino</Label>
-      {/* Importa Select, SelectTrigger, etc. desde @/components/ui/select si no lo has hecho ya */}
       <Select onValueChange={(value: string) => setSelectedTargetId(value)}>
       <SelectTrigger id="megalista-target">
       <SelectValue placeholder="Elige una playlist..." />
