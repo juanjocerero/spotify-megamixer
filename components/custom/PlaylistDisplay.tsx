@@ -228,9 +228,15 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       
       toast.success('¡Megalista completada con éxito!', { id: toastId, duration: 5000 });
       setIsResumable(false); // Desactivamos el modo reanudar al terminar.
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[UI_ERROR:handleResumeMix] Error durante la reanudación:', error);
-      toast.error(error.message || 'Falló la reanudación. Puedes intentarlo de nuevo.', { id: toastId });
+
+      let errorMessage = 'Falló la reanudación. Puedes intentarlo de nuevo.';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      toast.error(errorMessage, { id: toastId });
       // Mantenemos isResumable = true para permitir otro intento.
     } finally {
       setStep('idle');
