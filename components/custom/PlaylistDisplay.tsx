@@ -8,8 +8,10 @@ import { SpotifyPlaylist } from '@/types/spotify';
 import {
   fetchMorePlaylists,
   getTrackUris,
-  findOrCreateAndPreparePlaylist,
-  addTracksBatch,
+  findOrCreatePlaylist,
+  addTracksBatch, 
+  clearPlaylist, 
+  updateAndReorderPlaylist
 } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 
@@ -59,6 +61,11 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     const [newPlaylistName, setNewPlaylistName] = useState('');
     const [isResumable, setIsResumable] = useState(false);
     const [playlistIdForResume, setPlaylistIdForResume] = useState<string | null>(null);
+    const [overwriteDialog, setOverwriteDialog] = useState({
+      open: false,
+      playlistId: '',
+      playlistName: '',
+    });
     
     const { ref, inView } = useInView({ threshold: 0 });
     
@@ -165,7 +172,19 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       let playlistId: string | null = null;
       
       try {
-        playlistId = await findOrCreateAndPreparePlaylist(newPlaylistName);
+        const { playlistId, exists } = await findOrCreatePlaylist(newPlaylistName);
+        
+        if (exists) {
+          setStep('idle');
+          toast.dismiss(toastId);
+          setOverwriteDialog({
+            open: true,
+            playlistId: playlistId, // Ahora playlistId es un string
+            playlistName: newPlaylistName,
+          });
+          return;
+        }
+        
         // Guardamos el ID de la playlist en el estado inmediatamente.
         setPlaylistIdForResume(playlistId);
         toast.loading('Playlist preparada, iniciando adición de canciones...', { id: toastId });
@@ -204,6 +223,59 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
           setNewPlaylistName('');
           setProgress({ added: 0, total: 0 });
         }
+        setStep('idle');
+      }
+    };
+    
+    // Manejador para la opción "Reemplazar por completo"
+    const handleConfirmReplace = async () => {
+      const { playlistId } = overwriteDialog;
+      setOverwriteDialog({ ...overwriteDialog, open: false }); // Cierra el diálogo
+      setStep('processing'); // Muestra el diálogo de progreso
+      
+      const toastId = toast.loading(`Vaciando "${overwriteDialog.playlistName}"...`);
+      
+      try {
+        await clearPlaylist(playlistId);
+        toast.loading(`Añadiendo ${tracksToMix.length} canciones...`, { id: toastId });
+        
+        // Reutilizamos el bucle de añadir por lotes
+        const batchSize = 100;
+        for (let i = 0; i < tracksToMix.length; i += batchSize) {
+          const batch = tracksToMix.slice(i, i + batchSize);
+          await addTracksBatch(playlistId, batch);
+          setProgress((prev) => ({ ...prev, added: prev.added + batch.length }));
+        }
+        
+        toast.success('¡Playlist reemplazada con éxito!', { id: toastId });
+      } catch (error: unknown) {
+        console.error('[UI_ERROR:handleConfirmReplace]', error);
+        const message = error instanceof Error ? error.message : 'Error al reemplazar la playlist.';
+        toast.error(message, { id: toastId });
+      } finally {
+        setStep('idle');
+        // Aquí podrías decidir si limpiar el estado o no
+      }
+    };
+    
+    // NUEVO: Manejador para la opción "Actualizar y Reordenar"
+    const handleConfirmUpdate = async () => {
+      const { playlistId } = overwriteDialog;
+      setOverwriteDialog({ ...overwriteDialog, open: false });
+      setStep('processing');
+      
+      const toastId = toast.loading(`Actualizando "${overwriteDialog.playlistName}"...`);
+      
+      try {
+        const { finalCount } = await updateAndReorderPlaylist(playlistId, tracksToMix);
+        toast.success(`¡Playlist actualizada con éxito! Ahora tiene ${finalCount} canciones.`, { id: toastId });
+        // Actualizamos el progreso para reflejar el estado final
+        setProgress({ added: finalCount, total: finalCount });
+      } catch (error: unknown) {
+        console.error('[UI_ERROR:handleConfirmUpdate]', error);
+        const message = error instanceof Error ? error.message : 'Error al actualizar la playlist.';
+        toast.error(message, { id: toastId });
+      } finally {
         setStep('idle');
       }
     };
@@ -451,6 +523,36 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
         {progress.added} / {progress.total} canciones añadidas
         </p>
         </div>
+        </DialogContent>
+        </Dialog>
+        
+        {/* DIÁLOGO NUEVO: REEMPLAZAR O ACTUALIZAR */}
+        <Dialog open={overwriteDialog.open} onOpenChange={(isOpen) => !isOpen && setOverwriteDialog({ ...overwriteDialog, open: false })}>
+        <DialogContent>
+        <DialogHeader>
+        <DialogTitle>Playlist Existente</DialogTitle>
+        <DialogDescription>
+        La playlist llamada "{overwriteDialog.playlistName}" ya existe. ¿Qué te gustaría hacer?
+        </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+        <p className="text-sm text-muted-foreground">
+        Vas a mezclar <strong>{tracksToMix.length}</strong> canciones de tu selección.
+        </p>
+        </div>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <Button variant="outline" onClick={() => setOverwriteDialog({ ...overwriteDialog, open: false })}>
+        Cancelar
+        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+        <Button variant="destructive" onClick={handleConfirmReplace}>
+        Reemplazar por Completo
+        </Button>
+        <Button onClick={handleConfirmUpdate}>
+        Actualizar y Reordenar
+        </Button>
+        </div>
+        </DialogFooter>
         </DialogContent>
         </Dialog>
         </div>

@@ -248,3 +248,31 @@ export async function addTracksToPlaylist(
     );
   }
 }
+
+/**
+* Reemplaza todas las canciones de una playlist con un nuevo conjunto de URIs.
+* Esta función primero vacía la playlist y luego añade las nuevas canciones en lotes.
+* @param accessToken - El token de acceso del usuario.
+* @param playlistId - El ID de la playlist a modificar.
+* @param trackUris - El array completo de las nuevas URIs para la playlist.
+*/
+export async function replacePlaylistTracks(
+  accessToken: string,
+  playlistId: string,
+  trackUris: string[]
+): Promise<void> {
+  // Paso 1: Vaciar la playlist por completo.
+  // La API de Spotify lo hace con una petición PUT y un array de URIs vacío.
+  await clearPlaylistTracks(accessToken, playlistId);
+  
+  // Si no hay nuevas canciones que añadir, nuestro trabajo ha terminado.
+  if (trackUris.length === 0) {
+    console.log(`[SPOTIFY_API] Playlist ${playlistId} vaciada y no hay nuevas canciones que añadir.`);
+    return;
+  }
+  
+  // Paso 2: Añadir las nuevas canciones.
+  // Reutilizamos la lógica de 'addTracksToPlaylist' que ya es resiliente al rate-limiting.
+  console.log(`[SPOTIFY_API] Playlist ${playlistId} vaciada. Añadiendo ${trackUris.length} nuevas canciones...`);
+  await addTracksToPlaylist(accessToken, playlistId, trackUris);
+}

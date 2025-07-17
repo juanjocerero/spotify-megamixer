@@ -8,7 +8,8 @@ import {
   findUserPlaylistByName, 
   createNewPlaylist, 
   clearPlaylistTracks,
-  addTracksToPlaylist
+  addTracksToPlaylist, 
+  replacePlaylistTracks
 } from './spotify';
 import { shuffleArray } from './utils';
 
@@ -18,7 +19,7 @@ interface PlaylistsApiResponse {
 }
 
 /**
-* ACCIÓN 1: Obtiene y prepara las URIs de las canciones.
+* Obtiene y prepara las URIs de las canciones.
 */
 export async function getTrackUris(playlistIds: string[]) {
   // Bloque try...catch para logging detallado
@@ -44,10 +45,13 @@ export async function getTrackUris(playlistIds: string[]) {
 }
 
 /**
-* ACCIÓN 2: Encuentra o crea la playlist de destino y la prepara (limpiándola si existe).
+* Encuentra o crea la playlist de destino y la prepara.
+* Ahora detecta si la playlist existe sin modificarla.
+* @returns Un objeto con el ID de la playlist y un booleano 'exists'.
 */
-export async function findOrCreateAndPreparePlaylist(name: string) {
-  // Bloque try...catch para logging detallado
+export async function findOrCreatePlaylist(
+  name: string
+): Promise<{ playlistId: string; exists: boolean }> {
   try {
     const session = await auth();
     if (!session?.accessToken || !session.user?.id) {
@@ -58,21 +62,20 @@ export async function findOrCreateAndPreparePlaylist(name: string) {
     const existingPlaylist = await findUserPlaylistByName(accessToken, name);
     
     if (existingPlaylist) {
-      await clearPlaylistTracks(accessToken, existingPlaylist.id);
-      return existingPlaylist.id;
+      return { playlistId: existingPlaylist.id, exists: true };
     } else {
       const newPlaylist = await createNewPlaylist(accessToken, user.id, name);
-      return newPlaylist.id;
+      return { playlistId: newPlaylist.id, exists: false };
     }
   } catch (error) {
-    console.error('[ACTION_ERROR:findOrCreateAndPreparePlaylist] Fallo al preparar la playlist.', error);
+    console.error('[ACTION_ERROR:findOrCreatePlaylist] Fallo al buscar o crear la playlist.', error);
     throw error;
   }
 }
 
 
 /**
-* ACCIÓN 3: Añade un lote de canciones a una playlist.
+* Añade un lote de canciones a una playlist.
 */
 export async function addTracksBatch(
   playlistId: string,
@@ -89,6 +92,55 @@ export async function addTracksBatch(
     await addTracksToPlaylist(accessToken, playlistId, trackUrisBatch);
   } catch (error) {
     console.error('[ACTION_ERROR:addTracksBatch] Fallo al añadir un lote de canciones.', error);
+    throw error;
+  }
+}
+
+/**
+* Acción para actualizar una playlist con nuevas canciones y reordenarla.
+*/
+export async function updateAndReorderPlaylist(
+  playlistId: string,
+  newTrackUris: string[]
+) {
+  try {
+    const session = await auth();
+    if (!session?.accessToken) {
+      throw new Error('No autenticado o token no disponible.');
+    }
+    const { accessToken } = session;
+    
+    // 1. Obtener las canciones que ya están en la playlist
+    const existingTracks = await getAllPlaylistTracks(accessToken, playlistId);
+    
+    // 2. Combinar, eliminar duplicados y barajar
+    const combinedTracks = [...new Set([...existingTracks, ...newTrackUris])];
+    const shuffledTracks = shuffleArray(combinedTracks);
+    
+    // 3. Reemplazar el contenido de la playlist con el nuevo conjunto
+    await replacePlaylistTracks(accessToken, playlistId, shuffledTracks);
+    
+    return { finalCount: shuffledTracks.length };
+    
+  } catch (error) {
+    console.error(`[ACTION_ERROR:updateAndReorderPlaylist] Fallo al actualizar la playlist ${playlistId}.`, error);
+    throw error;
+  }
+}
+
+
+/**
+* Acción para vaciar una playlist.
+*/
+export async function clearPlaylist(playlistId: string) {
+  try {
+    const session = await auth();
+    if (!session?.accessToken) {
+      throw new Error('No autenticado o token no disponible.');
+    }
+    await clearPlaylistTracks(session.accessToken, playlistId);
+  } catch (error) {
+    console.error(`[ACTION_ERROR:clearPlaylist] Fallo al vaciar la playlist ${playlistId}.`, error);
     throw error;
   }
 }
