@@ -144,13 +144,14 @@ export async function createNewPlaylist(
     },
     body: JSON.stringify({
       name: name,
-      description: `Megalista generada por Spotify Megamixer el ${new Date().toLocaleDateString()}`,
+      // Añadimos un identificador único en la descripción para poder identificarla después como propia
+      description: `Megalista generada por Spotify Megamixer el ${new Date().toLocaleDateString()}. <!-- MEGAMIXER_APP_V1 -->`,
       public: false, // Las creamos como privadas por defecto
     }),
   });
   
   if (!response.ok) {
-    throw new Error("Fallo al crear la nueva playlist.");
+    throw new Error('Fallo al crear la nueva playlist.');
   }
   return response.json();
 }

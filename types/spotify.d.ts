@@ -11,6 +11,7 @@ export interface SpotifyPlaylist {
   owner: {
     display_name: string;
   };
+  description?: string;
   // Podemos añadir más campos de la API de Spotify aquí si los necesitamos
 }
 
