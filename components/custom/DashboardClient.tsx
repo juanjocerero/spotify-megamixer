@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Search, ListChecks } from 'lucide-react';
+import { Search, ListChecks, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Definimos las props que recibirá este componente desde la página del servidor
@@ -67,24 +67,45 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     type="text"
     placeholder="Filtrar por nombre..."
     // Padding a la derecha para que el texto no quede debajo del botón
-    className="pl-10 pr-32 text-base"
+    className="pl-10 pr-[160px] text-base"
     value={searchTerm}
     onChange={(e) => setSearchTerm(e.target.value)}
     />
     
-    {/* Renderizado condicional del botón de añadir resultados de búsqueda */}
+    {/* Contenedor para los botones de añadir toda la selección y borrar la búsqueda */}
+    <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-1">
+    
+    {/* El nuevo botón de limpiar, visible solo si hay texto */}
+    {searchTerm.trim() !== '' && (
+      <Button
+      variant="ghost"
+      size="icon"
+      className="h-7 w-7 rounded-full"
+      onClick={() => setSearchTerm('')}
+      >
+      <XCircle className="h-5 w-5 text-muted-foreground" />
+      </Button>
+    )}
+    
+    {/* El botón existente de "Seleccionar Todos" */}
     {searchTerm.trim() !== '' && filteredIds.length > 0 && (
+      <>
+      {/* Separador visual */}
+      <div className="mx-1 h-6 w-px bg-gray-600"></div>
       <Button
       variant="ghost"
       size="sm"
-      className="absolute right-1 top-1/2 -translate-y-1/2 h-8"
+      className="h-8"
       onClick={handleSelectAllFiltered}
       disabled={areAllFilteredSelected}
       >
       <ListChecks className="mr-2 h-4 w-4" />
       {areAllFilteredSelected ? 'Seleccionado' : 'Seleccionar'}
       </Button>
+      </>
     )}
+    </div>
+    </div>
     
     </div>
     <div className="flex items-center space-x-2 pt-4">
@@ -100,7 +121,6 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     <ListChecks className="h-5 w-5" />
     Mostrar solo seleccionadas
     </Label>
-    </div>
     </div>
     
     {/* Contenido principal */}
