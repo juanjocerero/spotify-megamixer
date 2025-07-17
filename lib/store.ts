@@ -15,6 +15,7 @@ interface PlaylistStore {
   setPlaylistCache: (playlists: SpotifyPlaylist[]) => void;
   addMoreToCache: (playlists: SpotifyPlaylist[]) => void;
   addPlaylistToCache: (playlist: SpotifyPlaylist) => void;
+  updatePlaylistInCache: (playlistId: string, newTrackCount: number) => void;
 }
 
 export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
@@ -35,15 +36,15 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   isSelected: (id: string) => {
     return get().selectedPlaylistIds.includes(id);
   },
-
+  
   clearSelection: () => {
     set({ selectedPlaylistIds: [] });
   },
-
+  
   // Lógica de la caché ---
   playlistCache: [],
   megamixCache: [],
-
+  
   // Acción para inicializar la caché
   setPlaylistCache: (playlists) => {
     // Filtramos las megalistas basándonos en nuestra "firma"
@@ -52,7 +53,7 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
     );
     set({ playlistCache: playlists, megamixCache: megamixes });
   },
-
+  
   // Acción para añadir más playlists a la caché (scroll infinito)
   addMoreToCache: (playlists) => {
     const newCache = [...get().playlistCache, ...playlists];
@@ -61,16 +62,30 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
     );
     set({ playlistCache: newCache, megamixCache: newMegamixes });
   },
-
+  
   addPlaylistToCache: (playlist) => {
     const existingCache = get().playlistCache;
     // Evitamos añadir duplicados si por alguna razón ya estuviera
     if (existingCache.some(p => p.id === playlist.id)) return;
-
+    
     const newCache = [playlist, ...existingCache]; // La añadimos al principio
     const newMegamixes = newCache.filter(
       (p) => p.description?.includes('<!-- MEGAMIXER_APP_V1 -->')
     );
     set({ playlistCache: newCache, megamixCache: newMegamixes });
-  }
+  },
+  
+  // Implementación de la acción de actualización
+  updatePlaylistInCache: (playlistId, newTrackCount) => {
+    const update = (p: SpotifyPlaylist) => 
+      p.id === playlistId 
+    ? { ...p, tracks: { ...p.tracks, total: newTrackCount } } 
+    : p;
+    
+    set((state) => ({
+      playlistCache: state.playlistCache.map(update),
+      megamixCache: state.megamixCache.map(update),
+    }));
+  },
+
 }));

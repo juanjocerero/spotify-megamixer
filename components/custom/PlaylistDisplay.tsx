@@ -51,7 +51,8 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     setPlaylistCache, 
     addMoreToCache, 
     megamixCache, 
-    addPlaylistToCache
+    addPlaylistToCache, 
+    updatePlaylistInCache
   } = usePlaylistStore();
   
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>(initialPlaylists);
@@ -209,8 +210,13 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       }
       
       toast.success('¡Megalista creada con éxito!', { id: toastId, duration: 5000 });
+      
+      // Ahora que la playlist está llena, actualizamos su contador en la caché.
+      updatePlaylistInCache(playlist.id, tracksToMix.length);
+      
       // Si todo va bien, nos aseguramos de desactivar el modo reanudación.
       setIsResumable(false);
+      
     } catch (error: unknown) { // CAMBIO 2: Tipado correcto del error
       console.error('[UI_ERROR:handleExecuteMix] Ocurrió un error durante la mezcla:', error);
       
@@ -382,6 +388,11 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     try {
       const trackUris = await getTrackUris([sourcePlaylistId]);
       
+      // Reseteamos el estado de progreso con los datos de ESTA operación.
+      setProgress({ added: 0, total: trackUris.length });
+      // Ahora el diálogo de progreso que se abra a continuación tendrá los datos correctos.
+      setStep('processing');
+      
       if (trackUris.length === 0) {
         toast.info('La playlist de origen no tiene canciones para añadir.', { id: toastId });
         setStep('idle');
@@ -391,6 +402,9 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       toast.loading('Actualizando la Megalista de destino...', { id: toastId });
       
       const { finalCount } = await updateAndReorderPlaylist(targetPlaylistId, trackUris);
+      
+      // Actualizamos también el contador de la playlist de destino.
+      updatePlaylistInCache(targetPlaylistId, finalCount);
       
       toast.success(`¡Megalista actualizada con éxito!`, {
         id: toastId,
