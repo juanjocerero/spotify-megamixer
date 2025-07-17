@@ -1,7 +1,7 @@
 // /components/custom/FloatingActionBar.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { usePlaylistStore } from '@/lib/store';
 
 // Lógica de acciones del backend
@@ -11,6 +11,7 @@ import {
   addTracksBatch,
   clearPlaylist,
   updateAndReorderPlaylist,
+  syncMegalist
 } from '@/lib/action';
 
 // Componentes UI de Shadcn
@@ -21,7 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectItem, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, Music, Shuffle, XCircle, PlusSquare, ListPlus } from 'lucide-react';
+import { Loader2, Shuffle, XCircle, PlusSquare, ListPlus, RefreshCw } from 'lucide-react';
 
 export default function FloatingActionBar() {
   
@@ -47,8 +48,16 @@ export default function FloatingActionBar() {
   });
   const [addToDialog, setAddToDialog] = useState({ open: false });
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
   
-  const isProcessing = step === 'fetching' || step === 'processing';
+  const isProcessing = step === 'fetching' || step === 'processing' || isSyncingAll;
+  
+  // Memoizamos el cálculo para saber si hay algo que sincronizar
+  const syncableMegalists = useMemo(
+    () => megamixCache.filter(p => p.isSyncable),
+    [megamixCache]
+  );
+  const hasSyncableMegalists = syncableMegalists.length > 0;
   
   const handleInitiateMix = async () => {
     // Asegurarse de que cada nueva mezcla empiece de forma limpia.
@@ -367,6 +376,51 @@ export default function FloatingActionBar() {
     }
   };
   
+  // Sincronizar todas las megalistas
+  const handleSyncAll = async () => {
+    if (syncableMegalists.length === 0) {
+      toast.info("No se encontraron Megalistas para sincronizar.");
+      return;
+    }
+    
+    setIsSyncingAll(true);
+    const toastId = toast.loading(`Sincronizando ${syncableMegalists.length} Megalista(s)...`);
+    
+    // Creamos un array de promesas para cada sincronización
+    const syncPromises = syncableMegalists.map(p => syncMegalist(p.id));
+    
+    // Usamos Promise.allSettled para que no se detenga si una falla
+    const results = await Promise.allSettled(syncPromises);
+    
+    let successCount = 0;
+    let failureCount = 0;
+    
+    // Procesamos los resultados
+    results.forEach((result, index) => {
+      const playlistName = syncableMegalists[index].name;
+      if (result.status === 'fulfilled') {
+        successCount++;
+        // Si la sincronización tuvo éxito, actualizamos la caché con el nuevo total de canciones
+        const syncResult = result.value;
+        updatePlaylistInCache(syncableMegalists[index].id, syncResult.finalCount);
+      } else {
+        failureCount++;
+        console.error(`Fallo al sincronizar "${playlistName}":`, result.reason);
+      }
+    });
+    
+    // Mostramos un resumen al usuario
+    if (failureCount === 0) {
+      toast.success(`¡${successCount} Megalista(s) sincronizadas con éxito!`, { id: toastId, duration: 5000 });
+    } else if (successCount > 0) {
+      toast.warning(`${successCount} sincronizadas, ${failureCount} fallaron.`, { id: toastId, duration: 5000, description: "Revisa la consola para más detalles." });
+    } else {
+      toast.error("No se pudo sincronizar ninguna Megalista.", { id: toastId, duration: 5000, description: "Revisa la consola para más detalles." });
+    }
+    
+    setIsSyncingAll(false);
+  };
+  
   if (selectedPlaylistIds.length === 0 && !isResumable) {
     return null;
   }
@@ -395,6 +449,29 @@ export default function FloatingActionBar() {
       </>
     ) : (
       <>
+      {/* --- Botón de sincronizar todo --- */}
+      {hasSyncableMegalists && (
+        <>
+        <Tooltip>
+        <TooltipTrigger asChild>
+        <Button 
+        variant="outline" 
+        size="lg" 
+        onClick={handleSyncAll} 
+        disabled={isProcessing} 
+        className="flex h-16 w-16 flex-col items-center justify-center gap-1 p-1 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2"
+        >
+        {isSyncingAll ? <Loader2 className="h-5 w-5 sm:mr-2 animate-spin"/> : <RefreshCw className="h-5 w-5 sm:mr-2" />}
+        <span className="text-xs sm:text-sm">Sincronizar</span>
+        </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+        <p>Sincronizar {syncableMegalists.length} Megalista(s)</p>
+        </TooltipContent>
+        </Tooltip>
+        </>
+      )}
+      
       <Tooltip>
       <TooltipTrigger asChild>
       {/* --- Botón Limpiar --- */}
