@@ -324,7 +324,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
           <DialogHeader>
             <DialogTitle>Creando tu Megalista...</DialogTitle>
             <DialogDescription>
-              Añadiendo canciones a "{newPlaylistName}".
+              Añadiendo canciones a &quot;{newPlaylistName}&quot;.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
