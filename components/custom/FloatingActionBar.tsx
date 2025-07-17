@@ -374,14 +374,14 @@ export default function FloatingActionBar() {
   return (
     <>
     <TooltipProvider delayDuration={0}>
-    <div className="fixed bottom-0 left-0 right-0 z-20 flex h-20 items-center justify-center border-t border-gray-700 bg-gray-800/95 px-4 shadow-lg backdrop-blur-sm sm:h-24">
-    <div className="flex w-full max-w-4xl items-center justify-between">
+    <div className="fixed bottom-0 left-0 right-0 z-20 flex h-20 items-center justify-center border-t border-gray-700 bg-gray-800/95 px-4 shadow-lg backdrop-blur-sm sm:h-24">    <div className="flex w-full max-w-4xl items-center justify-between">
     <div className="hidden text-sm text-gray-300 sm:block">
     <p className="font-bold text-white">{selectedPlaylistIds.length} playlist(s)</p>
     <p>seleccionada(s)</p>
     </div>
     
-    <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end sm:gap-4">
+    {/* El div que contiene los botones */}
+    <div className="flex w-full items-center justify-between gap-1 sm:w-auto sm:justify-end sm:gap-2">
     {isResumable ? (
       <>
       <Button variant="ghost" onClick={handleCancelResume} className="h-12 w-12 flex-col gap-1 px-2 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2">
@@ -397,9 +397,11 @@ export default function FloatingActionBar() {
       <>
       <Tooltip>
       <TooltipTrigger asChild>
-      <Button variant="ghost" size="lg" onClick={clearSelection} className="p-2 sm:px-4 sm:py-2">
-      <XCircle className="h-6 w-6 sm:mr-2" />
-      <span className="hidden sm:inline">Limpiar</span>
+      {/* --- Botón Limpiar --- */}
+      <Button variant="ghost" size="lg" onClick={clearSelection} className="flex h-16 w-16 flex-col items-center justify-center gap-1 p-1 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2">
+      <XCircle className="h-5 w-5 sm:mr-2" />
+      {/* El texto ahora es siempre visible, con tamaño responsivo */}
+      <span className="text-xs sm:text-sm">Limpiar</span>
       </Button>
       </TooltipTrigger>
       <TooltipContent><p>Limpiar Selección</p></TooltipContent>
@@ -407,9 +409,10 @@ export default function FloatingActionBar() {
       
       <Tooltip>
       <TooltipTrigger asChild>
-      <Button variant="outline" size="lg" onClick={handleInitiateAddToExisting} disabled={isProcessing} className="p-2 sm:px-4 sm:py-2">
-      <ListPlus className="h-6 w-6 sm:mr-2" />
-      <span className="hidden sm:inline">Añadir a...</span>
+      {/* --- Botón Añadir a... --- */}
+      <Button variant="outline" size="lg" onClick={handleInitiateAddToExisting} disabled={isProcessing} className="flex h-16 w-16 flex-col items-center justify-center gap-1 p-1 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2">
+      <ListPlus className="h-5 w-5 sm:mr-2" />
+      <span className="text-xs sm:text-sm">Añadir</span>
       </Button>
       </TooltipTrigger>
       <TooltipContent><p>Añadir a Megalista Existente</p></TooltipContent>
@@ -418,9 +421,10 @@ export default function FloatingActionBar() {
       {selectedPlaylistIds.length >= 2 && (
         <Tooltip>
         <TooltipTrigger asChild>
-        <Button size="lg" onClick={handleInitiateMix} disabled={isProcessing} className="bg-green-600 p-2 hover:bg-green-700 sm:px-4 sm:py-2">
-        <PlusSquare className="h-6 w-6 sm:mr-2" />
-        <span className="hidden sm:inline">Crear Megalista</span>
+        {/* --- Botón Crear --- */}
+        <Button size="lg" onClick={handleInitiateMix} disabled={isProcessing} className="flex h-16 w-16 flex-col items-center justify-center gap-1 bg-green-600 p-1 hover:bg-green-700 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2">
+        <PlusSquare className="h-5 w-5 sm:mr-2" />
+        <span className="text-xs sm:text-sm">Crear</span>
         </Button>
         </TooltipTrigger>
         <TooltipContent><p>Crear Nueva Megalista</p></TooltipContent>
