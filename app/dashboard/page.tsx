@@ -3,7 +3,6 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getUserPlaylists } from '@/lib/spotify';
 import PlaylistDisplay from '@/components/custom/PlaylistDisplay';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import LogoutButton from '@/components/custom/LogoutButton';
 
 export default async function DashboardPage() {
@@ -39,17 +38,15 @@ export default async function DashboardPage() {
     <LogoutButton />
     </header>
     
-    <Card className="bg-gray-800 border-gray-700">
-    <CardHeader>
-    <CardTitle>Mis Playlists</CardTitle>
-    </CardHeader>
-    <CardContent>
+    {/* El componente PlaylistDisplay ahora está directamente en el layout. */}
+    {/* Se añade un padding superior para compensar el espacio del CardHeader eliminado. */}
+    <div className="pt-6">
     <PlaylistDisplay 
     initialPlaylists={playlistsData.items} 
     initialNextUrl={playlistsData.next}
     />
-    </CardContent>
-    </Card>
+    </div>
+    
     </div>
     </div>
   );
