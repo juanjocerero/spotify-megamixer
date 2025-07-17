@@ -259,7 +259,7 @@ export default function PlaylistDisplay({
         </Avatar>
         </TableCell>
         
-        <TableCell className="font-medium py-2">
+        <TableCell className="font-medium py-2 pl-4">
         <div className="flex flex-col">
         <span className="truncate break-words">{playlist.name}</span>
         {/* El propietario se muestra debajo solo en pantallas pequeñas */}
@@ -295,7 +295,7 @@ export default function PlaylistDisplay({
           onClick={(e) => {
             e.stopPropagation();
             setDeleteAlert({ open: true, playlist });
-          }}
+          }}  
           >
           <Trash2 className="mr-2 h-4 w-4" />
           Eliminar
