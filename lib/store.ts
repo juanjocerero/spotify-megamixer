@@ -17,6 +17,7 @@ interface PlaylistStore {
   addMoreToCache: (playlists: SpotifyPlaylist[]) => void;
   addPlaylistToCache: (playlist: SpotifyPlaylist) => void;
   updatePlaylistInCache: (playlistId: string, newTrackCount: number) => void;
+  removePlaylistFromCache: (playlistId: string) => void; 
 }
 
 export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
@@ -41,7 +42,7 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   clearSelection: () => {
     set({ selectedPlaylistIds: [] });
   },
-
+  
   addMultipleToSelection: (playlistIds) => {
     set((state) => {
       // Usamos un Set para fusionar y eliminar duplicados de forma eficiente
@@ -96,5 +97,14 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
       megamixCache: state.megamixCache.map(update),
     }));
   },
-
+  
+  removePlaylistFromCache: (playlistId) => {
+    set((state) => ({
+      playlistCache: state.playlistCache.filter((p) => p.id !== playlistId),
+      megamixCache: state.megamixCache.filter((p) => p.id !== playlistId),
+      // También la eliminamos de la selección si estuviera seleccionada
+      selectedPlaylistIds: state.selectedPlaylistIds.filter((id) => id !== playlistId),
+    }));
+  },
+  
 }));

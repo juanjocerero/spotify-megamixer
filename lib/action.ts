@@ -177,3 +177,36 @@ export async function fetchMorePlaylists(
     throw error;
   }
 }
+
+/**
+* Deja de seguir (elimina de la librería del usuario) una playlist.
+* @param playlistId - El ID de la playlist a dejar de seguir.
+*/
+export async function unfollowPlaylist(playlistId: string): Promise<void> {
+  try {
+    const session = await auth();
+    if (!session?.accessToken) {
+      throw new Error('No autenticado o token no disponible.');
+    }
+    const { accessToken } = session;
+    
+    const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/followers`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error(`[ACTION_ERROR:unfollowPlaylist] Fallo al dejar de seguir la playlist ${playlistId}.`, errorData);
+      throw new Error(`Spotify respondió con ${response.status}: ${errorData.error?.message || 'Error desconocido'}`);
+    }
+    
+    console.log(`[ACTION] Playlist ${playlistId} dejada de seguir con éxito.`);
+    
+  } catch (error) {
+    console.error(`[ACTION_ERROR:unfollowPlaylist] Error en la acción de dejar de seguir la playlist ${playlistId}.`, error);
+    throw error;
+  }
+}

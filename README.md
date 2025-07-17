@@ -11,9 +11,6 @@ Una potente herramienta web para mezclar, fusionar y gestionar tus playlists de 
 
 <br/>
 
-[![Captura de pantalla o GIF de la aplicación mostrando la interfaz principal](https://i.imgur.com/link-a-tu-screenshot.png) 
-*(Recomendación: Reemplaza esta imagen con una captura de pantalla o, idealmente, un GIF que muestre el flujo de la aplicación)*]: <>
-
 ---
 
 ## ✨ Características Principales

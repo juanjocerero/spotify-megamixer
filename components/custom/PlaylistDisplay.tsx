@@ -6,18 +6,32 @@ import { useInView } from 'react-intersection-observer';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 import { SpotifyPlaylist } from '@/types/spotify';
 import { cn } from '@/lib/utils';
-import { fetchMorePlaylists } from '@/lib/action';
+import { fetchMorePlaylists, unfollowPlaylist } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Search, ListChecks, Music } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, Trash2, Loader2, Music, Search, ListChecks } from 'lucide-react';
 
 interface PlaylistDisplayProps {
   initialPlaylists: SpotifyPlaylist[];
@@ -50,13 +64,19 @@ export default function PlaylistDisplay({
     playlistCache,
     setPlaylistCache, 
     addMoreToCache,
-    addMultipleToSelection 
+    addMultipleToSelection, 
+    removePlaylistFromCache
   } = usePlaylistStore();
   
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map());
+  const [deleteAlert, setDeleteAlert] = useState<{ open: boolean; playlist: SpotifyPlaylist | null }>({
+    open: false,
+    playlist: null,
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { ref, inView } = useInView({ threshold: 0 });
   
@@ -166,6 +186,25 @@ export default function PlaylistDisplay({
     };
   }, [handleKeyDown]);
   
+  const handleConfirmDelete = async () => {
+    if (!deleteAlert.playlist) return;
+    setIsDeleting(true);
+    
+    const toastId = toast.loading(`Eliminando "${deleteAlert.playlist.name}"...`);
+    
+    try {
+      await unfollowPlaylist(deleteAlert.playlist.id);
+      removePlaylistFromCache(deleteAlert.playlist.id); // Sincroniza la UI
+      toast.success('Playlist eliminada con éxito.', { id: toastId });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo eliminar la playlist.';
+      toast.error(message, { id: toastId });
+    } finally {
+      setIsDeleting(false);
+      setDeleteAlert({ open: false, playlist: null });
+    }
+  };
+  
   return (
     <div>
     {/* Tabla de Playlists */}
@@ -178,12 +217,14 @@ export default function PlaylistDisplay({
     <TableHead className="w-[80px] text-muted-foreground">Cover</TableHead>
     <TableHead className="text-muted-foreground">Nombre</TableHead>
     <TableHead className="text-muted-foreground">Propietario</TableHead>
-    <TableHead className="text-right text-muted-foreground">Nº de Canciones</TableHead>
+    <TableHead className="text-right text-muted-foreground">Canciones</TableHead>
+    <TableHead className="w-[50px]"></TableHead>
     </TableRow>
     </TableHeader>
     
     <TableBody>
     {filteredPlaylists.map((playlist, index) => {
+      const isMegalista = playlist.description?.includes('<!-- MEGAMIXER_APP_V1 -->');
       const selected = isSelected(playlist.id);
       const focused = index === focusedIndex;
       
@@ -223,9 +264,43 @@ export default function PlaylistDisplay({
         </Avatar>
         </TableCell>
         
-        <TableCell className="font-medium">{playlist.name}</TableCell>
+        <TableCell className="font-medium">
+        <div className="flex items-center gap-2">
+        <span>{playlist.name}</span>
+        {isMegalista && (
+          <Badge variant="outline" className="border-green-500 text-green-500">
+          Megalista
+          </Badge>
+        )}
+        </div>
+        </TableCell>
+        
         <TableCell>{playlist.owner.display_name}</TableCell>
         <TableCell className="text-right">{playlist.tracks.total}</TableCell>
+        
+        <TableCell>
+        {isMegalista && (
+          <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+          <MoreHorizontal className="h-4 w-4" />
+          </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+          <DropdownMenuItem
+          className="text-red-500 focus:text-red-500"
+          onClick={(e) => {
+            e.stopPropagation();
+            setDeleteAlert({ open: true, playlist });
+          }}
+          >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Eliminar
+          </DropdownMenuItem>
+          </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        </TableCell>
         
         </TableRow>
       );
@@ -240,6 +315,25 @@ export default function PlaylistDisplay({
       {isLoading && <Loader />}
       </div>
     )}
+    
+    <AlertDialog open={deleteAlert.open} onOpenChange={(open) => setDeleteAlert({ open, playlist: open ? deleteAlert.playlist : null })}>
+    <AlertDialogContent>
+    <AlertDialogHeader>
+    <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+    <AlertDialogDescription>
+    Esta acción es irreversible. Estás a punto de eliminar la playlist{' '}
+    <strong className="text-white">{deleteAlert.playlist?.name}</strong> de tu librería de Spotify.
+    </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+    <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+    <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="bg-red-600 hover:bg-red-700">
+    {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+    Sí, eliminar
+    </AlertDialogAction>
+    </AlertDialogFooter>
+    </AlertDialogContent>
+    </AlertDialog>
     
     </div>
   );
