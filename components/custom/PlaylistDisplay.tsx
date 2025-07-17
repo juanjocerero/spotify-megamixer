@@ -286,6 +286,9 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       // Si todo va bien, nos aseguramos de desactivar el modo reanudación.
       setIsResumable(false);
       
+      // Limpia la selección actual
+      clearSelection();
+      
     } catch (error: unknown) { // CAMBIO 2: Tipado correcto del error
       console.error('[UI_ERROR:handleExecuteMix] Ocurrió un error durante la mezcla:', error);
       
@@ -335,6 +338,9 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       
       updatePlaylistInCache(playlistId, tracksToMix.length);
       toast.success('¡Playlist reemplazada con éxito!', { id: toastId });
+      
+      // Limpiar selección actual tras éxito
+      clearSelection();
     } catch (error: unknown) {
       console.error('[UI_ERROR:handleConfirmReplace]', error);
       const message = error instanceof Error ? error.message : 'Error al reemplazar la playlist.';
@@ -361,6 +367,9 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       toast.success(`¡Playlist actualizada con éxito! Ahora tiene ${finalCount} canciones.`, { id: toastId });
       // Actualizamos el progreso para reflejar el estado final
       setProgress({ added: finalCount, total: finalCount });
+      
+      // Limpiar selección actual tras éxito
+      clearSelection();
     } catch (error: unknown) {
       console.error('[UI_ERROR:handleConfirmUpdate]', error);
       const message = error instanceof Error ? error.message : 'Error al actualizar la playlist.';
@@ -404,6 +413,9 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       updatePlaylistInCache(playlistIdForResume!, progress.total);
       toast.success('¡Megalista completada con éxito!', { id: toastId, duration: 5000 });
       setIsResumable(false); // Desactivamos el modo reanudar al terminar.
+      
+      // Limpiar selección actual tras éxito
+      clearSelection();
     } catch (error: unknown) {
       console.error('[UI_ERROR:handleResumeMix] Error durante la reanudación:', error);
       
@@ -484,6 +496,9 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
         id: toastId,
         description: `Ahora tiene ${finalCount} canciones únicas.`,
       });
+
+      // Limpiar selección actual tras éxito
+      clearSelection();
       
     } catch (error: unknown) {
       console.error('[UI_ERROR:handleConfirmAddToExisting]', error);
@@ -491,7 +506,6 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       toast.error(message, { id: toastId });
     } finally {
       setStep('idle');
-      clearSelection(); // Limpiamos la selección para finalizar el flujo
     }
   };
   
