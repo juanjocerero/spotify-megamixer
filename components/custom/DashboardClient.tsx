@@ -66,6 +66,7 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     <PlaylistDisplay
     initialPlaylists={initialPlaylists}
     initialNextUrl={initialNextUrl}
+    onClearSearch={handleClearSearch}
     // Pasamos el estado y el filtro como props al componente hijo
     searchTerm={searchTerm}
     showOnlySelected={showOnlySelected}
