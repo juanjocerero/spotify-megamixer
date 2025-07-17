@@ -321,6 +321,9 @@ export default function FloatingActionBar() {
     const sourcePlaylistIds = selectedPlaylistIds;
     const targetPlaylistId = selectedTargetId;
     
+    // Limpiamos el estado antes de mostrar ningún diálogo al usuario
+    setProgress({ added: 0, total: 0 });
+    
     setAddToDialog({ open: false }); // Cierra el diálogo de selección
     setStep('processing'); // Muestra el diálogo de progreso
     
@@ -330,9 +333,9 @@ export default function FloatingActionBar() {
       const trackUris = await getTrackUris(sourcePlaylistIds);
       
       // Reseteamos el estado de progreso con los datos de ESTA operación.
+      // Esto causará un re-renderizado suave del diálogo de "0/0" a "0/N"
       setProgress({ added: 0, total: trackUris.length });
       // Ahora el diálogo de progreso que se abra a continuación tendrá los datos correctos.
-      setStep('processing');
       
       if (trackUris.length === 0) {
         toast.info('La playlist de origen no tiene canciones para añadir.', { id: toastId });
