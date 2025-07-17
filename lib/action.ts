@@ -9,7 +9,9 @@ import {
   createNewPlaylist, 
   clearPlaylistTracks,
   addTracksToPlaylist, 
-  replacePlaylistTracks
+  replacePlaylistTracks,
+  getPlaylistDetails,
+  getSourcePlaylistIds
 } from './spotify';
 import { shuffleArray } from './utils';
 
@@ -208,6 +210,80 @@ export async function unfollowPlaylist(playlistId: string): Promise<void> {
     
   } catch (error) {
     console.error(`[ACTION_ERROR:unfollowPlaylist] Error en la acción de dejar de seguir la playlist ${playlistId}.`, error);
+    throw error;
+  }
+}
+
+/**
+* Sincroniza una Megalista con sus playlists de origen.
+* @param playlistId - El ID de la Megalista a sincronizar.
+* @returns Un objeto con el resultado de la sincronización.
+*/
+export async function syncMegalist(playlistId: string) {
+  const toastId = `sync-${playlistId}`; // Identificador único para los toasts
+  console.log(`[ACTION:syncMegalist] Iniciando sincronización para ${playlistId}`);
+  
+  try {
+    const session = await auth();
+    if (!session?.accessToken) {
+      throw new Error('No autenticado o token no disponible.');
+    }
+    const { accessToken } = session;
+    
+    // Obtener los detalles de la Megalista y parsear sus fuentes
+    const megalist = await getPlaylistDetails(accessToken, playlistId);
+    const sourceIds = getSourcePlaylistIds(megalist);
+    
+    if (!sourceIds) {
+      console.warn(`[ACTION:syncMegalist] La playlist ${playlistId} no es sincronizable.`);
+      throw new Error("Esta Megalista no es sincronizable (no contiene los metadatos de origen).");
+    }
+    
+    // Obtener las canciones actuales de la Megalista y las actualizadas de las fuentes
+    const [initialTrackUris, finalTrackUris] = await Promise.all([
+      getAllPlaylistTracks(accessToken, playlistId),
+      getTrackUris(sourceIds) // Esta acción ya obtiene, unifica, elimina duplicados y baraja
+    ]);
+    
+    // Calcular las diferencias para el informe
+    const initialTracksSet = new Set(initialTrackUris);
+    const finalTracksSet = new Set(finalTrackUris);
+    
+    let addedCount = 0;
+    for (const uri of finalTracksSet) {
+      if (!initialTracksSet.has(uri)) {
+        addedCount++;
+      }
+    }
+    
+    let removedCount = 0;
+    for (const uri of initialTracksSet) {
+      if (!finalTracksSet.has(uri)) {
+        removedCount++;
+      }
+    }
+    
+    // Si no hay cambios, no hacemos nada más.
+    if (addedCount === 0 && removedCount === 0) {
+      console.log(`[ACTION:syncMegalist] La playlist ${playlistId} ya estaba sincronizada.`);
+      return { success: true, added: 0, removed: 0, finalCount: initialTrackUris.length, message: "Ya estaba sincronizada." };
+    }
+    
+    // Si hay cambios, reemplazar los tracks de la playlist
+    console.log(`[ACTION:syncMegalist] Actualizando ${playlistId}. Añadiendo: ${addedCount}, Eliminando: ${removedCount}`);
+    await replacePlaylistTracks(accessToken, playlistId, finalTrackUris);
+    
+    // Devolver el resultado
+    return { 
+      success: true, 
+      added: addedCount, 
+      removed: removedCount, 
+      finalCount: finalTrackUris.length 
+    };
+    
+  } catch (error) {
+    console.error(`[ACTION_ERROR:syncMegalist] Fallo al sincronizar la playlist ${playlistId}.`, error);
+    // Relanzamos el error para que el cliente lo pueda capturar y mostrar un toast.
     throw error;
   }
 }

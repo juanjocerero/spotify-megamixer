@@ -64,6 +64,54 @@ export async function getAllPlaylistTracks(
   return allTrackUris;
 }
 
+/**
+* Obtiene el objeto completo de una playlist por su ID.
+* @param accessToken - El token de acceso del usuario.
+* @param playlistId - El ID de la playlist a obtener.
+* @returns Una promesa que se resuelve al objeto completo de la playlist.
+*/
+export async function getPlaylistDetails(
+  accessToken: string,
+  playlistId: string
+): Promise<SpotifyPlaylist> {
+  const response = await fetch(`${SPOTIFY_API_BASE}/playlists/${playlistId}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error(`Fallo al obtener los detalles de la playlist ${playlistId}:`, errorData);
+    throw new Error(`Fallo al obtener los detalles de la playlist ${playlistId}`);
+  }
+  
+  return response.json();
+}
+
+/**
+* Parsea la descripción de una playlist para extraer los IDs de sus fuentes.
+* @param playlist - El objeto de la playlist.
+* @returns Un array de IDs de las fuentes, o null si no es una Megalista sincronizable.
+*/
+export function getSourcePlaylistIds(playlist: SpotifyPlaylist): string[] | null {
+  if (!playlist.description) {
+    return null;
+  }
+  
+  // Usamos una expresión regular para encontrar y extraer el contenido de nuestra etiqueta.
+  const match = playlist.description.match(/<!-- MEGAMIXER_SOURCES:\[(.*?)] -->/);
+  
+  // match[0] es el texto completo, match[1] es el contenido del primer grupo de captura (.*?)
+  if (match && match[1]) {
+    // Si encontramos una coincidencia y tiene contenido, lo dividimos por la coma.
+    return match[1].split(',');
+  }
+  
+  return null;
+}
+
+
 export async function getUserPlaylists(accessToken: string): Promise<PlaylistsApiResponse> {
   const response = await fetch(`${SPOTIFY_API_BASE}/me/playlists?limit=50`, {
     headers: {
