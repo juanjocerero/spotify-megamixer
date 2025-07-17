@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { getUserPlaylists } from '@/lib/spotify';
 import PlaylistDisplay from '@/components/custom/PlaylistDisplay';
 import LogoutButton from '@/components/custom/LogoutButton';
+import FloatingActionBar from '@/components/custom/FloatingActionBar';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -46,6 +47,8 @@ export default async function DashboardPage() {
     initialNextUrl={playlistsData.next}
     />
     </div>
+    
+    <FloatingActionBar />
     
     </div>
     </div>
