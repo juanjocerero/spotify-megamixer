@@ -1,17 +1,20 @@
 // /components/custom/DashboardClient.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { SpotifyPlaylist } from '@/types/spotify';
+import { usePlaylistStore } from '@/lib/store';
 
 // Importamos los componentes que va a orquestar
 import PlaylistDisplay from './PlaylistDisplay';
 import FloatingActionBar from './FloatingActionBar';
 
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Search, ListChecks } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Definimos las props que recibirá este componente desde la página del servidor
 interface DashboardClientProps {
@@ -24,9 +27,29 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
   // El estado para la búsqueda y el filtro ahora vive en este componente padre.
   const [searchTerm, setSearchTerm] = useState('');
   const [showOnlySelected, setShowOnlySelected] = useState(false);
+  const [filteredIds, setFilteredIds] = useState<string[]>([]);
+  
+  const { selectedPlaylistIds, addMultipleToSelection } = usePlaylistStore();
+  
+  const handleFilteredChange = useCallback((ids: string[]) => {
+    setFilteredIds(ids);
+  }, []);
   
   const handleClearSearch = () => {
     setSearchTerm('');
+  };
+  
+  // Lógica para determinar si el botón debe estar deshabilitado
+  const areAllFilteredSelected = useMemo(() => {
+    if (filteredIds.length === 0) return false;
+    return filteredIds.every(id => selectedPlaylistIds.includes(id));
+  }, [filteredIds, selectedPlaylistIds]);
+  
+  // Manejador para el botón 
+  const handleSelectAllFiltered = () => {
+    if (areAllFilteredSelected) return;
+    addMultipleToSelection(filteredIds);
+    toast.info(`${filteredIds.length} playlists de la búsqueda han sido añadidas.`);
   };
   
   return (
@@ -39,14 +62,30 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     <Input
     type="text"
     placeholder="Filtrar por nombre..."
-    className="pl-10 text-base"
+    // Padding a la derecha para que el texto no quede debajo del botón
+    className="pl-10 pr-32 text-base"
     value={searchTerm}
     onChange={(e) => setSearchTerm(e.target.value)}
     />
+    
+    {/* Renderizado condicional del botón de añadir resultados de búsqueda */}
+    {searchTerm.trim() !== '' && filteredIds.length > 0 && (
+      <Button
+      variant="ghost"
+      size="sm"
+      className="absolute right-1 top-1/2 -translate-y-1/2 h-8"
+      onClick={handleSelectAllFiltered}
+      disabled={areAllFilteredSelected}
+      >
+      <ListChecks className="mr-2 h-4 w-4" />
+      {areAllFilteredSelected ? 'Seleccionado' : 'Seleccionar'}
+      </Button>
+    )}
+    
     </div>
     <div className="flex items-center space-x-2 pt-4">
     <Switch
-    id="show-selected-main" // ID único
+    id="show-selected-main"
     checked={showOnlySelected}
     onCheckedChange={(isChecked) => {
       setShowOnlySelected(isChecked);
@@ -60,20 +99,19 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     </div>
     </div>
     
-    {/* 3. CONTENIDO PRINCIPAL */}
+    {/* Contenido principal */}
     {/* Añadimos un padding para separar la cabecera del contenido */}
     <div className="pt-6">
     <PlaylistDisplay
     initialPlaylists={initialPlaylists}
     initialNextUrl={initialNextUrl}
-    onClearSearch={handleClearSearch}
-    // Pasamos el estado y el filtro como props al componente hijo
     searchTerm={searchTerm}
-    showOnlySelected={showOnlySelected}
+    showOnlySelected={showOnlySelected} 
+    onClearSearch={handleClearSearch}
+    onFilteredChange={handleFilteredChange}
     />
     </div>
     
-    {/* 4. LA BARRA DE ACCIONES FLOTANTE NO NECESITA CAMBIOS */}
     <FloatingActionBar />
     </>
   );

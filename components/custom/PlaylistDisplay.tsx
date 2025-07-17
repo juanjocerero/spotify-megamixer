@@ -39,6 +39,7 @@ interface PlaylistDisplayProps {
   searchTerm: string;
   showOnlySelected: boolean;
   onClearSearch: () => void;
+  onFilteredChange: (ids: string[]) => void;
 }
 
 function Loader() {
@@ -55,7 +56,8 @@ export default function PlaylistDisplay({
   initialNextUrl, 
   searchTerm,           
   showOnlySelected,
-  onClearSearch
+  onClearSearch, 
+  onFilteredChange
 }: PlaylistDisplayProps) {
   const { 
     togglePlaylist, 
@@ -131,19 +133,10 @@ export default function PlaylistDisplay({
     setFocusedIndex(null);
   }, [searchTerm, showOnlySelected]);
   
-  const areAllFilteredSelected = useMemo(() => {
-    if (searchTerm.trim() === '' || filteredPlaylists.length === 0) {
-      return false;
-    }
-    return filteredPlaylists.every(p => selectedPlaylistIds.includes(p.id));
-  }, [filteredPlaylists, selectedPlaylistIds, searchTerm]);
-  
-  const handleSelectAllFiltered = () => {
-    if (areAllFilteredSelected) return;
-    const filteredIds = filteredPlaylists.map(p => p.id);
-    addMultipleToSelection(filteredIds);
-    toast.info(`${filteredIds.length} playlists de la búsqueda han sido añadidas a la selección.`);
-  };
+  useEffect(() => {
+    const ids = filteredPlaylists.map(p => p.id);
+    onFilteredChange(ids);
+  }, [filteredPlaylists, onFilteredChange]);
   
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (filteredPlaylists.length === 0) return;
