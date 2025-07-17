@@ -6,7 +6,7 @@ import { useInView } from 'react-intersection-observer';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 import { SpotifyPlaylist } from '@/types/spotify';
 import { cn } from '@/lib/utils';
-import { fetchMorePlaylists, unfollowPlaylist } from '@/lib/action';
+import { fetchMorePlaylists, unfollowPlaylist, syncMegalist } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 
 import { toast } from 'sonner';
@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Trash2, Loader2, Music, Search, ListChecks } from 'lucide-react';
+import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw } from 'lucide-react';
 
 interface PlaylistDisplayProps {
   initialPlaylists: SpotifyPlaylist[];
@@ -66,6 +66,7 @@ export default function PlaylistDisplay({
     playlistCache,
     setPlaylistCache, 
     addMoreToCache,
+    updatePlaylistInCache,
     addMultipleToSelection, 
     removePlaylistFromCache
   } = usePlaylistStore();
@@ -79,6 +80,7 @@ export default function PlaylistDisplay({
     playlist: null,
   });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
   
   const { ref, inView } = useInView({ threshold: 0 });
   
@@ -179,6 +181,37 @@ export default function PlaylistDisplay({
     };
   }, [handleKeyDown]);
   
+  // --- Lógica para manejar la sincronización desde la UI ---
+  const handleSync = async (playlistToSync: SpotifyPlaylist) => {
+    if (syncingId) return; // Evitar clics múltiples
+    
+    setSyncingId(playlistToSync.id);
+    const toastId = toast.loading(`Sincronizando "${playlistToSync.name}"...`);
+    
+    try {
+      const result = await syncMegalist(playlistToSync.id);
+      
+      // Actualizamos el contador de canciones en la UI inmediatamente
+      updatePlaylistInCache(playlistToSync.id, result.finalCount);
+      
+      if (result.message === "Ya estaba sincronizada.") {
+        toast.info(`"${playlistToSync.name}" ya estaba al día.`, { id: toastId });
+      } else {
+        toast.success(`Sincronización de "${playlistToSync.name}" completada.`, {
+          id: toastId,
+          description: `Añadidas: ${result.added}, Eliminadas: ${result.removed}. Total: ${result.finalCount} canciones.`,
+        });
+      }
+      
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo sincronizar la playlist.';
+      toast.error(message, { id: toastId });
+    } finally {
+      setSyncingId(null); // Reseteamos el estado de carga
+    }
+  };
+  
+  
   const handleConfirmDelete = async () => {
     if (!deleteAlert.playlist) return;
     setIsDeleting(true);
@@ -218,6 +251,8 @@ export default function PlaylistDisplay({
     <TableBody>
     {filteredPlaylists.map((playlist, index) => {
       const isMegalista = playlist.description?.includes('<!-- MEGAMIXER_APP_V1 -->');
+      const isSyncable = playlist.isSyncable ?? false;
+      const isSyncingThis = syncingId === playlist.id;
       const selected = isSelected(playlist.id);
       const focused = index === focusedIndex;
       
@@ -266,11 +301,18 @@ export default function PlaylistDisplay({
         <span className="text-xs text-muted-foreground sm:hidden break-words">
         {playlist.owner.display_name}
         </span>
+        
         {isMegalista && (
-          <Badge variant="outline" className="border-green-500 text-green-500 whitespace-nowrap">
+          <Badge variant="outline" className={cn(
+            "whitespace-nowrap w-fit", // w-fit para que no ocupe todo el ancho
+            isSyncable 
+            ? "border-green-500 text-green-500" // Verde si es sincronizable
+            : "border-yellow-500 text-yellow-500"  // Amarillo si no lo es
+          )}>
           Megalista
           </Badge>
         )}
+        
         </div>
         </TableCell>
         
@@ -289,18 +331,39 @@ export default function PlaylistDisplay({
           <MoreHorizontal className="h-4 w-4" />
           </Button>
           </DropdownMenuTrigger>
+          
           <DropdownMenuContent align="end">
+          {/* --- Opción de Sincronizar --- */}
+          {isSyncable && (
+            <DropdownMenuItem
+            disabled={isSyncingThis}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSync(playlist);
+            }}
+            >
+            {isSyncingThis ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            <span>{isSyncingThis ? "Sincronizando..." : "Sincronizar"}</span>
+            </DropdownMenuItem>
+          )}
+          
+          {/* Opción de Eliminar */}
           <DropdownMenuItem
           className="text-red-500 focus:text-red-500"
           onClick={(e) => {
             e.stopPropagation();
             setDeleteAlert({ open: true, playlist });
-          }}  
+          }}
           >
           <Trash2 className="mr-2 h-4 w-4" />
           Eliminar
           </DropdownMenuItem>
           </DropdownMenuContent>
+          
           </DropdownMenu>
         )}
         </TableCell>

@@ -22,6 +22,17 @@ interface PlaylistStore {
   removePlaylistFromCache: (playlistId: string) => void; 
 }
 
+const processPlaylists = (playlists: SpotifyPlaylist[]): SpotifyPlaylist[] => {
+  return playlists.map(p => {
+    const isMegalista = p.description?.includes('<!-- MEGAMIXER_APP_V1 -->');
+    if (!isMegalista) return p;
+    
+    // Si es una megalista, comprobamos si es sincronizable
+    const isSyncable = p.description?.includes('<!-- MEGAMIXER_SOURCES:[');
+    return { ...p, isSyncable }; // Añadimos la nueva propiedad
+  });
+};
+
 export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   // --- Estado existente ---
   selectedPlaylistIds: [],
@@ -68,16 +79,18 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   
   // Acción para inicializar la caché
   setPlaylistCache: (playlists) => {
+    const processedPlaylists = processPlaylists(playlists);
     // Filtramos las megalistas basándonos en nuestra "firma"
-    const megamixes = playlists.filter(
+    const megamixes = processedPlaylists.filter(
       (p) => p.description?.includes('<!-- MEGAMIXER_APP_V1 -->')
     );
-    set({ playlistCache: playlists, megamixCache: megamixes });
+    set({ playlistCache: processedPlaylists, megamixCache: megamixes });
   },
   
   // Acción para añadir más playlists a la caché (scroll infinito)
   addMoreToCache: (playlists) => {
-    const newCache = [...get().playlistCache, ...playlists];
+    const processedNewPlaylists = processPlaylists(playlists); // Usamos la función de ayuda
+    const newCache = [...get().playlistCache, ...processedNewPlaylists];
     const newMegamixes = newCache.filter(
       (p) => p.description?.includes('<!-- MEGAMIXER_APP_V1 -->')
     );
@@ -86,10 +99,12 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   
   addPlaylistToCache: (playlist) => {
     const existingCache = get().playlistCache;
-    // Evitamos añadir duplicados si por alguna razón ya estuviera
     if (existingCache.some(p => p.id === playlist.id)) return;
     
-    const newCache = [playlist, ...existingCache]; // La añadimos al principio
+    // Usamos la función de ayuda aquí también, dentro de un array
+    const [processedPlaylist] = processPlaylists([playlist]);
+    
+    const newCache = [processedPlaylist, ...existingCache];
     const newMegamixes = newCache.filter(
       (p) => p.description?.includes('<!-- MEGAMIXER_APP_V1 -->')
     );
