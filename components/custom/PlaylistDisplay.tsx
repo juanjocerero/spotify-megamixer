@@ -45,19 +45,21 @@ function Loader() {
 }
 
 export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: PlaylistDisplayProps) {
-  const { togglePlaylist, 
+  // Obtener el estado del store
+  const { 
+    togglePlaylist, 
     isSelected, 
     selectedPlaylistIds, 
     clearSelection, 
+    playlistCache, // Esta es la fuente de verdad
     setPlaylistCache, 
     addMoreToCache, 
     megamixCache, 
     addPlaylistToCache, 
-    updatePlaylistInCache, 
+    updatePlaylistInCache,
     addMultipleToSelection
   } = usePlaylistStore();
   
-  const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>(initialPlaylists);
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -94,8 +96,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     setIsLoading(true);
     try {
       const { items: newPlaylists, next: newNextUrl } = await fetchMorePlaylists(nextUrl);
-      setPlaylists((prev) => [...prev, ...newPlaylists]);
-      addMoreToCache(newPlaylists);
+      addMoreToCache(newPlaylists); 
       setNextUrl(newNextUrl);
     } catch {
       // silenciamos el error para evitar el warning
@@ -121,7 +122,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
   );
   
   const filteredPlaylists = useMemo(() => {
-    let items = playlists;
+    let items = playlistCache; // Usa el estado del store
     if (showOnlySelected) {
       items = items.filter((p) => selectedPlaylistIds.includes(p.id));
     }
@@ -130,7 +131,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       items = fuseInstance.search(searchTerm).map((result) => result.item);
     }
     return items;
-  }, [playlists, searchTerm, showOnlySelected, selectedPlaylistIds, fuseOptions]);
+  }, [playlistCache, searchTerm, showOnlySelected, selectedPlaylistIds, fuseOptions]);
   
   // Limpiar foco si el filtro cambia
   useEffect(() => {
@@ -263,7 +264,6 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
       
       // Si la playlist no existía, significa que se acaba de crear.
       // La añadimos a nuestro estado local para que la UI se actualice.
-      setPlaylists((prev) => [playlist, ...prev]);
       addPlaylistToCache(playlist);
       
       // Guardamos el ID de la playlist en el estado inmediatamente.
@@ -333,6 +333,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
         setProgress((prev) => ({ ...prev, added: prev.added + batch.length }));
       }
       
+      updatePlaylistInCache(playlistId, tracksToMix.length);
       toast.success('¡Playlist reemplazada con éxito!', { id: toastId });
     } catch (error: unknown) {
       console.error('[UI_ERROR:handleConfirmReplace]', error);
@@ -344,7 +345,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     }
   };
   
-  // NUEVO: Manejador para la opción "Actualizar y Reordenar"
+  // Manejador para la opción "Actualizar y Reordenar"
   const handleConfirmUpdate = async () => {
     const { playlistId } = overwriteDialog;
     setOverwriteDialog({ ...overwriteDialog, open: false });
@@ -354,6 +355,9 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
     
     try {
       const { finalCount } = await updateAndReorderPlaylist(playlistId, tracksToMix);
+
+      updatePlaylistInCache(playlistId, finalCount);
+
       toast.success(`¡Playlist actualizada con éxito! Ahora tiene ${finalCount} canciones.`, { id: toastId });
       // Actualizamos el progreso para reflejar el estado final
       setProgress({ added: finalCount, total: finalCount });
@@ -397,6 +401,7 @@ export default function PlaylistDisplay({ initialPlaylists, initialNextUrl }: Pl
         setProgress((prev) => ({ ...prev, added: prev.added + batch.length }));
       }
       
+      updatePlaylistInCache(playlistIdForResume!, progress.total);
       toast.success('¡Megalista completada con éxito!', { id: toastId, duration: 5000 });
       setIsResumable(false); // Desactivamos el modo reanudar al terminar.
     } catch (error: unknown) {
