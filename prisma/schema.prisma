@@ -1,0 +1,27 @@
+// /prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Para el runtime de la aplicación, usa la URL del pooler,
+  // idealmente la que está optimizada para Prisma.
+  url       = env("POSTGRES_PRISMA_URL") 
+  
+  // Para migraciones y comandos 'db push', usa la URL de conexión directa.
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+// Nuestro modelo de datos para las Megalistas
+model Megalist {
+  id        Int      @id @default(autoincrement())
+  playlistId String   @unique // El ID de la playlist de Spotify
+  userId    String   // El ID del usuario de Spotify
+  sourcePlaylistIds String[] // Un array de los IDs de las playlists de origen
+  trackCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
