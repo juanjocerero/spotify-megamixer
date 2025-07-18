@@ -100,12 +100,10 @@ export function getSourcePlaylistIds(playlist: SpotifyPlaylist): string[] | null
     return null;
   }
   
-  // Usamos una expresión regular para encontrar y extraer el contenido de nuestra etiqueta.
-  const match = playlist.description.match(/<!-- MEGAMIXER_SOURCES:\[(.*?)] -->/);
+  // La expresión regular ahora busca los nuevos delimitadores __...__
+  const match = playlist.description.match(/__MEGAMIXER_SOURCES:\[(.*?)]__/);
   
-  // match[0] es el texto completo, match[1] es el contenido del primer grupo de captura (.*?)
   if (match && match[1]) {
-    // Si encontramos una coincidencia y tiene contenido, lo dividimos por la coma.
     return match[1].split(',');
   }
   
@@ -190,8 +188,8 @@ export async function createNewPlaylist(
   sourcePlaylistIds: string[] 
 ): Promise<SpotifyPlaylist> {
   const DESCRIPTION_CHAR_LIMIT = 4000; // Límite de seguridad para la descripción de Spotify.
-  const baseDescription = `Generada por Spotify Megamixer el ${new Date().toLocaleDateString()}. <!-- MEGAMIXER_APP_V1 -->`;
-  const sourcesTag = sourcePlaylistIds.length > 0 ? ` <!-- MEGAMIXER_SOURCES:[${sourcePlaylistIds.join(',')}] -->` : '';
+  const baseDescription = `Generada por Spotify Megamixer el ${new Date().toLocaleDateString()}. __MEGAMIXER_APP_V1__`;
+  const sourcesTag = sourcePlaylistIds.length > 0 ? ` __MEGAMIXER_SOURCES:[${sourcePlaylistIds.join(',')}]__` : '';
   
   const fullDescription = baseDescription + sourcesTag;
   let finalDescription = baseDescription;

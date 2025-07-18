@@ -1,6 +1,7 @@
 // /app/dashboard/page.tsx
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import { SpotifyPlaylist } from '@/types/spotify';
 import { getUserPlaylists, getPlaylistDetails } from '@/lib/spotify';
 import LogoutButton from '@/components/custom/LogoutButton';
 import DashboardClient from '@/components/custom/DashboardClient';
@@ -26,18 +27,29 @@ export default async function DashboardPage() {
     redirect('/');
   }
   
+  const initialData = await getUserPlaylists(session.accessToken);
+  const initialPlaylists = initialData.items;
+  
   const playlistsData = await getUserPlaylists(session.accessToken);
   
-  // --- INICIO DEL CÓDIGO DE DEPURACIÓN ---
-  // Supongamos que la playlist que falla se llama "Mix Definitivo"
-  const faultyPlaylist = playlistsData.items.find(p => p.name === "Mix Definitivo");
   
-  if (faultyPlaylist) {
-    console.log("DATOS DE LA PLAYLIST PROBLEMÁTICA DESDE /me/playlists:");
-    console.log(faultyPlaylist); 
-    // Fíjate bien en los campos `description` y `tracks` del objeto que se imprima.
-  }
-  // --- FIN DEL CÓDIGO DE DEPURACIÓN ---
+  // --- Lógica de hidratación ---
+  
+  // Identificamos las Megalistas basándonos en el nuevo marcador
+  const megalistPromises: Promise<SpotifyPlaylist>[] = initialPlaylists
+  .filter(p => p.description?.includes('__MEGAMIXER_APP_V1__'))
+  .map(p => getPlaylistDetails(session.accessToken!, p.id));
+  
+  // Hacemos una llamada a la API para cada Megalista para obtener sus datos frescos
+  // Promise.all se ejecuta en paralelo, por lo que es muy eficiente.
+  const freshMegalists = await Promise.all(megalistPromises);
+  
+  // Creamos un mapa para una búsqueda rápida (ID -> Objeto de Playlist Fresco)
+  const freshDataMap = new Map(freshMegalists.map(p => [p.id, p]));
+  
+  // Construimos la lista final: si una playlist está en el mapa, usamos la versión
+  // fresca; si no, usamos la original.
+  const finalPlaylists = initialPlaylists.map(p => freshDataMap.get(p.id) || p);
   
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
@@ -49,14 +61,13 @@ export default async function DashboardPage() {
     <LogoutButton />
     </header>
     
-    {/* 2. Renderizamos el componente cliente y le pasamos los datos iniciales */}
+    {/* 6. Pasamos los datos ya corregidos y enriquecidos al cliente */}
     <DashboardClient
-    initialPlaylists={playlistsData.items}
-    initialNextUrl={playlistsData.next}
+    initialPlaylists={finalPlaylists}
+    initialNextUrl={initialData.next}
     />
     
     <FloatingActionBar />
-    
     </div>
     </div>
   );

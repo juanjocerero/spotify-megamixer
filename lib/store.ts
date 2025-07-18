@@ -24,11 +24,12 @@ interface PlaylistStore {
 
 const processPlaylists = (playlists: SpotifyPlaylist[]): SpotifyPlaylist[] => {
   return playlists.map(p => {
-    const isMegalista = /<!--\s*MEGAMIXER_APP_V1\s*-->/.test(p.description || "");
+    // Usamos .includes() con los nuevos delimitadores, que es más simple y robusto.
+    const isMegalista = p.description?.includes('__MEGAMIXER_APP_V1__') || false;
     if (!isMegalista) return p;
     
-    // Si es una megalista, comprobamos si es sincronizable
-    const isSyncable = /<!--\s*MEGAMIXER_SOURCES:\[.*?]\s*-->/.test(p.description || "");
+    // Si es una megalista, comprobamos si es sincronizable.
+    const isSyncable = p.description?.includes('__MEGAMIXER_SOURCES:[') || false;
     return { ...p, isSyncable, isMegalist: true };
   });
 };
