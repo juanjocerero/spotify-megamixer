@@ -164,7 +164,6 @@ export async function createNewPlaylist(
   accessToken: string,
   userId: string,
   name: string,
-  sourcePlaylistIds: string[] 
 ): Promise<SpotifyPlaylist> {
   
   const response = await fetch(`${SPOTIFY_API_BASE}/users/${userId}/playlists`, {

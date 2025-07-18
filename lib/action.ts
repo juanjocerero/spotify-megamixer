@@ -72,7 +72,7 @@ export async function findOrCreatePlaylist(
     } else {
       // Si se fuerza 'no sync', pasamos un array vacío a la función de creación.
       const idsToStore = sourcePlaylistIds;
-      const newPlaylist = await createNewPlaylist(accessToken, user.id, name, idsToStore);
+      const newPlaylist = await createNewPlaylist(accessToken, user.id, name);
       
       // Persistencia en base de datos
       try {
@@ -89,11 +89,23 @@ export async function findOrCreatePlaylist(
         console.error(`[DB_ERROR] Fallo al crear el registro para la Megalista ${newPlaylist.id}`, dbError);
       }
       
-      if (!newPlaylist.owner) {
-        newPlaylist.owner = { display_name: session.user.name || 'Tú' };
+      // No devolvemos `newPlaylistFromSpotify` directamente. Creamos nuestro propio objeto "enriquecido".
+      const enrichedPlaylist: SpotifyPlaylist = {
+        ...newPlaylist, // Usamos la base del objeto de Spotify (id, name, owner, etc.)
+        isMegalist: true,          // La marcamos como Megalista
+        isSyncable: true,          // Por definición, una nueva megalista es sincronizable
+        tracks: {
+          ...newPlaylist.tracks,
+          total: initialTrackCount, // Sobrescribimos el `total: 0` con nuestro recuento real
+        },
+      };
+      
+      if (!enrichedPlaylist.owner) {
+        enrichedPlaylist.owner = { display_name: session.user.name || 'Tú' };
       }
       
-      return { playlist: newPlaylist, exists: false };
+      // Devolvemos el objeto enriquecido
+      return { playlist: enrichedPlaylist, exists: false };
     }
   } catch (error) {
     console.error('[ACTION_ERROR:findOrCreatePlaylist] Fallo al buscar o crear la playlist.', error);
