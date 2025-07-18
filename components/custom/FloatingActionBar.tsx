@@ -146,7 +146,7 @@ export default function FloatingActionBar() {
       toast.success('¡Megalista creada con éxito!', { id: toastId, duration: 5000 });
       
       // Ahora que la playlist está llena, actualizamos su contador en la caché.
-      updatePlaylistInCache(playlist.id, tracksToMix.length);
+      updatePlaylistInCache(playlist.id, { trackCount: tracksToMix.length });
       
       // Si todo va bien, nos aseguramos de desactivar el modo reanudación.
       setIsResumable(false);
@@ -201,7 +201,7 @@ export default function FloatingActionBar() {
         setProgress((prev) => ({ ...prev, added: prev.added + batch.length }));
       }
       
-      updatePlaylistInCache(playlistId, tracksToMix.length);
+      updatePlaylistInCache(playlistId, { trackCount: tracksToMix.length });
       toast.success('¡Playlist reemplazada con éxito!', { id: toastId });
       
       // Limpiar selección actual tras éxito
@@ -225,9 +225,9 @@ export default function FloatingActionBar() {
     const toastId = toast.loading(`Actualizando "${overwriteDialog.playlistName}"...`);
     
     try {
-      const { finalCount } = await updateAndReorderPlaylist(playlistId, tracksToMix);
+      const { finalCount, isSyncable } = await updateAndReorderPlaylist(playlistId, selectedPlaylistIds);
       
-      updatePlaylistInCache(playlistId, finalCount);
+      updatePlaylistInCache(playlistId, { trackCount: finalCount, isSyncable });
       
       toast.success(`¡Playlist actualizada con éxito! Ahora tiene ${finalCount} canciones.`, { id: toastId });
       // Actualizamos el progreso para reflejar el estado final
@@ -275,7 +275,7 @@ export default function FloatingActionBar() {
         setProgress((prev) => ({ ...prev, added: prev.added + batch.length }));
       }
       
-      updatePlaylistInCache(playlistIdForResume!, progress.total);
+      updatePlaylistInCache(playlistIdForResume!, { trackCount: progress.total });
       toast.success('¡Megalista completada con éxito!', { id: toastId, duration: 5000 });
       setIsResumable(false); // Desactivamos el modo reanudar al terminar.
       
@@ -326,46 +326,28 @@ export default function FloatingActionBar() {
       toast.error('Por favor, selecciona una Megalista de destino.');
       return;
     }
-    if (selectedPlaylistIds.length !== 1) return;
-    
+    // No necesitamos una validación de número de playlists, la lógica ya lo maneja
     const sourcePlaylistIds = selectedPlaylistIds;
     const targetPlaylistId = selectedTargetId;
     
-    // Limpiamos el estado antes de mostrar ningún diálogo al usuario
-    setProgress({ added: 0, total: 0 });
+    setAddToDialog({ open: false });
+    setStep('processing'); // Mostramos el diálogo de progreso
     
-    setAddToDialog({ open: false }); // Cierra el diálogo de selección
-    setStep('processing'); // Muestra el diálogo de progreso
-    
-    const toastId = toast.loading('Obteniendo canciones de la playlist de origen...');
+    const toastId = toast.loading('Actualizando Megalista de destino...');
     
     try {
-      const trackUris = await getTrackUris(sourcePlaylistIds);
+      // La llamada a la acción ahora es más simple desde el cliente.
+      // Le pasamos los IDs y la acción se encarga de todo.
+      const { finalCount, isSyncable } = await updateAndReorderPlaylist(targetPlaylistId, sourcePlaylistIds);
       
-      // Reseteamos el estado de progreso con los datos de ESTA operación.
-      // Esto causará un re-renderizado suave del diálogo de "0/0" a "0/N"
-      setProgress({ added: 0, total: trackUris.length });
-      // Ahora el diálogo de progreso que se abra a continuación tendrá los datos correctos.
-      
-      if (trackUris.length === 0) {
-        toast.info('La playlist de origen no tiene canciones para añadir.', { id: toastId });
-        setStep('idle');
-        return;
-      }
-      
-      toast.loading('Actualizando la Megalista de destino...', { id: toastId });
-      
-      const { finalCount } = await updateAndReorderPlaylist(targetPlaylistId, trackUris);
-      
-      // Actualizamos también el contador de la playlist de destino.
-      updatePlaylistInCache(targetPlaylistId, finalCount);
+      // Actualizamos la caché con toda la nueva información.
+      updatePlaylistInCache(targetPlaylistId, { trackCount: finalCount, isSyncable });
       
       toast.success(`¡Megalista actualizada con éxito!`, {
         id: toastId,
-        description: `Ahora tiene ${finalCount} canciones únicas.`,
+        description: `Ahora tiene ${finalCount} canciones. Sincronización: ${isSyncable ? 'Activada' : 'Desactivada'}.`,
       });
       
-      // Limpiar selección actual tras éxito
       clearSelection();
       
     } catch (error: unknown) {
@@ -374,6 +356,8 @@ export default function FloatingActionBar() {
       toast.error(message, { id: toastId });
     } finally {
       setStep('idle');
+      // Limpiamos el estado de progreso para la próxima operación
+      setProgress({ added: 0, total: 0 }); 
     }
   };
   
@@ -403,7 +387,7 @@ export default function FloatingActionBar() {
         successCount++;
         // Si la sincronización tuvo éxito, actualizamos la caché con el nuevo total de canciones
         const syncResult = result.value;
-        updatePlaylistInCache(syncableMegalists[index].id, syncResult.finalCount);
+        updatePlaylistInCache(syncableMegalists[index].id, { trackCount: syncResult.finalCount });
       } else {
         failureCount++;
         console.error(`Fallo al sincronizar "${playlistName}":`, result.reason);

@@ -11,7 +11,8 @@ import {
   addTracksToPlaylist, 
   replacePlaylistTracks,
   getPlaylistDetails,
-  getSourcePlaylistIds
+  getSourcePlaylistIds, 
+  updatePlaylistDetails
 } from './spotify';
 import { shuffleArray } from './utils';
 
@@ -105,12 +106,13 @@ export async function addTracksBatch(
 }
 
 /**
-* Acción para actualizar una playlist con nuevas canciones y reordenarla.
+* Acción para actualizar una playlist con nuevas canciones, metadatos y reordenarla.
+* Ahora actualiza la descripción con las nuevas fuentes y devuelve si sigue siendo sincronizable.
 */
 export async function updateAndReorderPlaylist(
-  playlistId: string,
-  newTrackUris: string[]
-) {
+  targetPlaylistId: string,
+  newSourceIds: string[]
+): Promise<{ finalCount: number; isSyncable: boolean }> {
   try {
     const session = await auth();
     if (!session?.accessToken) {
@@ -118,24 +120,56 @@ export async function updateAndReorderPlaylist(
     }
     const { accessToken } = session;
     
-    // 1. Obtener las canciones que ya están en la playlist
-    const existingTracks = await getAllPlaylistTracks(accessToken, playlistId);
+    // --- Lógica de metadatos ---
+    // 1. Obtener la playlist de destino para leer su descripción actual
+    const targetPlaylist = await getPlaylistDetails(accessToken, targetPlaylistId);
+    const existingSourceIds = getSourcePlaylistIds(targetPlaylist) || [];
     
-    // 2. Combinar, eliminar duplicados y barajar
-    const combinedTracks = [...new Set([...existingTracks, ...newTrackUris])];
+    // Combinar las fuentes antiguas y nuevas sin duplicados
+    const allSourceIds = Array.from(new Set([...existingSourceIds, ...newSourceIds]));
+    
+    // Reconstruir la descripción y comprobar el límite de caracteres
+    const DESCRIPTION_CHAR_LIMIT = 4000;
+    const baseDescription = `Generada por Spotify Megamixer el ${new Date().toLocaleDateString()}. __MEGAMIXER_APP_V1__`;
+    const sourcesTag = ` __MEGAMIXER_SOURCES:[${allSourceIds.join(',')}]__`;
+    const fullDescription = baseDescription + sourcesTag;
+    let finalDescription = baseDescription;
+    let isSyncable = false;
+    
+    if (fullDescription.length < DESCRIPTION_CHAR_LIMIT) {
+      finalDescription = fullDescription;
+      isSyncable = true;
+    } else {
+      console.warn(`[ACTION] La nueva descripción para ${targetPlaylistId} excede el límite. Se guardará sin fuentes.`);
+    }
+    
+    // Actualizar la descripción en Spotify si ha cambiado
+    if (finalDescription !== targetPlaylist.description) {
+      await updatePlaylistDetails(accessToken, targetPlaylistId, { description: finalDescription });
+    }
+    
+    // --- LÓGICA DE CANCIONES ---
+    // Obtener todas las canciones (existentes y nuevas)
+    const [existingTracks, newTracks] = await Promise.all([
+      getAllPlaylistTracks(accessToken, targetPlaylistId),
+      getTrackUris(newSourceIds)
+    ]);
+    
+    // Combinar, eliminar duplicados y barajar
+    const combinedTracks = [...new Set([...existingTracks, ...newTracks])];
     const shuffledTracks = shuffleArray(combinedTracks);
     
-    // 3. Reemplazar el contenido de la playlist con el nuevo conjunto
-    await replacePlaylistTracks(accessToken, playlistId, shuffledTracks);
+    // Reemplazar el contenido de la playlist con el nuevo conjunto
+    await replacePlaylistTracks(accessToken, targetPlaylistId, shuffledTracks);
     
-    return { finalCount: shuffledTracks.length };
+    // Devolver el resultado completo
+    return { finalCount: shuffledTracks.length, isSyncable };
     
   } catch (error) {
-    console.error(`[ACTION_ERROR:updateAndReorderPlaylist] Fallo al actualizar la playlist ${playlistId}.`, error);
+    console.error(`[ACTION_ERROR:updateAndReorderPlaylist] Fallo al actualizar la playlist ${targetPlaylistId}.`, error);
     throw error;
   }
 }
-
 
 /**
 * Acción para vaciar una playlist.

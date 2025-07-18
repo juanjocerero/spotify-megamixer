@@ -18,7 +18,7 @@ interface PlaylistStore {
   setPlaylistCache: (playlists: SpotifyPlaylist[]) => void;
   addMoreToCache: (playlists: SpotifyPlaylist[]) => void;
   addPlaylistToCache: (playlist: SpotifyPlaylist) => void;
-  updatePlaylistInCache: (playlistId: string, newTrackCount: number) => void;
+  updatePlaylistInCache: (playlistId: string, updates: { trackCount?: number; isSyncable?: boolean }) => void;
   removePlaylistFromCache: (playlistId: string) => void; 
 }
 
@@ -106,11 +106,22 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   },
   
   // Implementación de la acción de actualización (sin cambios)
-  updatePlaylistInCache: (playlistId, newTrackCount) => {
-    const update = (p: SpotifyPlaylist) => 
-      p.id === playlistId 
-    ? { ...p, tracks: { ...p.tracks, total: newTrackCount } } 
-    : p;
+  updatePlaylistInCache: (playlistId, updates) => {
+    const update = (p: SpotifyPlaylist): SpotifyPlaylist => {
+      if (p.id !== playlistId) return p;
+      
+      // Unimos la playlist existente con las actualizaciones que nos llegan
+      return {
+        ...p,
+        tracks: {
+          ...p.tracks,
+          // Actualizamos el total solo si se proporciona
+          total: updates.trackCount ?? p.tracks.total, 
+        },
+        // Actualizamos isSyncable solo si se proporciona
+        isSyncable: updates.isSyncable ?? p.isSyncable,
+      };
+    };
     
     set((state) => ({
       playlistCache: state.playlistCache.map(update),

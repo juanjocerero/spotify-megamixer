@@ -343,3 +343,32 @@ export async function replacePlaylistTracks(
   console.log(`[SPOTIFY_API] Playlist ${playlistId} vaciada. Añadiendo ${trackUris.length} nuevas canciones...`);
   await addTracksToPlaylist(accessToken, playlistId, trackUris);
 }
+
+/**
+* Actualiza los detalles de una playlist (nombre, descripción, etc.).
+* @param accessToken - El token de acceso del usuario.
+* @param playlistId - El ID de la playlist a modificar.
+* @param details - Un objeto con los detalles a actualizar.
+*/
+export async function updatePlaylistDetails(
+  accessToken: string,
+  playlistId: string,
+  details: { name?: string; description?: string; public?: boolean; collaborative?: boolean }
+): Promise<void> {
+  const response = await fetch(`${SPOTIFY_API_BASE}/playlists/${playlistId}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(details),
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error(`[SPOTIFY_API] Fallo al actualizar los detalles de la playlist ${playlistId}`, errorData);
+    throw new Error(`Spotify respondió con ${response.status} al intentar actualizar los detalles.`);
+  }
+  
+  console.log(`[SPOTIFY_API] Detalles de la playlist ${playlistId} actualizados con éxito.`);
+}

@@ -192,7 +192,7 @@ export default function PlaylistDisplay({
       const result = await syncMegalist(playlistToSync.id);
       
       // Actualizamos el contador de canciones en la UI inmediatamente
-      updatePlaylistInCache(playlistToSync.id, result.finalCount);
+      updatePlaylistInCache(playlistToSync.id, { trackCount: result.finalCount });
       
       if (result.message === "Ya estaba sincronizada.") {
         toast.info(`"${playlistToSync.name}" ya estaba al día.`, { id: toastId });
