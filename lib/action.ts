@@ -1,6 +1,7 @@
 // /lib/actions.ts
 'use server'; // ¡Muy importante! Esto marca todas las funciones exportadas como Server Actions.
 
+import { db } from '@/lib/db';
 import { auth } from '@/auth';
 import { SpotifyPlaylist } from '@/types/spotify';
 import { 
@@ -75,6 +76,22 @@ export async function findOrCreatePlaylist(
       // Si se fuerza 'no sync', pasamos un array vacío a la función de creación.
       const idsToStore = forceNoSync ? [] : sourcePlaylistIds;
       const newPlaylist = await createNewPlaylist(accessToken, user.id, name, idsToStore);
+      
+      // Persistencia en base de datos
+      try {
+        await db.megalist.create({
+          data: {
+            id: newPlaylist.id,
+            spotifyUserId: user.id,
+            sourcePlaylistIds: idsToStore,
+          },
+        });
+        console.log(`[DB] Creado el registro para la nueva Megalista ${newPlaylist.id}`);
+      } catch (dbError) {
+        // Si la escritura en la BD falla, solo lo registramos.
+        // La aplicación seguirá funcionando con la lógica de la descripción.
+        console.error(`[DB_ERROR] Fallo al crear el registro para la Megalista ${newPlaylist.id}`, dbError);
+      }
       
       if (!newPlaylist.owner) {
         newPlaylist.owner = { display_name: session.user.name || 'Tú' };
@@ -168,6 +185,24 @@ export async function updateAndReorderPlaylist(
     // Reemplazar el contenido de la playlist con el nuevo conjunto
     await replacePlaylistTracks(accessToken, targetPlaylistId, shuffledTracks);
     
+    // Persistir en base de datos
+    try {
+      await db.megalist.upsert({
+        where: { id: targetPlaylistId },
+        update: {
+          sourcePlaylistIds: allSourceIds,
+        },
+        create: {
+          id: targetPlaylistId,
+          spotifyUserId: session.user.id,
+          sourcePlaylistIds: allSourceIds,
+        },
+      });
+      console.log(`[DB] Actualizado el registro para la Megalista ${targetPlaylistId}`);
+    } catch (dbError) {
+      console.error(`[DB_ERROR] Fallo al actualizar el registro para la Megalista ${targetPlaylistId}`, dbError);
+    }
+    
     // Devolver el resultado completo
     return { finalCount: shuffledTracks.length, isSyncable };
     
@@ -260,6 +295,18 @@ export async function unfollowPlaylist(playlistId: string): Promise<void> {
     }
     
     console.log(`[ACTION] Playlist ${playlistId} dejada de seguir con éxito.`);
+    
+    // Persistir en base de datos
+    try {
+      // Usamos deleteMany porque no lanza un error si el registro no existe,
+      // lo cual es perfecto si el usuario elimina una playlist que no era una Megalista.
+      await db.megalist.deleteMany({
+        where: { id: playlistId },
+      });
+      console.log(`[DB] Eliminado el registro para la (posible) Megalista ${playlistId}`);
+    } catch (dbError) {
+      console.error(`[DB_ERROR] Fallo al eliminar el registro para la Megalista ${playlistId}`, dbError);
+    }
     
   } catch (error) {
     console.error(`[ACTION_ERROR:unfollowPlaylist] Error en la acción de dejar de seguir la playlist ${playlistId}.`, error);
