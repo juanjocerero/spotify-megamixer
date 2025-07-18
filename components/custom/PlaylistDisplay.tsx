@@ -300,7 +300,7 @@ export default function PlaylistDisplay({
         <div className="flex items-start justify-between gap-x-3">
         {/* Contenedor para el texto (nombre y propietario) */}
         <div className="flex-grow min-w-0">
-        <span className="block break-words">{playlist.name}</span>
+        <span className="block break-words pr-2">{playlist.name}</span>
         {/* El propietario se muestra debajo solo en pantallas pequeñas */}
         <span className="block text-xs text-muted-foreground sm:hidden break-words">
         {playlist.owner.display_name}
