@@ -297,12 +297,12 @@ export default function PlaylistDisplay({
         
         <TableCell className="font-medium py-2">
         {/* El contenedor principal ahora es flex y alinea verticalmente */}
-        <div className="flex items-start gap-x-3">
+        <div className="flex items-start justify-between gap-x-3">
         {/* Contenedor para el texto (nombre y propietario) */}
-        <div className="flex-grow">
-        <span className="truncate break-words">{playlist.name}</span>
+        <div className="flex-grow min-w-0">
+        <span className="block break-words">{playlist.name}</span>
         {/* El propietario se muestra debajo solo en pantallas pequeñas */}
-        <span className="text-xs text-muted-foreground sm:hidden break-words">
+        <span className="block text-xs text-muted-foreground sm:hidden break-words">
         {playlist.owner.display_name}
         </span>
         </div>
