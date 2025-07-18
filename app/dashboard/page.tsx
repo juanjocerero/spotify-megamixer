@@ -1,8 +1,7 @@
 // /app/dashboard/page.tsx
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { getUserPlaylists } from '@/lib/spotify';
-import PlaylistDisplay from '@/components/custom/PlaylistDisplay';
+import { getUserPlaylists, getPlaylistDetails } from '@/lib/spotify';
 import LogoutButton from '@/components/custom/LogoutButton';
 import DashboardClient from '@/components/custom/DashboardClient';
 import FloatingActionBar from '@/components/custom/FloatingActionBar';
@@ -28,7 +27,17 @@ export default async function DashboardPage() {
   }
   
   const playlistsData = await getUserPlaylists(session.accessToken);
-  // const playlists = playlistsData.items;
+  
+  // --- INICIO DEL CÓDIGO DE DEPURACIÓN ---
+  // Supongamos que la playlist que falla se llama "Mix Definitivo"
+  const faultyPlaylist = playlistsData.items.find(p => p.name === "Mix Definitivo");
+  
+  if (faultyPlaylist) {
+    console.log("DATOS DE LA PLAYLIST PROBLEMÁTICA DESDE /me/playlists:");
+    console.log(faultyPlaylist); 
+    // Fíjate bien en los campos `description` y `tracks` del objeto que se imprima.
+  }
+  // --- FIN DEL CÓDIGO DE DEPURACIÓN ---
   
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
@@ -39,11 +48,11 @@ export default async function DashboardPage() {
     </h1>
     <LogoutButton />
     </header>
-
+    
     {/* 2. Renderizamos el componente cliente y le pasamos los datos iniciales */}
     <DashboardClient
-      initialPlaylists={playlistsData.items}
-      initialNextUrl={playlistsData.next}
+    initialPlaylists={playlistsData.items}
+    initialNextUrl={playlistsData.next}
     />
     
     <FloatingActionBar />
