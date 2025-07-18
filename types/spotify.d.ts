@@ -29,6 +29,7 @@ export interface SpotifyTrack {
   id: string;
   name: string;
   uri: string; // El identificador único para añadir a la cola o a una playlist
+  type: string;
   album: {
     name: string;
     images: { url: string; }[];

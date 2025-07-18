@@ -32,9 +32,12 @@ export async function getAllPlaylistTracks(
   accessToken: string,
   playlistId: string
 ): Promise<string[]> {
+  
   const allTrackUris: string[] = [];
+  
   // Hacemos la petición inicial más ligera pidiendo solo los campos que necesitamos.
-  let nextUrl: string | null = `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?fields=items(track(uri)),next&limit=100`;
+  // Incluimos el tipo de objeto para filtrar después aquellos que no sean canciones.
+  let nextUrl: string | null = `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks?fields=items(track(uri,type)),next&limit=100`;  
   
   do {
     const response = await fetch(nextUrl, {
@@ -53,12 +56,21 @@ export async function getAllPlaylistTracks(
     
     // Extraemos las URIs, filtrando cualquier posible track nulo (ej. canciones locales no disponibles)
     const uris = data.items
-    .map(item => item.track?.uri)
-    .filter((uri): uri is string => !!uri); // Filtro de tipo para asegurar que solo tenemos strings
+    // Un item es válido solo si cumple todas estas condiciones:
+    .filter(item => 
+      item &&                   // 1. El contenedor del item no es nulo.
+      item.track &&             // 2. El objeto 'track' existe (descarta canciones borradas/locales).
+      item.track.type === 'track' && // 3. Su tipo es exactamente 'track' (descarta podcasts).
+      item.track.uri            // 4. La URI existe y no es una cadena vacía.
+    )
+    
+    // Solo después del filtro, extraemos la URI del objeto 'track' que sabemos que es válido.
+    .map(item => item.track!.uri);
     
     allTrackUris.push(...uris);
     
     nextUrl = data.next;
+
   } while (nextUrl);
   
   return allTrackUris;
