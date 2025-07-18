@@ -81,15 +81,14 @@ export async function findOrCreatePlaylist(
       try {
         await db.megalist.create({
           data: {
-            id: newPlaylist.id,
+            id: newPlaylist.id, // El ID de la playlist de Spotify va en el campo `id`
             spotifyUserId: user.id,
             sourcePlaylistIds: idsToStore,
+            trackCount: 0, // Una megalista nueva siempre empieza con 0 canciones
           },
         });
         console.log(`[DB] Creado el registro para la nueva Megalista ${newPlaylist.id}`);
       } catch (dbError) {
-        // Si la escritura en la BD falla, solo lo registramos.
-        // La aplicación seguirá funcionando con la lógica de la descripción.
         console.error(`[DB_ERROR] Fallo al crear el registro para la Megalista ${newPlaylist.id}`, dbError);
       }
       
