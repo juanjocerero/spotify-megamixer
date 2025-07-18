@@ -147,7 +147,8 @@ export default function FloatingActionBar() {
       const { playlist, exists } = await findOrCreatePlaylist(
         newPlaylistName, 
         selectedPlaylistIds, 
-        forceNoSyncOnCreation
+        forceNoSyncOnCreation, 
+        progress.total
       );
       
       createdPlaylistId = playlist.id;

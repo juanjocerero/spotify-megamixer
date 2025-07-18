@@ -59,7 +59,8 @@ export async function getTrackUris(playlistIds: string[]) {
 export async function findOrCreatePlaylist(
   name: string,
   sourcePlaylistIds: string[],
-  forceNoSync: boolean = false
+  forceNoSync: boolean = false,
+  initialTrackCount: number 
 ): Promise<{ playlist: SpotifyPlaylist; exists: boolean }> {
   try {
     const session = await auth();
@@ -84,7 +85,7 @@ export async function findOrCreatePlaylist(
             id: newPlaylist.id, // El ID de la playlist de Spotify va en el campo `id`
             spotifyUserId: user.id,
             sourcePlaylistIds: idsToStore,
-            trackCount: 0, // Una megalista nueva siempre empieza con 0 canciones
+            trackCount: initialTrackCount, // Una megalista nueva siempre empieza con 0 canciones
           },
         });
         console.log(`[DB] Creado el registro para la nueva Megalista ${newPlaylist.id}`);
