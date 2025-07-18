@@ -202,6 +202,8 @@ export async function createNewPlaylist(
     // La playlist seguirá funcionando, pero no será sincronizable.
     console.warn('[SPOTIFY_API] La descripción es demasiado larga. Creando playlist sin metadatos de sincronización.');
   }
+
+  console.log(`[DEBUG] Enviando a Spotify - Longitud: ${finalDescription.length} - Descripción: "${finalDescription}"`);
   
   const response = await fetch(`${SPOTIFY_API_BASE}/users/${userId}/playlists`, {
     method: 'POST',
