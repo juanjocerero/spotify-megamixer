@@ -18,8 +18,9 @@ interface PlaylistStore {
   setPlaylistCache: (playlists: SpotifyPlaylist[]) => void;
   addMoreToCache: (playlists: SpotifyPlaylist[]) => void;
   addPlaylistToCache: (playlist: SpotifyPlaylist) => void;
-  updatePlaylistInCache: (playlistId: string, updates: { trackCount?: number; isSyncable?: boolean }) => void;
-  removePlaylistFromCache: (playlistId: string) => void; 
+  updatePlaylistInCache: (playlistId: string, updates: { name?: string; description?: string; trackCount?: number; isSyncable?: boolean }) => void;
+  removePlaylistFromCache: (playlistId: string) => void;
+  removeMultipleFromCache: (playlistIds: string[]) => void;
 }
 
 const processPlaylists = (playlists: SpotifyPlaylist[]): SpotifyPlaylist[] => {
@@ -27,7 +28,6 @@ const processPlaylists = (playlists: SpotifyPlaylist[]): SpotifyPlaylist[] => {
 };
 
 export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
-  // --- Estado existente (sin cambios) ---
   selectedPlaylistIds: [],
   showOnlySelected: false,
   
@@ -64,14 +64,13 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
     set({ showOnlySelected: value })
   },
   
-  // --- Lógica de la caché (con correcciones) ---
   playlistCache: [],
   megamixCache: [],
   
   // Acción para inicializar la caché
   setPlaylistCache: (playlists) => {
     const processedPlaylists = processPlaylists(playlists);
-    // CORRECCIÓN: Filtrar usando la propiedad booleana `isMegalist` ya calculada.
+    // Filtrar usando la propiedad booleana `isMegalist` ya calculada.
     const megamixes = processedPlaylists.filter(p => p.isMegalist);
     set({ playlistCache: processedPlaylists, megamixCache: megamixes });
   },
@@ -80,7 +79,6 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   addMoreToCache: (playlists) => {
     const processedNewPlaylists = processPlaylists(playlists);
     const newCache = [...get().playlistCache, ...processedNewPlaylists];
-    // CORRECCIÓN: Filtrar usando la propiedad booleana `isMegalist`.
     const newMegamixes = newCache.filter(p => p.isMegalist);
     set({ playlistCache: newCache, megamixCache: newMegamixes });
   },
@@ -92,25 +90,33 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
     const [processedPlaylist] = processPlaylists([playlist]);
     
     const newCache = [processedPlaylist, ...existingCache];
-    // CORRECCIÓN: Filtrar usando la propiedad booleana `isMegalist`.
     const newMegamixes = newCache.filter(p => p.isMegalist);
     set({ playlistCache: newCache, megamixCache: newMegamixes });
   },
   
-  // Implementación de la acción de actualización (sin cambios)
+  // Implementación de la acción de eliminación
+  removePlaylistFromCache: (playlistId) => {
+    set((state) => ({
+      playlistCache: state.playlistCache.filter((p) => p.id !== playlistId),
+      megamixCache: state.megamixCache.filter((p) => p.id !== playlistId),
+      selectedPlaylistIds: state.selectedPlaylistIds.filter((id) => id !== playlistId),
+    }));
+  },
+  
+  // Actualiza nombre y descripción de una playlist
   updatePlaylistInCache: (playlistId, updates) => {
     const update = (p: SpotifyPlaylist): SpotifyPlaylist => {
       if (p.id !== playlistId) return p;
       
-      // Unimos la playlist existente con las actualizaciones que nos llegan
       return {
         ...p,
+        // Actualizamos nombre y descripción si se proporcionan
+        name: updates.name ?? p.name,
+        description: updates.description ?? p.description,
         tracks: {
           ...p.tracks,
-          // Actualizamos el total solo si se proporciona
           total: updates.trackCount ?? p.tracks.total, 
         },
-        // Actualizamos isSyncable solo si se proporciona
         isSyncable: updates.isSyncable ?? p.isSyncable,
       };
     };
@@ -121,12 +127,12 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
     }));
   },
   
-  // Implementación de la acción de eliminación (sin cambios)
-  removePlaylistFromCache: (playlistId) => {
+  removeMultipleFromCache: (playlistIds) => {
+    const idSet = new Set(playlistIds);
     set((state) => ({
-      playlistCache: state.playlistCache.filter((p) => p.id !== playlistId),
-      megamixCache: state.megamixCache.filter((p) => p.id !== playlistId),
-      selectedPlaylistIds: state.selectedPlaylistIds.filter((id) => id !== playlistId),
+      playlistCache: state.playlistCache.filter((p) => !idSet.has(p.id)),
+      megamixCache: state.megamixCache.filter((p) => !idSet.has(p.id)),
+      selectedPlaylistIds: state.selectedPlaylistIds.filter((id) => !idSet.has(id)),
     }));
   },
 }));

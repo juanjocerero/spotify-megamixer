@@ -11,6 +11,7 @@ import {
   clearPlaylistTracks,
   addTracksToPlaylist, 
   replacePlaylistTracks,
+  updatePlaylistDetails
 } from './spotify';
 import { shuffleArray } from './utils';
 
@@ -301,8 +302,8 @@ export async function unfollowPlaylist(playlistId: string): Promise<void> {
 
 /**
 * Sincroniza una Megalista con sus playlists de origen.
+* Es "autocurativa" y devuelve un informe detallado de los cambios.
 * @param playlistId - El ID de la Megalista a sincronizar.
-* @returns Un objeto con el resultado de la sincronización.
 */
 export async function syncMegalist(playlistId: string) {
   console.log(`[ACTION:syncMegalist] Iniciando sincronización para ${playlistId}`);
@@ -315,10 +316,11 @@ export async function syncMegalist(playlistId: string) {
     const { accessToken } = session;
     
     
-    // Obtener los detalles de la Megalista y parsear sus fuentes
-    const megalist = await db.megalist.findUnique({
-      where: { id: playlistId },
-    });
+    // Obtener estado inicial de la megalista y sus fuentes
+    const megalist = await db.megalist.findUnique({ where: { id: playlistId } });
+    if (!megalist) {
+      throw new Error("Esta Megalista no es sincronizable.");
+    }
     
     // Si no está en la base de datos, no es sincronizable
     if (!megalist) {
@@ -326,22 +328,43 @@ export async function syncMegalist(playlistId: string) {
       throw new Error("Esta Megalista no es sincronizable o no fue creada por la aplicación.");
     }
     
+    const initialTrackUris = await getAllPlaylistTracks(accessToken, playlistId);
     const sourceIds = megalist.sourcePlaylistIds;
     
-    if (!sourceIds) {
-      console.warn(`[ACTION:syncMegalist] La playlist ${playlistId} no es sincronizable.`);
-      throw new Error("Esta Megalista no es sincronizable (no contiene los metadatos de origen).");
-    }
+    // Lógica de autocuración
+    // Trata de manejar el caso de que el usuario borre una playlist
+    // que ya forma parte de una megalista. En este caso, ignora las que
+    // ya no existe y las limpia de la base de datos
     
-    // Obtener las canciones actuales de la Megalista y las actualizadas de las fuentes
-    const [initialTrackUris, finalTrackUris] = await Promise.all([
-      getAllPlaylistTracks(accessToken, playlistId),
-      getTrackUris(sourceIds) // Esta acción ya obtiene, unifica, elimina duplicados y baraja
-    ]);
+    const trackUrisPromises = sourceIds.map(id => 
+      getAllPlaylistTracks(accessToken, id)
+      .catch(error => {
+        console.warn(`[SYNC_WARN] No se pudo obtener la playlist fuente ${id}.`, error);
+        return { id, error: true };
+      })
+    );
     
-    // Calcular las diferencias para el informe
+    const results = await Promise.all(trackUrisPromises);
+    
+    const validSourceIds: string[] = [];
+    const finalTrackUris: string[] = [];
+    
+    results.forEach((result, index) => {
+      if (typeof result === 'object' && 'error' in result) {
+        // Es una fuente inválida, no la incluimos
+      } else {
+        // Es un array de URIs válido
+        validSourceIds.push(sourceIds[index]);
+        finalTrackUris.push(...result);
+      }
+    });
+    
+    // Unificamos, eliminamos duplicados y barajamos
+    const uniqueFinalTracks = shuffleArray([...new Set(finalTrackUris)]);
+    
+    // Calcular diferencias entre el estado inicial y el final
     const initialTracksSet = new Set(initialTrackUris);
-    const finalTracksSet = new Set(finalTrackUris);
+    const finalTracksSet = new Set(uniqueFinalTracks);
     
     let addedCount = 0;
     for (const uri of finalTracksSet) {
@@ -349,7 +372,6 @@ export async function syncMegalist(playlistId: string) {
         addedCount++;
       }
     }
-    
     let removedCount = 0;
     for (const uri of initialTracksSet) {
       if (!finalTracksSet.has(uri)) {
@@ -357,27 +379,104 @@ export async function syncMegalist(playlistId: string) {
       }
     }
     
-    // Si no hay cambios, no hacemos nada más.
-    if (addedCount === 0 && removedCount === 0) {
+    // Optimizar. Si no hay cambios, salimos 
+    if (addedCount === 0 && removedCount === 0 && validSourceIds.length === sourceIds.length) {
       console.log(`[ACTION:syncMegalist] La playlist ${playlistId} ya estaba sincronizada.`);
       return { success: true, added: 0, removed: 0, finalCount: initialTrackUris.length, message: "Ya estaba sincronizada." };
     }
     
-    // Si hay cambios, reemplazar los tracks de la playlist
-    console.log(`[ACTION:syncMegalist] Actualizando ${playlistId}. Añadiendo: ${addedCount}, Eliminando: ${removedCount}`);
-    await replacePlaylistTracks(accessToken, playlistId, finalTrackUris);
+    console.log(`[ACTION:syncMegalist] Actualizando ${playlistId}. 
+      Fuentes válidas: ${validSourceIds.length}/${sourceIds.length}. 
+      Canciones finales: ${uniqueFinalTracks.length}`
+    );
     
-    // Devolver el resultado
+    // Actualizamos la playlist en Spotify
+    console.log(`[ACTION:syncMegalist] Actualizando ${playlistId}. Añadiendo: ${addedCount}, Eliminando: ${removedCount}`);
+    await replacePlaylistTracks(accessToken, playlistId, uniqueFinalTracks);
+    
+    // Actualizamos nuestra base de datos para eliminar las referencias huérfanas
+    await db.megalist.update({
+      where: { id: playlistId },
+      data: {
+        sourcePlaylistIds: validSourceIds, // Actualizamos con las fuentes válidas
+        trackCount: uniqueFinalTracks.length,
+      },
+    });
+    
+    // Devolvemos el informe completo
     return { 
       success: true, 
       added: addedCount, 
       removed: removedCount, 
-      finalCount: finalTrackUris.length 
+      finalCount: uniqueFinalTracks.length 
     };
     
   } catch (error) {
     console.error(`[ACTION_ERROR:syncMegalist] Fallo al sincronizar la playlist ${playlistId}.`, error);
     // Relanzamos el error para que el cliente lo pueda capturar y mostrar un toast.
+    throw error;
+  }
+}
+
+/**
+* Actualiza los detalles de una playlist (nombre/descripción) en Spotify.
+*/
+export async function updatePlaylistDetailsAction(
+  playlistId: string,
+  newName: string,
+  newDescription: string
+): Promise<void> {
+  try {
+    const session = await auth();
+    if (!session?.accessToken) {
+      throw new Error('No autenticado o token no disponible.');
+    }
+    
+    // Reutilizamos la función helper que ya existe en lib/spotify.ts
+    await updatePlaylistDetails(session.accessToken, playlistId, {
+      name: newName,
+      description: newDescription,
+    });
+    
+    console.log(`[ACTION] Detalles de la playlist ${playlistId} actualizados.`);
+    
+  } catch (error) {
+    console.error(`[ACTION_ERROR:updatePlaylistDetailsAction] Fallo al actualizar detalles de ${playlistId}.`, error);
+    throw error;
+  }
+}
+
+// /lib/action.ts (añadir esta nueva función)
+
+/**
+* Deja de seguir (elimina) un lote de playlists de la librería del usuario.
+*/
+export async function unfollowPlaylistsBatch(playlistIds: string[]): Promise<void> {
+  try {
+    const session = await auth();
+    if (!session?.accessToken) {
+      throw new Error('No autenticado o token no disponible.');
+    }
+    const { accessToken } = session;
+    
+    // Ejecutamos las peticiones a la API de Spotify en paralelo
+    const unfollowPromises = playlistIds.map(id =>
+      fetch(`https://api.spotify.com/v1/playlists/${id}/followers`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+    );
+    await Promise.all(unfollowPromises);
+    
+    // Eliminamos todos los registros de nuestra base de datos en una sola operación
+    await db.megalist.deleteMany({
+      where: { id: { in: playlistIds } },
+    });
+    
+    console.log(`[ACTION] Lote de ${playlistIds.length} playlists eliminadas.`);
+    
+  } catch (error) {
+    console.error('[ACTION_ERROR:unfollowPlaylistsBatch] Fallo al eliminar el lote de playlists.', error);
     throw error;
   }
 }
