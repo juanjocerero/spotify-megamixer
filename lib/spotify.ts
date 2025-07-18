@@ -59,11 +59,12 @@ export async function getAllPlaylistTracks(
     // Un item es válido solo si cumple todas estas condiciones:
     .filter(item => 
       item &&                   // 1. El contenedor del item no es nulo.
-      item.track &&             // 2. El objeto 'track' existe (descarta canciones borradas/locales).
+      item.track &&             // 2. El objeto 'track' existe (descarta canciones borradas).
       item.track.type === 'track' && // 3. Su tipo es exactamente 'track' (descarta podcasts).
-      item.track.uri            // 4. La URI existe y no es una cadena vacía.
+      item.track.uri &&            // 4. La URI existe y no es una cadena vacía.
+      !item.track.uri.startsWith('spotify:local:') // Excluimos específicamente archivos locales
     )
-    
+
     // Solo después del filtro, extraemos la URI del objeto 'track' que sabemos que es válido.
     .map(item => item.track!.uri);
     
