@@ -120,8 +120,6 @@ export default function FloatingActionBar() {
       // Fin del código de depuración
       console.error('[UI_ERROR:handleInitiateMix] Error al obtener las canciones:', error);
       
-      // Comprobar el tipo de error antes de usarlo
-      let errorMessage = 'Error al obtener las canciones.';
       toast.error(`Falló la obtención de canciones. Revisa la consola para más detalles.`, { id: toastId });
       setStep('idle');
     }
