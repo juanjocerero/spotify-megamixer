@@ -248,9 +248,11 @@ export default function PlaylistDisplay({
     </TableRow>
     </TableHeader>
     
+    
     <TableBody>
     {filteredPlaylists.map((playlist, index) => {
-      const isMegalista = playlist.description?.includes('<!-- MEGAMIXER_APP_V1 -->');
+      const isMegalista = playlist.isMegalist ?? false;
+      
       const isSyncable = playlist.isSyncable ?? false;
       const isSyncingThis = syncingId === playlist.id;
       const selected = isSelected(playlist.id);
@@ -342,7 +344,7 @@ export default function PlaylistDisplay({
           {isSyncable && (
             <DropdownMenuItem
             disabled={isSyncingThis}
-            onClick={(e) => {
+            onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
               handleSync(playlist);
             }}
@@ -359,7 +361,7 @@ export default function PlaylistDisplay({
           {/* Opción de Eliminar */}
           <DropdownMenuItem
           className="text-red-500 focus:text-red-500"
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent) => {
             e.stopPropagation();
             setDeleteAlert({ open: true, playlist });
           }}
@@ -387,7 +389,7 @@ export default function PlaylistDisplay({
       </div>
     )}
     
-    <AlertDialog open={deleteAlert.open} onOpenChange={(open) => setDeleteAlert({ open, playlist: open ? deleteAlert.playlist : null })}>
+    <AlertDialog open={deleteAlert.open} onOpenChange={(open: boolean) => setDeleteAlert({ open, playlist: open ? deleteAlert.playlist : null })}>
     <AlertDialogContent>
     <AlertDialogHeader>
     <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>

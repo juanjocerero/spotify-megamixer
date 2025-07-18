@@ -20,6 +20,7 @@ export interface SpotifyPlaylist {
     display_name: string;
   };
   description?: string;
+  isMegalist?: boolean;
   // Podemos añadir más campos de la API de Spotify aquí si los necesitamos
 }
 
