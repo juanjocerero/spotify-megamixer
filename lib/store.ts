@@ -35,7 +35,7 @@ const processPlaylists = (playlists: SpotifyPlaylist[]): SpotifyPlaylist[] => {
 };
 
 export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
-  // --- Estado existente ---
+  // --- Estado existente (sin cambios) ---
   selectedPlaylistIds: [],
   showOnlySelected: false,
   
@@ -59,12 +59,10 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
       selectedPlaylistIds: [],
       showOnlySelected: false,
     })
-    
   },
   
   addMultipleToSelection: (playlistIds) => {
     set((state) => {
-      // Usamos un Set para fusionar y eliminar duplicados de forma eficiente
       const combinedIds = new Set([...state.selectedPlaylistIds, ...playlistIds]);
       return { selectedPlaylistIds: Array.from(combinedIds) };
     });
@@ -74,27 +72,24 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
     set({ showOnlySelected: value })
   },
   
-  // Lógica de la caché ---
+  // --- Lógica de la caché (con correcciones) ---
   playlistCache: [],
   megamixCache: [],
   
   // Acción para inicializar la caché
   setPlaylistCache: (playlists) => {
     const processedPlaylists = processPlaylists(playlists);
-    // Filtramos las megalistas basándonos en nuestra "firma"
-    const megamixes = processedPlaylists.filter(
-      (p) => p.description?.includes('<!-- MEGAMIXER_APP_V1 -->')
-    );
+    // CORRECCIÓN: Filtrar usando la propiedad booleana `isMegalist` ya calculada.
+    const megamixes = processedPlaylists.filter(p => p.isMegalist);
     set({ playlistCache: processedPlaylists, megamixCache: megamixes });
   },
   
   // Acción para añadir más playlists a la caché (scroll infinito)
   addMoreToCache: (playlists) => {
-    const processedNewPlaylists = processPlaylists(playlists); // Usamos la función de ayuda
+    const processedNewPlaylists = processPlaylists(playlists);
     const newCache = [...get().playlistCache, ...processedNewPlaylists];
-    const newMegamixes = newCache.filter(
-      (p) => p.description?.includes('<!-- MEGAMIXER_APP_V1 -->')
-    );
+    // CORRECCIÓN: Filtrar usando la propiedad booleana `isMegalist`.
+    const newMegamixes = newCache.filter(p => p.isMegalist);
     set({ playlistCache: newCache, megamixCache: newMegamixes });
   },
   
@@ -102,17 +97,15 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
     const existingCache = get().playlistCache;
     if (existingCache.some(p => p.id === playlist.id)) return;
     
-    // Usamos la función de ayuda aquí también, dentro de un array
     const [processedPlaylist] = processPlaylists([playlist]);
     
     const newCache = [processedPlaylist, ...existingCache];
-    const newMegamixes = newCache.filter(
-      (p) => p.description?.includes('<!-- MEGAMIXER_APP_V1 -->')
-    );
+    // CORRECCIÓN: Filtrar usando la propiedad booleana `isMegalist`.
+    const newMegamixes = newCache.filter(p => p.isMegalist);
     set({ playlistCache: newCache, megamixCache: newMegamixes });
   },
   
-  // Implementación de la acción de actualización
+  // Implementación de la acción de actualización (sin cambios)
   updatePlaylistInCache: (playlistId, newTrackCount) => {
     const update = (p: SpotifyPlaylist) => 
       p.id === playlistId 
@@ -125,13 +118,12 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
     }));
   },
   
+  // Implementación de la acción de eliminación (sin cambios)
   removePlaylistFromCache: (playlistId) => {
     set((state) => ({
       playlistCache: state.playlistCache.filter((p) => p.id !== playlistId),
       megamixCache: state.megamixCache.filter((p) => p.id !== playlistId),
-      // También la eliminamos de la selección si estuviera seleccionada
       selectedPlaylistIds: state.selectedPlaylistIds.filter((id) => id !== playlistId),
     }));
   },
-  
 }));

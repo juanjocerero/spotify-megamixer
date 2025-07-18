@@ -114,10 +114,6 @@ export default function FloatingActionBar() {
     try {
       const { playlist, exists } = await findOrCreatePlaylist(newPlaylistName, selectedPlaylistIds);
       
-      // --- INICIO DEL CÓDIGO DE DEPURACIÓN ---
-      console.log('[DEBUG] Objeto de la playlist RECIBIDO del servidor:', playlist);
-      // --- FIN DEL CÓDIGO DE DEPURACIÓN ---
-      
       createdPlaylistId = playlist.id;
       
       if (exists) {
