@@ -122,10 +122,7 @@ export default function FloatingActionBar() {
       
       // Comprobar el tipo de error antes de usarlo
       let errorMessage = 'Error al obtener las canciones.';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      toast.error("Falló la obtención de canciones. Revisa la consola para más detalles.", { id: toastId });
+      toast.error(`Falló la obtención de canciones. Revisa la consola para más detalles.`, { id: toastId });
       setStep('idle');
     }
   };

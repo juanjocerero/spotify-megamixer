@@ -67,7 +67,6 @@ export default function PlaylistDisplay({
     setPlaylistCache, 
     addMoreToCache,
     updatePlaylistInCache,
-    addMultipleToSelection, 
     removePlaylistFromCache
   } = usePlaylistStore();
   
@@ -172,7 +171,7 @@ export default function PlaylistDisplay({
       onClearSearch();
       break;
     }
-  }, [focusedIndex, filteredPlaylists, togglePlaylist]);
+  }, [focusedIndex, filteredPlaylists, togglePlaylist, onClearSearch]);
   
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);

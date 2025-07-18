@@ -28,10 +28,7 @@ export default async function DashboardPage() {
   }
   
   const initialData = await getUserPlaylists(session.accessToken);
-  const initialPlaylists = initialData.items;
-  
-  const playlistsData = await getUserPlaylists(session.accessToken);
-  
+  const initialPlaylists = initialData.items;  
   
   // --- Lógica de hidratación ---
   
