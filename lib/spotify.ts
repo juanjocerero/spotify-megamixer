@@ -90,27 +90,6 @@ export async function getPlaylistDetails(
   return response.json();
 }
 
-/**
-* Parsea la descripción de una playlist para extraer los IDs de sus fuentes.
-* @param playlist - El objeto de la playlist.
-* @returns Un array de IDs de las fuentes, o null si no es una Megalista sincronizable.
-*/
-export function getSourcePlaylistIds(playlist: SpotifyPlaylist): string[] | null {
-  if (!playlist.description) {
-    return null;
-  }
-  
-  // La expresión regular ahora busca los nuevos delimitadores __...__
-  const match = playlist.description.match(/__MEGAMIXER_SOURCES:\[(.*?)]__/);
-  
-  if (match && match[1]) {
-    return match[1].split(',');
-  }
-  
-  return null;
-}
-
-
 export async function getUserPlaylists(accessToken: string): Promise<PlaylistsApiResponse> {
   const fields = "items(id,name,description,images,owner,tracks(total)),next";
   const url = `${SPOTIFY_API_BASE}/me/playlists?limit=50&fields=${encodeURIComponent(fields)}`;
@@ -187,23 +166,6 @@ export async function createNewPlaylist(
   name: string,
   sourcePlaylistIds: string[] 
 ): Promise<SpotifyPlaylist> {
-  const DESCRIPTION_CHAR_LIMIT = 4000; // Límite de seguridad para la descripción de Spotify.
-  const baseDescription = `Generada por Spotify Megamixer el ${new Date().toLocaleDateString()}. __MEGAMIXER_APP_V1__`;
-  const sourcesTag = sourcePlaylistIds.length > 0 ? ` __MEGAMIXER_SOURCES:[${sourcePlaylistIds.join(',')}]__` : '';
-  
-  const fullDescription = baseDescription + sourcesTag;
-  let finalDescription = baseDescription;
-  
-  if (fullDescription.length < DESCRIPTION_CHAR_LIMIT) {
-    finalDescription = fullDescription;
-    console.log('[SPOTIFY_API] Creando playlist con metadatos de sincronización.');
-  } else {
-    // Si la descripción es demasiado larga, la creamos sin los metadatos de las fuentes.
-    // La playlist seguirá funcionando, pero no será sincronizable.
-    console.warn('[SPOTIFY_API] La descripción es demasiado larga. Creando playlist sin metadatos de sincronización.');
-  }
-
-  console.log(`[DEBUG] Enviando a Spotify - Longitud: ${finalDescription.length} - Descripción: "${finalDescription}"`);
   
   const response = await fetch(`${SPOTIFY_API_BASE}/users/${userId}/playlists`, {
     method: 'POST',
@@ -214,7 +176,7 @@ export async function createNewPlaylist(
     body: JSON.stringify({
       name: name,
       // Añadimos un identificador único en la descripción para poder identificarla después como propia
-      description: finalDescription,
+      description: `Generada por Spotify Megamixer el ${new Date().toLocaleDateString()}.`,
       public: false, // Las creamos como privadas por defecto
     }),
   });

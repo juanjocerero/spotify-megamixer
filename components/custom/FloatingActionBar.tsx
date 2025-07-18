@@ -59,8 +59,6 @@ export default function FloatingActionBar() {
   const [addToDialog, setAddToDialog] = useState({ open: false });
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
-  const [syncWarningDialog, setSyncWarningDialog] = useState({ open: false });
-  const [forceNoSyncOnCreation, setForceNoSyncOnCreation] = useState(false);
   
   const isProcessing = step === 'fetching' || step === 'processing' || isSyncingAll;
   
@@ -97,40 +95,16 @@ export default function FloatingActionBar() {
       toast.success(`Se encontraron ${uris.length} canciones únicas.`, { id: toastId });
       setTracksToMix(uris);
       setProgress({ added: 0, total: uris.length });
+      setStep('confirming'); // Pasa directamente a la confirmación
       
-      const DESCRIPTION_CHAR_LIMIT = 4000
-      const baseDesc = `Generada por Spotify Megamixer el ${new Date().toLocaleDateString()}. __MEGAMIXER_APP_V1__`;
-      const sourcesTag = ` __MEGAMIXER_SOURCES:[${selectedPlaylistIds.join(',')}]__`;
-      
-      if ((baseDesc + sourcesTag).length >= DESCRIPTION_CHAR_LIMIT) {
-        // La descripción es demasiado larga, mostramos el diálogo de advertencia
-        setForceNoSyncOnCreation(true);
-        setSyncWarningDialog({ open: true });
-        setStep('idle'); // Detenemos el spinner del toast
-        toast.dismiss(toastId);
-      } else {
-        // La descripción es válida, continuamos con el flujo normal
-        setForceNoSyncOnCreation(false);
-        setStep('confirming');
-      }
-      
-    } catch (error: unknown) { // Tipado correcto del error como 'unknown'
-      // Código de depuración
-      console.error('[DEBUG] Objeto de error completo recibido por el cliente:', error);
-      // Fin del código de depuración
+    } catch (error: unknown) {
       console.error('[UI_ERROR:handleInitiateMix] Error al obtener las canciones:', error);
-      
-      toast.error(`Falló la obtención de canciones. Revisa la consola para más detalles.`, { id: toastId });
+      toast.error(`Falló la obtención de canciones. Revisa la consola.`, { id: toastId });
       setStep('idle');
     }
+    
   };
-  
-  const handleConfirmWithoutSync = () => {
-    setSyncWarningDialog({ open: false });
-    // Reutilizamos el diálogo de nombrar playlist
-    setStep('confirming'); 
-  };
-  
+
   const handleExecuteMix = async () => {
     if (!newPlaylistName.trim()) {
       toast.error('El nombre de la playlist no puede estar vacío.');
@@ -147,7 +121,6 @@ export default function FloatingActionBar() {
       const { playlist, exists } = await findOrCreatePlaylist(
         newPlaylistName, 
         selectedPlaylistIds, 
-        forceNoSyncOnCreation, 
         progress.total
       );
       
@@ -262,9 +235,8 @@ export default function FloatingActionBar() {
     const toastId = toast.loading(`Actualizando "${overwriteDialog.playlistName}"...`);
     
     try {
-      const { finalCount, isSyncable } = await updateAndReorderPlaylist(playlistId, selectedPlaylistIds);
-      
-      updatePlaylistInCache(playlistId, { trackCount: finalCount, isSyncable });
+      const { finalCount } = await updateAndReorderPlaylist(playlistId, selectedPlaylistIds);
+      updatePlaylistInCache(playlistId, { trackCount: finalCount });
       
       toast.success(`¡Playlist actualizada con éxito! Ahora tiene ${finalCount} canciones.`, { id: toastId });
       // Actualizamos el progreso para reflejar el estado final
@@ -375,14 +347,14 @@ export default function FloatingActionBar() {
     try {
       // La llamada a la acción ahora es más simple desde el cliente.
       // Le pasamos los IDs y la acción se encarga de todo.
-      const { finalCount, isSyncable } = await updateAndReorderPlaylist(targetPlaylistId, sourcePlaylistIds);
+      const { finalCount } = await updateAndReorderPlaylist(targetPlaylistId, sourcePlaylistIds);
       
       // Actualizamos la caché con toda la nueva información.
-      updatePlaylistInCache(targetPlaylistId, { trackCount: finalCount, isSyncable });
+      updatePlaylistInCache(targetPlaylistId, { trackCount: finalCount });
       
       toast.success(`¡Megalista actualizada con éxito!`, {
         id: toastId,
-        description: `Ahora tiene ${finalCount} canciones. Sincronización: ${isSyncable ? 'Activada' : 'Desactivada'}.`,
+        description: `Ahora tiene ${finalCount} canciones.`,
       });
       
       clearSelection();
@@ -652,27 +624,6 @@ export default function FloatingActionBar() {
     </DialogContent>
     </Dialog>
     
-    {/* Diálogo: Advertencia de Límite de Sincronización */}
-    <AlertDialog open={syncWarningDialog.open} onOpenChange={(isOpen: boolean) => setSyncWarningDialog({ open: isOpen })}>
-    <AlertDialogContent>
-    <AlertDialogHeader>
-    <AlertDialogTitle>Límite de Playlists Superado</AlertDialogTitle>
-    <AlertDialogDescription>
-    Has seleccionado tantas playlists que la lista de sus orígenes no cabe en la descripción de Spotify.
-    <br/><br/>
-    La Megalista se creará con todas las canciones, pero **no podrá ser sincronizada** en el futuro.
-    </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-    <AlertDialogCancel onClick={() => setSyncWarningDialog({ open: false })}>
-    Cancelar
-    </AlertDialogCancel>
-    <AlertDialogAction onClick={handleConfirmWithoutSync}>
-    Continuar sin Sincronización
-    </AlertDialogAction>
-    </AlertDialogFooter>
-    </AlertDialogContent>
-    </AlertDialog>
     </>
   );
 }
