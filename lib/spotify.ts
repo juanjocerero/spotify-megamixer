@@ -191,9 +191,7 @@ export async function createNewPlaylist(
 ): Promise<SpotifyPlaylist> {
   const DESCRIPTION_CHAR_LIMIT = 4000; // Límite de seguridad para la descripción de Spotify.
   const baseDescription = `Generada por Spotify Megamixer el ${new Date().toLocaleDateString()}. <!-- MEGAMIXER_APP_V1 -->`;
-  const sourcesTag = sourcePlaylistIds.length > 0 
-  ? ` <!-- MEGAMIXER_SOURCES:[${sourcePlaylistIds.join(',')}] -->` 
-  : '';
+  const sourcesTag = sourcePlaylistIds.length > 0 ? ` <!-- MEGAMIXER_SOURCES:[${sourcePlaylistIds.join(',')}] -->` : '';
   
   const fullDescription = baseDescription + sourcesTag;
   let finalDescription = baseDescription;
