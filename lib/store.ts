@@ -23,15 +23,7 @@ interface PlaylistStore {
 }
 
 const processPlaylists = (playlists: SpotifyPlaylist[]): SpotifyPlaylist[] => {
-  return playlists.map(p => {
-    // Usamos .includes() con los nuevos delimitadores, que es más simple y robusto.
-    const isMegalista = p.description?.includes('__MEGAMIXER_APP_V1__') || false;
-    if (!isMegalista) return p;
-    
-    // Si es una megalista, comprobamos si es sincronizable.
-    const isSyncable = p.description?.includes('__MEGAMIXER_SOURCES:[') || false;
-    return { ...p, isSyncable, isMegalist: true };
-  });
+  return playlists;
 };
 
 export const usePlaylistStore = create<PlaylistStore>((set, get) => ({

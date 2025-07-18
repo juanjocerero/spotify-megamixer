@@ -1,8 +1,10 @@
 // /app/dashboard/page.tsx
+
+import { db } from '@/lib/db';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { SpotifyPlaylist } from '@/types/spotify';
-import { getUserPlaylists, getPlaylistDetails } from '@/lib/spotify';
+import { Megalist } from '@prisma/client';
+import { getUserPlaylists } from '@/lib/spotify';
 import LogoutButton from '@/components/custom/LogoutButton';
 import DashboardClient from '@/components/custom/DashboardClient';
 import FloatingActionBar from '@/components/custom/FloatingActionBar';
@@ -27,26 +29,25 @@ export default async function DashboardPage() {
     redirect('/');
   }
   
+  // Obtenemos las listas del usuario de la base de datos 
+  // y creamos un Set con los ids para buscar rápidamente
+  const userMegalists = await db.megalist.findMany({
+    where: { spotifyUserId: session.user.id },
+  });
+  
+  const megalistIds = new Set(userMegalists.map((m: Megalist) => m.id));
+  
   const initialData = await getUserPlaylists(session.accessToken);
-  const initialPlaylists = initialData.items;  
+  const initialPlaylists = initialData.items;
   
-  // --- Lógica de hidratación ---
-  
-  // Identificamos las Megalistas basándonos en el nuevo marcador
-  const megalistPromises: Promise<SpotifyPlaylist>[] = initialPlaylists
-  .filter(p => p.description?.includes('__MEGAMIXER_APP_V1__'))
-  .map(p => getPlaylistDetails(session.accessToken!, p.id));
-  
-  // Hacemos una llamada a la API para cada Megalista para obtener sus datos frescos
-  // Promise.all se ejecuta en paralelo, por lo que es muy eficiente.
-  const freshMegalists = await Promise.all(megalistPromises);
-  
-  // Creamos un mapa para una búsqueda rápida (ID -> Objeto de Playlist Fresco)
-  const freshDataMap = new Map(freshMegalists.map(p => [p.id, p]));
-  
-  // Construimos la lista final: si una playlist está en el mapa, usamos la versión
-  // fresca; si no, usamos la original.
-  const finalPlaylists = initialPlaylists.map(p => freshDataMap.get(p.id) || p);
+  const finalPlaylists = initialPlaylists.map(p => {
+    const isMegalist = megalistIds.has(p.id);
+    if (isMegalist) {
+      // Todas las megalistas en nuestra db son sincronizables por definición
+      return { ...p, isMegalist: true, isSyncable: true };
+    }
+    return p;
+  });
   
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">

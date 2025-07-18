@@ -331,8 +331,18 @@ export async function syncMegalist(playlistId: string) {
     }
     const { accessToken } = session;
     
+    
     // Obtener los detalles de la Megalista y parsear sus fuentes
-    const megalist = await getPlaylistDetails(accessToken, playlistId);
+    const megalist = await db.megalist.findUnique({
+      where: { id: playlistId },
+    });
+    
+    // Si no está en la base de datos, no es sincronizable
+    if (!megalist) {
+      console.warn(`[ACTION:syncMegalist] La playlist ${playlistId} no se encontró en la base de datos.`);
+      throw new Error("Esta Megalista no es sincronizable o no fue creada por la aplicación.");
+    }
+    
     const sourceIds = getSourcePlaylistIds(megalist);
     
     if (!sourceIds) {
