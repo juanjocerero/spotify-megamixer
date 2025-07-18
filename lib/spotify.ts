@@ -218,7 +218,9 @@ export async function createNewPlaylist(
   });
   
   if (!response.ok) {
-    throw new Error('Fallo al crear la nueva playlist.');
+    const errorData = await response.json();
+    console.error('[SPOTIFY_API_ERROR_DETAILS]', errorData); 
+    throw new Error(`Spotify respondió con ${response.status}: ${errorData.error?.message || 'Error desconocido al crear la playlist.'}`);
   }
   return response.json();
 }

@@ -98,7 +98,7 @@ export default function FloatingActionBar() {
       setTracksToMix(uris);
       setProgress({ added: 0, total: uris.length });
       
-      const DESCRIPTION_CHAR_LIMIT = 3800; // Límite con margen de seguridad
+      const DESCRIPTION_CHAR_LIMIT = 4000
       const baseDesc = `Generada por Spotify Megamixer el ${new Date().toLocaleDateString()}. __MEGAMIXER_APP_V1__`;
       const sourcesTag = ` __MEGAMIXER_SOURCES:[${selectedPlaylistIds.join(',')}]__`;
       
