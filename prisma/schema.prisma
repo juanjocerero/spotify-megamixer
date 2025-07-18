@@ -24,4 +24,6 @@ model Megalist {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("megalists") // Nombra la tabla en la base de datos como "megalists"
 }
