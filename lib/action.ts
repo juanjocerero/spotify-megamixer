@@ -343,7 +343,7 @@ export async function syncMegalist(playlistId: string) {
       throw new Error("Esta Megalista no es sincronizable o no fue creada por la aplicación.");
     }
     
-    const sourceIds = getSourcePlaylistIds(megalist);
+    const sourceIds = megalist.sourcePlaylistIds;
     
     if (!sourceIds) {
       console.warn(`[ACTION:syncMegalist] La playlist ${playlistId} no es sincronizable.`);
