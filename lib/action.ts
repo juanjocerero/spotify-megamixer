@@ -190,11 +190,13 @@ export async function updateAndReorderPlaylist(
         where: { id: targetPlaylistId },
         update: {
           sourcePlaylistIds: allSourceIds,
+          trackCount: shuffledTracks.length,
         },
         create: {
           id: targetPlaylistId,
           spotifyUserId: session.user.id,
           sourcePlaylistIds: allSourceIds,
+          trackCount: shuffledTracks.length,
         },
       });
       console.log(`[DB] Actualizado el registro para la Megalista ${targetPlaylistId}`);
