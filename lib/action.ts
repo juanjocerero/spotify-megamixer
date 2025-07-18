@@ -48,13 +48,17 @@ export async function getTrackUris(playlistIds: string[]) {
 }
 
 /**
-* Encuentra o crea la playlist de destino y la prepara.
-* Ahora detecta si la playlist existe sin modificarla.
+* Encuentra o crea la playlist de destino.
+* Puede forzar la creación sin metadatos de sincronización si la descripción es muy larga.
+* @param name - El nombre de la playlist.
+* @param sourcePlaylistIds - Los IDs de las playlists de origen.
+* @param forceNoSync - Si es true, la playlist se creará sin los metadatos de las fuentes.
 * @returns Un objeto con el ID de la playlist y un booleano 'exists'.
 */
 export async function findOrCreatePlaylist(
   name: string,
-  sourcePlaylistIds: string[]
+  sourcePlaylistIds: string[],
+  forceNoSync: boolean = false
 ): Promise<{ playlist: SpotifyPlaylist; exists: boolean }> {
   try {
     const session = await auth();
@@ -68,7 +72,9 @@ export async function findOrCreatePlaylist(
     if (existingPlaylist) {
       return { playlist: existingPlaylist, exists: true };
     } else {
-      const newPlaylist = await createNewPlaylist(accessToken, user.id, name, sourcePlaylistIds);
+      // Si se fuerza 'no sync', pasamos un array vacío a la función de creación.
+      const idsToStore = forceNoSync ? [] : sourcePlaylistIds;
+      const newPlaylist = await createNewPlaylist(accessToken, user.id, name, idsToStore);
       
       if (!newPlaylist.owner) {
         newPlaylist.owner = { display_name: session.user.name || 'Tú' };
