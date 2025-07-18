@@ -238,7 +238,6 @@ export default function PlaylistDisplay({
     
     <TableHeader>
     <TableRow className="hover:bg-transparent">
-    <TableHead className="w-[50px] hidden sm:table-cell"></TableHead>
     <TableHead className="w-[60px] sm:w-[80px] text-muted-foreground"></TableHead>
     <TableHead className="text-muted-foreground">Nombre</TableHead>
     <TableHead className="text-muted-foreground hidden sm:table-cell w-[120px]">Propietario</TableHead>
@@ -274,16 +273,6 @@ export default function PlaylistDisplay({
           }
         )}
         >
-        
-        {/* Ocultar celda de checkbox en móvil */}
-        <TableCell className="hidden sm:table-cell">
-        <Checkbox
-        id={`select-${playlist.id}`}
-        checked={selected}
-        onClick={(e) => e.stopPropagation()}
-        onCheckedChange={() => togglePlaylist(playlist.id)}
-        />
-        </TableCell>
         
         {/* Añadir padding a la celda del cover solo en el móvil */}
         <TableCell className="pl-4 sm:pl-0 py-2">
