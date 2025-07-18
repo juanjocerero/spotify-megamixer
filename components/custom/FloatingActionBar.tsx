@@ -87,6 +87,9 @@ export default function FloatingActionBar() {
       setProgress({ added: 0, total: uris.length });
       setStep('confirming');
     } catch (error: unknown) { // Tipado correcto del error como 'unknown'
+      // Código de depuración
+      console.error('[DEBUG] Objeto de error completo recibido por el cliente:', error);
+      // Fin del código de depuración
       console.error('[UI_ERROR:handleInitiateMix] Error al obtener las canciones:', error);
       
       // Comprobar el tipo de error antes de usarlo
@@ -94,7 +97,7 @@ export default function FloatingActionBar() {
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      toast.error(errorMessage, { id: toastId });
+      toast.error("Falló la obtención de canciones. Revisa la consola para más detalles.", { id: toastId });
       setStep('idle');
     }
   };
