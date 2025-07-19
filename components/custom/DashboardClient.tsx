@@ -83,26 +83,21 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
   return (
     <>
     {/* Cabecera de control fija (Sticky) */}
-    {/* Este div se quedará pegado en la parte superior de la página al hacer scroll */}
     <div className="sticky top-0 z-10 bg-gray-900/80 py-4 backdrop-blur-md">
-    
-    <div className="flex flex-col sm:flex-row items-center gap-4"></div>
-    
-    <div className="relative w-full sm:flex-grow">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+    {/* Barra de búsqueda */}
+    <div className="relative flex-grow w-full sm:w-auto">
     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
     <Input
     type="text"
     placeholder="Filtrar por nombre..."
-    // Padding a la derecha para que el texto no quede debajo del botón
-    className="pl-10 pr-[160px] text-base"
+    className="pl-10 pr-[160px] text-base w-full"
     value={searchTerm}
     onChange={(e) => setSearchTerm(e.target.value)}
     />
     
-    {/* Contenedor para los botones de añadir toda la selección y borrar la búsqueda */}
+    {/* Botones internos */}
     <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center gap-1">
-    
-    {/* El nuevo botón de limpiar, visible solo si hay texto */}
     {searchTerm.trim() !== '' && (
       <Button
       variant="ghost"
@@ -114,10 +109,8 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
       </Button>
     )}
     
-    {/* El botón existente de "Seleccionar Todos" */}
     {searchTerm.trim() !== '' && filteredIds.length > 0 && (
       <>
-      {/* Separador visual */}
       <div className="mx-1 h-6 w-px bg-gray-600"></div>
       <Button
       variant="ghost"
@@ -134,9 +127,13 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     </div>
     </div>
     
+    {/* Botón de ordenar */}
     <DropdownMenu>
     <DropdownMenuTrigger asChild>
-    <Button variant="outline" className="w-full sm:w-auto sm:flex-shrink-0">
+    <Button
+    variant="outline"
+    className="w-full sm:w-auto whitespace-nowrap"
+    >
     <ArrowUpDown className="mr-2 h-4 w-4" />
     {sortLabels[sortOption]}
     </Button>
@@ -144,7 +141,7 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     <DropdownMenuContent align="end">
     <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
     <DropdownMenuSeparator />
-    <DropdownMenuItem onSelect={() => setSortOption('custom')}>Orden Personalizado</DropdownMenuItem>
+    <DropdownMenuItem onSelect={() => setSortOption('custom')}>Orden por defecto</DropdownMenuItem>
     <DropdownMenuItem onSelect={() => setSortOption('megalist_first')}>Megalistas Primero</DropdownMenuItem>
     <DropdownMenuItem onSelect={() => setSortOption('name_asc')}>Nombre (A-Z)</DropdownMenuItem>
     <DropdownMenuItem onSelect={() => setSortOption('name_desc')}>Nombre (Z-A)</DropdownMenuItem>
@@ -153,9 +150,9 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     <DropdownMenuItem onSelect={() => setSortOption('owner_asc')}>Propietario (A-Z)</DropdownMenuItem>
     </DropdownMenuContent>
     </DropdownMenu>
-    
     </div>
     
+    {/* Switch de mostrar solo seleccionadas */}
     <div className="flex items-center space-x-2 pt-4">
     <Switch
     id="show-selected-main"
@@ -169,6 +166,7 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     <ListChecks className="h-5 w-5" />
     Mostrar solo seleccionadas
     </Label>
+    </div>
     </div>
     
     {/* Contenido principal */}
