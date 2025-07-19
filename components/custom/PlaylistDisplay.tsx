@@ -10,11 +10,13 @@ import { fetchMorePlaylists, unfollowPlaylist, syncMegalist } from '@/lib/action
 import { usePlaylistStore } from '@/lib/store';
 
 import { toast } from 'sonner';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,12 +28,20 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw } from 'lucide-react';
+import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw, Pencil } from 'lucide-react';
 
 interface PlaylistDisplayProps {
   initialPlaylists: SpotifyPlaylist[];
@@ -77,6 +87,17 @@ export default function PlaylistDisplay({
   const [deleteAlert, setDeleteAlert] = useState<{ open: boolean; playlist: SpotifyPlaylist | null }>({
     open: false,
     playlist: null,
+  });
+  const [editState, setEditState] = useState<{
+    open: boolean;
+    playlist: SpotifyPlaylist | null;
+    newName: string;
+    newDescription: string;
+  }>({
+    open: false,
+    playlist: null,
+    newName: '',
+    newDescription: '',
   });
   const [isDeleting, setIsDeleting] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
@@ -328,6 +349,21 @@ export default function PlaylistDisplay({
           </DropdownMenuTrigger>
           
           <DropdownMenuContent align="end">
+          {/* Opción de Editar */}
+          <DropdownMenuItem
+          onClick={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            setEditState({
+              open: true,
+              playlist: playlist,
+              newName: playlist.name,
+              newDescription: playlist.description || '',
+            });
+          }}
+          >
+          <Pencil className="mr-2 h-4 w-4" />
+          <span>Editar detalles</span>
+          </DropdownMenuItem>
           {/* --- Opción de Sincronizar --- */}
           {isSyncable && (
             <DropdownMenuItem
@@ -395,6 +431,45 @@ export default function PlaylistDisplay({
     </AlertDialogFooter>
     </AlertDialogContent>
     </AlertDialog>
+    
+    {/* Diálogo de edición de detalles */}
+    <Dialog open={editState.open} onOpenChange={(isOpen) => setEditState({ ...editState, open: isOpen })}>
+    <DialogContent>
+    <DialogHeader>
+    <DialogTitle>Editar: {editState.playlist?.name}</DialogTitle>
+    <DialogDescription>
+    Modifica el nombre y la descripción de tu playlist. Los cambios se reflejarán en Spotify.
+    </DialogDescription>
+    </DialogHeader>
+    <div className="grid gap-4 py-4">
+    <div className="grid gap-2">
+    <Label htmlFor="playlist-name">Nombre</Label>
+    <Input
+    id="playlist-name"
+    value={editState.newName}
+    onChange={(e) => setEditState({ ...editState, newName: e.target.value })}
+    />
+    </div>
+    <div className="grid gap-2">
+    <Label htmlFor="playlist-description">Descripción</Label>
+    <Textarea
+    id="playlist-description"
+    value={editState.newDescription}
+    onChange={(e) => setEditState({ ...editState, newDescription: e.target.value })}
+    placeholder="Añade una descripción (opcional)"
+    />
+    </div>
+    </div>
+    <DialogFooter>
+    <Button variant="outline" onClick={() => setEditState({ ...editState, open: false })}>
+    Cancelar
+    </Button>
+    <Button onClick={() => { /* TODO: Hito 3 - Llamar a la server action */ }}>
+    Guardar Cambios
+    </Button>
+    </DialogFooter>
+    </DialogContent>
+    </Dialog>
     
     </div>
   );

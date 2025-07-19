@@ -32,7 +32,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectItem, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, Shuffle, XCircle, PlusSquare, ListPlus, RefreshCw } from 'lucide-react';
+import { Loader2, Shuffle, XCircle, PlusSquare, ListPlus, RefreshCw, Trash2 } from 'lucide-react';
 
 export default function FloatingActionBar() {
   
@@ -59,6 +59,7 @@ export default function FloatingActionBar() {
   const [addToDialog, setAddToDialog] = useState({ open: false });
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
+  const [deleteBatchAlertOpen, setDeleteBatchAlertOpen] = useState(false);
   
   const isProcessing = step === 'fetching' || step === 'processing' || isSyncingAll;
   
@@ -104,7 +105,7 @@ export default function FloatingActionBar() {
     }
     
   };
-
+  
   const handleExecuteMix = async () => {
     if (!newPlaylistName.trim()) {
       toast.error('El nombre de la playlist no puede estar vacío.');
@@ -478,6 +479,23 @@ export default function FloatingActionBar() {
       <TooltipContent><p>Limpiar Selección</p></TooltipContent>
       </Tooltip>
       
+      {/* Eliminar en bulk */}
+      <Tooltip>
+      <TooltipTrigger asChild>
+      <Button
+      variant="destructive"
+      size="lg"
+      onClick={() => setDeleteBatchAlertOpen(true)}
+      disabled={isProcessing}
+      className="flex h-16 w-16 flex-col items-center justify-center gap-1 p-1 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2"
+      >
+      <Trash2 className="h-5 w-5 sm:mr-2" />
+      <span className="text-xs sm:text-sm">Eliminar</span>
+      </Button>
+      </TooltipTrigger>
+      <TooltipContent><p>Eliminar Seleccionada(s)</p></TooltipContent>
+      </Tooltip>
+      
       <Tooltip>
       <TooltipTrigger asChild>
       {/* --- Botón Añadir a... --- */}
@@ -623,6 +641,28 @@ export default function FloatingActionBar() {
     </DialogFooter>
     </DialogContent>
     </Dialog>
+    
+    {/* Diálogo de confirmación de eliminación en lote */}
+    <AlertDialog open={deleteBatchAlertOpen} onOpenChange={setDeleteBatchAlertOpen}>
+    <AlertDialogContent>
+    <AlertDialogHeader>
+    <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+    <AlertDialogDescription>
+    Vas a eliminar permanentemente {selectedPlaylistIds.length} playlist(s) de tu librería de Spotify.
+    Esta acción es irreversible.
+    </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+    <AlertDialogAction
+    className="bg-red-600 hover:bg-red-700"
+    onClick={() => { /* TODO: Hito 3 - Llamar a la server action de eliminación en lote */ }}
+    >
+    Sí, eliminar
+    </AlertDialogAction>
+    </AlertDialogFooter>
+    </AlertDialogContent>
+    </AlertDialog>
     
     </>
   );
