@@ -12,8 +12,7 @@ import {
   addTracksToPlaylist, 
   replacePlaylistTracks,
   getPlaylistDetails, 
-  updatePlaylistDetails,
-  getTracksDetails
+  updatePlaylistDetails
 } from './spotify';
 import { shuffleArray } from './utils';
 
@@ -26,7 +25,6 @@ interface PlaylistsApiResponse {
 * Obtiene y prepara las URIs de las canciones.
 */
 export async function getTrackUris(playlistIds: string[]) {
-  // Bloque try...catch para logging detallado
   try {
     const session = await auth();
     if (!session?.accessToken) {
@@ -35,11 +33,10 @@ export async function getTrackUris(playlistIds: string[]) {
     const { accessToken } = session;
     
     const trackPromises = playlistIds.map((id) =>
-      getAllPlaylistTracks(accessToken, id)
+      getAllPlaylistTracks(accessToken, id).then(tracks => tracks.map(t => t.uri))
   );
   const tracksPerPlaylist = await Promise.all(trackPromises);
   const uniqueTrackUris = [...new Set(tracksPerPlaylist.flat())];
-  
   return shuffleArray(uniqueTrackUris);
 } catch (error) {
   console.error('[ACTION_ERROR:getTrackUris] Fallo al obtener las URIs.', error);
@@ -159,17 +156,17 @@ export async function updateAndReorderPlaylist(
     const allSourceIds = Array.from(new Set([...existingSourceIds, ...newSourceIds]));
     
     // Obtener todas las canciones (existentes y nuevas)
-    const [existingTracks, newTracks] = await Promise.all([
-      getAllPlaylistTracks(accessToken, targetPlaylistId),
-      getTrackUris(newSourceIds)
+    const [existingTracksUris, newTracksUris] = await Promise.all([
+      getAllPlaylistTracks(accessToken, targetPlaylistId).then(tracks => tracks.map(t => t.uri)),
+      getTrackUris(newSourceIds) // getTrackUris ya devuelve URIs
     ]);
     
     // Combinar, eliminar duplicados y barajar
-    const combinedTracks = [...new Set([...existingTracks, ...newTracks])];
-    const shuffledTracks = shuffleArray(combinedTracks);
+    const combinedTracksUris = [...new Set([...existingTracksUris, ...newTracksUris])];
+    const shuffledTracksUris = shuffleArray(combinedTracksUris);
     
     // Reemplazar el contenido de la playlist con el nuevo conjunto
-    await replacePlaylistTracks(accessToken, targetPlaylistId, shuffledTracks);
+    await replacePlaylistTracks(accessToken, targetPlaylistId, shuffledTracksUris);
     
     // Persistir en base de datos
     try {
@@ -177,13 +174,13 @@ export async function updateAndReorderPlaylist(
         where: { id: targetPlaylistId },
         update: {
           sourcePlaylistIds: allSourceIds,
-          trackCount: shuffledTracks.length,
+          trackCount: shuffledTracksUris.length,
         },
         create: {
           id: targetPlaylistId,
           spotifyUserId: session.user.id,
           sourcePlaylistIds: allSourceIds,
-          trackCount: shuffledTracks.length,
+          trackCount: shuffledTracksUris.length,
         },
       });
       console.log(`[DB] Actualizado el registro para la Megalista ${targetPlaylistId}`);
@@ -192,7 +189,7 @@ export async function updateAndReorderPlaylist(
     }
     
     // Devolver el resultado completo
-    return { finalCount: shuffledTracks.length };
+    return { finalCount: shuffledTracksUris.length };
     
   } catch (error) {
     console.error(`[ACTION_ERROR:updateAndReorderPlaylist] Fallo al actualizar la playlist ${targetPlaylistId}.`, error);
@@ -330,19 +327,22 @@ export async function syncMegalist(playlistId: string) {
       throw new Error("Esta Megalista no es sincronizable o no fue creada por la aplicación.");
     }
     
-    const initialTrackUris = await getAllPlaylistTracks(accessToken, playlistId);
-    const sourceIds = megalist.sourcePlaylistIds;
+    const initialTracks = await getAllPlaylistTracks(accessToken, playlistId);
+    const initialTrackUris = initialTracks.map(t => t.uri);
     
     // Lógica de autocuración
     // Trata de manejar el caso de que el usuario borre una playlist
     // que ya forma parte de una megalista. En este caso, ignora las que
     // ya no existe y las limpia de la base de datos
+    const sourceIds = megalist.sourcePlaylistIds;
     
-    const trackUrisPromises = sourceIds.map(id => 
+    const trackUrisPromises = sourceIds.map(id =>
+      // Asegurarse de que el .catch devuelva un array vacío o un objeto de error para Promise.all
       getAllPlaylistTracks(accessToken, id)
+      .then(tracks => tracks.map(t => t.uri)) // Mapear a URIs
       .catch(error => {
         console.warn(`[SYNC_WARN] No se pudo obtener la playlist fuente ${id}.`, error);
-        return { id, error: true };
+        return { id, error: true }; // Devolver un indicador de error
       })
     );
     
@@ -352,10 +352,11 @@ export async function syncMegalist(playlistId: string) {
     const finalTrackUris: string[] = [];
     
     results.forEach((result, index) => {
-      if (typeof result === 'object' && 'error' in result) {
-        // Es una fuente inválida, no la incluimos
-      } else {
-        // Es un array de URIs válido
+      // Comprobar si el resultado es un objeto de error o un array de URIs
+      if (typeof result === 'object' && result !== null && 'error' in result) {
+        // Es un error, no añadir a validSourceIds ni a finalTrackUris
+      } else if (Array.isArray(result)) {
+        // Es un array de URIs válidas
         validSourceIds.push(sourceIds[index]);
         finalTrackUris.push(...result);
       }
@@ -394,7 +395,7 @@ export async function syncMegalist(playlistId: string) {
     
     // Actualizamos la playlist en Spotify
     console.log(`[ACTION:syncMegalist] Actualizando ${playlistId}. Añadiendo: ${addedCount}, Eliminando: ${removedCount}`);
-    await replacePlaylistTracks(accessToken, playlistId, uniqueFinalTracks);
+    await replacePlaylistTracks(accessToken, playlistId, uniqueFinalTracks); // uniqueFinalTracks son URIs
     
     // Actualizamos nuestra base de datos para eliminar las referencias huérfanas
     await db.megalist.update({
@@ -516,57 +517,53 @@ export async function createSurpriseMegalist(
       throw new Error(`PLAYLIST_EXISTS::${existingPlaylist.id}`);
     }
     
-    // Obtener todas las canciones de las fuentes de forma robusta
+    // Aquí, getAllPlaylistTracks devuelve { uri, name, artists }
     const tracksPerPlaylistPromises = sourcePlaylistIds.map(id =>
       getAllPlaylistTracks(accessToken, id).catch(err => {
         console.warn(`[SURPRISE_MIX] No se pudo obtener la playlist ${id}, se omitirá.`, err);
-        return []; // Si una falla, la tratamos como si estuviera vacía
+        return []; // Devolver array vacío en caso de error
       })
     );
-    const tracksPerPlaylist = await Promise.all(tracksPerPlaylistPromises);
+    // Extraemos solo las URIs de los resultados
+    const tracksPerPlaylistUris = (await Promise.all(tracksPerPlaylistPromises)).map(tracks => tracks.map(t => t.uri));
     
     // Algoritmo de selección de canciones
-    let selectedTracks: string[];
-    const allUniqueTracks = [...new Set(tracksPerPlaylist.flat())];
+    let selectedTracksUris: string[];
+    const allUniqueTracksUris = [...new Set(tracksPerPlaylistUris.flat())];
     
-    if (allUniqueTracks.length <= targetTrackCount) {
-      // Caso simple: no hay suficientes canciones, se usan todas
-      console.log(`[SURPRISE_MIX] Menos canciones (${allUniqueTracks.length}) que el objetivo. Se usarán todas.`);
-      selectedTracks = allUniqueTracks;
+    if (allUniqueTracksUris.length <= targetTrackCount) {
+      console.log(`[SURPRISE_MIX] Menos canciones (${allUniqueTracksUris.length}) que el objetivo. Se usarán todas.`);
+      selectedTracksUris = allUniqueTracksUris;
     } else {
-      // Caso complejo: selección proporcional + relleno
-      const selectedTracksSet = new Set<string>();
-      const remainingTracksPool: string[] = [];
+      const selectedTracksUrisSet = new Set<string>();
+      const remainingTracksPoolUris: string[] = [];
       const quota = Math.floor(targetTrackCount / sourcePlaylistIds.length);
-      
-      // Fase de cuota proporcional
-      tracksPerPlaylist.forEach(playlistTracks => {
-        const shuffled = shuffleArray([...playlistTracks]);
+
+      tracksPerPlaylistUris.forEach(playlistTracksUris => {
+        const shuffled = shuffleArray([...playlistTracksUris]);
         const toAdd = shuffled.slice(0, quota);
         const remaining = shuffled.slice(quota);
-        toAdd.forEach(track => selectedTracksSet.add(track));
-        remainingTracksPool.push(...remaining);
+        toAdd.forEach(trackUri => selectedTracksUrisSet.add(trackUri));
+        remainingTracksPoolUris.push(...remaining);
       });
-      
-      // Fase de relleno si es necesario
-      const remainingNeeded = targetTrackCount - selectedTracksSet.size;
+
+      const remainingNeeded = targetTrackCount - selectedTracksUrisSet.size;
       if (remainingNeeded > 0) {
-        const shuffledPool = shuffleArray(remainingTracksPool);
-        for (const track of shuffledPool) {
-          if (selectedTracksSet.size >= targetTrackCount) break;
-          selectedTracksSet.add(track);
+        const shuffledPool = shuffleArray(remainingTracksPoolUris);
+        for (const trackUri of shuffledPool) {
+          if (selectedTracksUrisSet.size >= targetTrackCount) break;
+          selectedTracksUrisSet.add(trackUri);
         }
       }
-      
-      selectedTracks = Array.from(selectedTracksSet);
+      selectedTracksUris = Array.from(selectedTracksUrisSet);
     }
     
     // Asegurar el recuento final y barajar
-    const finalShuffledTracks = shuffleArray(selectedTracks).slice(0, targetTrackCount);
+     const finalShuffledTracksUris = shuffleArray(selectedTracksUris).slice(0, targetTrackCount);
     
     // Crear la playlist en Spotify y añadir las canciones
     const newPlaylist = await createNewPlaylist(accessToken, user.id, newPlaylistName);
-    await replacePlaylistTracks(accessToken, newPlaylist.id, finalShuffledTracks);
+    await replacePlaylistTracks(accessToken, newPlaylist.id, finalShuffledTracksUris);
     
     // Persistir la nueva Megalista en nuestra base de datos
     await db.megalist.create({
@@ -574,7 +571,7 @@ export async function createSurpriseMegalist(
         id: newPlaylist.id,
         spotifyUserId: user.id,
         sourcePlaylistIds: sourcePlaylistIds,
-        trackCount: finalShuffledTracks.length,
+        trackCount: finalShuffledTracksUris.length,
       },
     });
     console.log(`[DB] Creado el registro para la nueva Megalista Sorpresa ${newPlaylist.id}`);
@@ -586,7 +583,7 @@ export async function createSurpriseMegalist(
       isSyncable: true, // Por definición, una nueva megalista es sincronizable
       tracks: {
         ...newPlaylist.tracks,
-        total: finalShuffledTracks.length,
+        total: finalShuffledTracksUris.length,
       },
     };
     return enrichedPlaylist;
@@ -623,50 +620,53 @@ export async function overwriteSurpriseMegalist(
   
   try {
     // Obtener y seleccionar las canciones
+    // Aquí, getAllPlaylistTracks devuelve { uri, name, artists }
     const tracksPerPlaylistPromises = sourcePlaylistIds.map(id =>
       getAllPlaylistTracks(accessToken, id).catch(() => [])
     );
-    const tracksPerPlaylist = await Promise.all(tracksPerPlaylistPromises);
+    // Extraemos solo las URIs de los resultados
+    const tracksPerPlaylistUris = (await Promise.all(tracksPerPlaylistPromises)).map(tracks => tracks.map(t => t.uri));
     
-    let selectedTracks: string[];
-    const allUniqueTracks = [...new Set(tracksPerPlaylist.flat())];
+    let selectedTracksUris: string[];
+    const allUniqueTracksUris = [...new Set(tracksPerPlaylistUris.flat())];
     
-    if (allUniqueTracks.length <= targetTrackCount) {
-      selectedTracks = allUniqueTracks;
+    if (allUniqueTracksUris.length <= targetTrackCount) {
+      selectedTracksUris = allUniqueTracksUris;
     } else {
-      const selectedTracksSet = new Set<string>();
-      const remainingTracksPool: string[] = [];
+      const selectedTracksUrisSet = new Set<string>();
+      const remainingTracksPoolUris: string[] = [];
       const quota = Math.floor(targetTrackCount / sourcePlaylistIds.length);
-      
-      tracksPerPlaylist.forEach(playlistTracks => {
-        const shuffled = shuffleArray([...playlistTracks]);
+
+      tracksPerPlaylistUris.forEach(playlistTracksUris => {
+        const shuffled = shuffleArray([...playlistTracksUris]);
         const toAdd = shuffled.slice(0, quota);
         const remaining = shuffled.slice(quota);
-        toAdd.forEach(trackUri => selectedTracksSet.add(trackUri));
-        remainingTracksPool.push(...remaining);
+        toAdd.forEach(trackUri => selectedTracksUrisSet.add(trackUri));
+        remainingTracksPoolUris.push(...remaining);
       });
-      
-      const remainingNeeded = targetTrackCount - selectedTracksSet.size;
+
+      const remainingNeeded = targetTrackCount - selectedTracksUrisSet.size;
       if (remainingNeeded > 0) {
-        const shuffledPool = shuffleArray(remainingTracksPool);
-        for (const track of shuffledPool) {
-          if (selectedTracksSet.size >= targetTrackCount) break;
-          selectedTracksSet.add(track);
+        const shuffledPool = shuffleArray(remainingTracksPoolUris);
+        for (const trackUri of shuffledPool) {
+          if (selectedTracksUrisSet.size >= targetTrackCount) break;
+          selectedTracksUrisSet.add(trackUri);
         }
       }
-      selectedTracks = Array.from(selectedTracksSet);
+      selectedTracksUris = Array.from(selectedTracksUrisSet);
     }
-    const finalShuffledTracks = shuffleArray(selectedTracks).slice(0, targetTrackCount);
+
+    const finalShuffledTracksUris = shuffleArray(selectedTracksUris).slice(0, targetTrackCount);
     
     // Reemplazar el contenido de la playlist existente
-    await replacePlaylistTracks(accessToken, playlistId, finalShuffledTracks);
+    await replacePlaylistTracks(accessToken, playlistId, finalShuffledTracksUris);
     
     // Actualizar el registro en nuestra base de datos
     await db.megalist.update({
       where: { id: playlistId },
       data: {
         sourcePlaylistIds: sourcePlaylistIds,
-        trackCount: finalShuffledTracks.length,
+        trackCount: finalShuffledTracksUris.length,
         updatedAt: new Date(),
       },
     });
@@ -682,7 +682,7 @@ export async function overwriteSurpriseMegalist(
       isSyncable: true,
       tracks: {
         ...updatedPlaylistFromSpotify.tracks,
-        total: finalShuffledTracks.length,
+        total: finalShuffledTracksUris.length,
       },
     };
     
@@ -694,12 +694,11 @@ export async function overwriteSurpriseMegalist(
 
 /**
 * Server Action para obtener los nombres de las canciones y los artistas de una playlist.
+* Utiliza la optimización donde getAllPlaylistTracks ya trae los detalles necesarios.
 * @param playlistId El ID de la playlist de Spotify.
 * @returns Un array de objetos con el nombre y los artistas de cada canción.
 */
-export async function getPlaylistTracksDetailsAction(
-  playlistId: string
-): Promise<{ name: string; artists: string; }[]> {
+export async function getPlaylistTracksDetailsAction(playlistId: string): Promise<{ name: string; artists: string; }[]> {
   console.log(`[ACTION:getPlaylistTracksDetailsAction] Iniciando obtención de detalles para la playlist ${playlistId}`);
   try {
     const session = await auth();
@@ -708,18 +707,15 @@ export async function getPlaylistTracksDetailsAction(
     }
     const { accessToken } = session;
     
-    // Obtener todas las URIs de las canciones de la playlist
-    const trackUris = await getAllPlaylistTracks(accessToken, playlistId);
-    console.log(`[ACTION:getPlaylistTracksDetailsAction] Encontradas ${trackUris.length} URIs para la playlist ${playlistId}.`);
+    // Paso único: Obtener todas las canciones con sus detalles directamente
+    // getAllPlaylistTracks ahora devuelve objetos como { uri: string; name: string; artists: string; }[]
+    const detailedTracksWithUri = await getAllPlaylistTracks(accessToken, playlistId);
+    console.log(`[ACTION:getPlaylistTracksDetailsAction] Obtenidos detalles para ${detailedTracksWithUri.length} canciones.`);
     
-    // Obtener detalles (nombre y artistas) para esas URIs
-    const detailedTracks = await getTracksDetails(accessToken, trackUris);
-    console.log(`[ACTION:getPlaylistTracksDetailsAction] Obtenidos detalles para ${detailedTracks.length} canciones.`);
-    
-    return detailedTracks;
+    // Mapear para devolver solo 'name' y 'artists', como requiere el componente TrackDetailView
+    return detailedTracksWithUri.map(track => ({ name: track.name, artists: track.artists }));
   } catch (error) {
     console.error(`[ACTION_ERROR:getPlaylistTracksDetailsAction] Fallo al obtener detalles de las canciones para la playlist ${playlistId}.`, error);
-    // Relanzar el error para que la UI pueda manejarlo
     throw error;
   }
 }
