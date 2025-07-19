@@ -444,11 +444,9 @@ export default function PlaylistDisplay({
     
     {/* Cuerpo - Usa flexbox y virtualización */}
     <div
-    ref={parentRef}
+    ref={parentRef} 
+    className="relative h-65vh overflow-auto pr-4 overflow-anchor-none"
     style={{
-      height: '65vh',
-      overflow: 'auto',
-      position: 'relative',
       paddingRight: '10px'
     }}
     >
