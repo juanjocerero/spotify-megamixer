@@ -457,90 +457,110 @@ export default function FloatingActionBar() {
     </div>
     
     {/* El div que contiene los botones */}
-    <div className="flex w-full items-center justify-between gap-1 sm:w-auto sm:justify-end sm:gap-2">
+    <div className="flex w-full max-w-4xl items-center justify-between">
+    <div className="hidden text-sm text-gray-300 sm:block">
+    <p className="font-bold text-white">{selectedPlaylistIds.length} playlist(s)</p>
+    <p>seleccionada(s)</p>
+    </div>
+    
+    {/* Reemplaza desde este div... */}
+    <div className="flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-end">
     {isResumable ? (
       <>
-      <Button variant="ghost" onClick={handleCancelResume} className="h-12 w-12 flex-col gap-1 px-2 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2">
-      <XCircle className="h-5 w-5" />
-      <span className="text-xs sm:text-sm">Cancelar</span>
+      {/* --- Botones de Reanudar/Cancelar (estilo actualizado) --- */}
+      <Tooltip>
+      <TooltipTrigger asChild>
+      <Button variant="ghost" onClick={handleCancelResume} className="h-14 w-14 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2">
+      <XCircle className="h-6 w-6 sm:h-5 sm:w-5" />
+      <span className="hidden sm:inline-block text-sm">Cancelar</span>
       </Button>
-      <Button onClick={handleResumeMix} disabled={isProcessing} className="h-12 w-12 flex-col gap-1 px-2 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2">
-      {isProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Shuffle className="h-5 w-5" />}
-      <span className="text-xs sm:text-sm">{step === 'idle' ? 'Reanudar' : 'Procesando'}</span>
-      </Button>
-      </>
-    ) : (
-      <>
-      {/* --- Botón de sincronizar todo --- */}
-      {hasSyncableMegalists && (
-        <>
-        <Tooltip>
-        <TooltipTrigger asChild>
-        <Button 
-        variant="outline" 
-        size="lg" 
-        onClick={handleSyncAll} 
-        disabled={isProcessing} 
-        className="flex h-16 w-16 flex-col items-center justify-center gap-1 p-1 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2"
-        >
-        {isSyncingAll ? <Loader2 className="h-5 w-5 sm:mr-2 animate-spin"/> : <RefreshCw className="h-5 w-5 sm:mr-2" />}
-        <span className="text-xs sm:text-sm">Sincronizar</span>
-        </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-        <p>Sincronizar {syncableMegalists.length} Megalista(s)</p>
-        </TooltipContent>
-        </Tooltip>
-        </>
-      )}
+      </TooltipTrigger>
+      <TooltipContent><p>Cancelar Proceso</p></TooltipContent>
+      </Tooltip>
       
       <Tooltip>
       <TooltipTrigger asChild>
-      {/* --- Botón Limpiar --- */}
-      <Button variant="ghost" size="lg" onClick={clearSelection} className="flex h-16 w-16 flex-col items-center justify-center gap-1 p-1 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2">
-      <XCircle className="h-5 w-5 sm:mr-2" />
-      {/* El texto ahora es siempre visible, con tamaño responsivo */}
-      <span className="text-xs sm:text-sm">Limpiar</span>
+      <Button 
+      onClick={handleResumeMix} 
+      disabled={isProcessing} 
+      className="h-14 w-14 bg-green-600 text-white hover:bg-green-700 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2"
+      >
+      {isProcessing ? <Loader2 className="h-6 w-6 sm:h-5 sm:w-5 animate-spin" /> : <Shuffle className="h-6 w-6 sm:h-5 sm:w-5" />}
+      <span className="hidden sm:inline-block text-sm">{step === 'idle' ? 'Reanudar' : 'Procesando'}</span>
+      </Button>
+      </TooltipTrigger>
+      <TooltipContent><p>Reanudar Mezcla</p></TooltipContent>
+      </Tooltip>
+      </>
+    ) : (
+      <>
+      {/* --- Botonera Principal (reordenada y rediseñada) --- */}
+      
+      {/* 1. Limpiar */}
+      <Tooltip>
+      <TooltipTrigger asChild>
+      <Button variant="ghost" size="lg" onClick={clearSelection} className="h-14 w-14 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2">
+      <XCircle className="h-6 w-6 sm:h-5 sm:w-5" />
+      <span className="hidden sm:inline-block text-sm">Limpiar</span>
       </Button>
       </TooltipTrigger>
       <TooltipContent><p>Limpiar Selección</p></TooltipContent>
       </Tooltip>
       
-      {/* Eliminar en bulk */}
+      {/* 2. Eliminar */}
       <Tooltip>
       <TooltipTrigger asChild>
       <Button
-      variant="destructive"
+      variant="ghost"
       size="lg"
       onClick={() => setDeleteBatchAlertOpen(true)}
       disabled={isProcessing}
-      className="flex h-16 w-16 flex-col items-center justify-center gap-1 p-1 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2"
+      className="h-14 w-14 text-red-500 hover:bg-red-500/10 hover:text-red-500 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2"
       >
-      <Trash2 className="h-5 w-5 sm:mr-2" />
-      <span className="text-xs sm:text-sm">Eliminar</span>
+      <Trash2 className="h-6 w-6 sm:h-5 sm:w-5" />
+      <span className="hidden sm:inline-block text-sm">Eliminar</span>
       </Button>
       </TooltipTrigger>
       <TooltipContent><p>Eliminar Seleccionada(s)</p></TooltipContent>
       </Tooltip>
       
+      {/* 3. Sincronizar */}
+      {hasSyncableMegalists && (
+        <Tooltip>
+        <TooltipTrigger asChild>
+        <Button 
+        variant="ghost" 
+        size="lg" 
+        onClick={handleSyncAll} 
+        disabled={isProcessing} 
+        className="h-14 w-14 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2"
+        >
+        {isSyncingAll ? <Loader2 className="h-6 w-6 sm:h-5 sm:w-5 animate-spin"/> : <RefreshCw className="h-6 w-6 sm:h-5 sm:w-5" />}
+        <span className="hidden sm:inline-block text-sm">Sincronizar</span>
+        </Button>
+        </TooltipTrigger>
+        <TooltipContent><p>Sincronizar {syncableMegalists.length} Megalista(s)</p></TooltipContent>
+        </Tooltip>
+      )}
+      
+      {/* 4. Añadir */}
       <Tooltip>
       <TooltipTrigger asChild>
-      {/* --- Botón Añadir a... --- */}
-      <Button variant="outline" size="lg" onClick={handleInitiateAddToExisting} disabled={isProcessing} className="flex h-16 w-16 flex-col items-center justify-center gap-1 p-1 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2">
-      <ListPlus className="h-5 w-5 sm:mr-2" />
-      <span className="text-xs sm:text-sm">Añadir</span>
+      <Button variant="ghost" size="lg" onClick={handleInitiateAddToExisting} disabled={isProcessing} className="h-14 w-14 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2">
+      <ListPlus className="h-6 w-6 sm:h-5 sm:w-5" />
+      <span className="hidden sm:inline-block text-sm">Añadir</span>
       </Button>
       </TooltipTrigger>
       <TooltipContent><p>Añadir a Megalista Existente</p></TooltipContent>
       </Tooltip>
       
+      {/* 5. Crear */}
       {selectedPlaylistIds.length >= 2 && (
         <Tooltip>
         <TooltipTrigger asChild>
-        {/* --- Botón Crear --- */}
-        <Button size="lg" onClick={handleInitiateMix} disabled={isProcessing} className="flex h-16 w-16 flex-col items-center justify-center gap-1 bg-green-600 p-1 hover:bg-green-700 sm:h-auto sm:w-auto sm:flex-row sm:px-4 sm:py-2">
-        <PlusSquare className="h-5 w-5 sm:mr-2" />
-        <span className="text-xs sm:text-sm">Crear</span>
+        <Button size="lg" onClick={handleInitiateMix} disabled={isProcessing} className="h-14 w-14 bg-green-600 text-white hover:bg-green-700 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2">
+        <PlusSquare className="h-6 w-6 sm:h-5 sm:w-5" />
+        <span className="hidden sm:inline-block text-sm">Crear</span>
         </Button>
         </TooltipTrigger>
         <TooltipContent><p>Crear Nueva Megalista</p></TooltipContent>
@@ -548,6 +568,7 @@ export default function FloatingActionBar() {
       )}
       </>
     )}
+    </div>
     </div>
     </div>
     </div>
