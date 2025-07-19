@@ -362,6 +362,7 @@ export default function PlaylistDisplay({
       height: '65vh',
       overflow: 'auto',
       position: 'relative',
+      paddingRight: '10px'
     }}
     >
     <div
