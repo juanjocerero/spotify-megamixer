@@ -50,7 +50,7 @@ export default function SurpriseMixButton() {
   
   // Inicia el flujo: determina las fuentes y abre el primer diálogo
   const handleInitiateMix = () => {
-   
+    
     if (selectedPlaylistIds.length >= 1) {
       // El usuario ha seleccionado playlists, saltamos al paso de contar canciones
       const sources = playlistCache.filter(p => selectedPlaylistIds.includes(p.id));
@@ -169,7 +169,7 @@ export default function SurpriseMixButton() {
     </TooltipContent>
     </Tooltip>
     
-    {/* --- Diálogo NUEVO: Preguntar número de fuentes --- */}
+    {/* --- Preguntar número de fuentes --- */}
     <Dialog open={dialogStep === 'askingSourceCount'} onOpenChange={(isOpen) => !isOpen && resetState()}>
     <DialogContent>
     <DialogHeader>
@@ -180,12 +180,14 @@ export default function SurpriseMixButton() {
     </DialogHeader>
     <div className="py-4">
     <Label htmlFor="source-count">Número de Playlists (máx. 50)</Label>
+    <div className="mt-3">
     <Input
     id="source-count"
     type="number"
     value={sourceCount}
     onChange={(e) => setSourceCount(Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1)))}
     />
+    </div>
     </div>
     <DialogFooter>
     <Button variant="outline" onClick={resetState}>Cancelar</Button>
@@ -194,7 +196,7 @@ export default function SurpriseMixButton() {
     </DialogContent>
     </Dialog>
     
-    {/* --- Diálogo 1 (antes): Preguntar número de canciones --- */}
+    {/* --- Preguntar número de canciones --- */}
     <Dialog open={dialogStep === 'askingTrackCount'} onOpenChange={(isOpen) => !isOpen && resetState()}>
     <DialogContent>
     <DialogHeader>
@@ -206,12 +208,13 @@ export default function SurpriseMixButton() {
     </DialogHeader>
     <div className="py-4">
     <Label htmlFor="track-count">Número de canciones</Label>
+    <div className="mt-3">
     <Input
     id="track-count"
     type="number"
     value={trackCount}
     onChange={(e) => setTrackCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
-    />
+    /></div>
     </div>
     <DialogFooter className="sm:justify-between">
     <Button variant="ghost" onClick={() => selectedPlaylistIds.length >= 1 ? resetState() : setDialogStep('askingSourceCount')}>Atrás</Button>
@@ -223,7 +226,7 @@ export default function SurpriseMixButton() {
     </DialogContent>
     </Dialog>
     
-    {/* --- Diálogo 2 (antes): Preguntar nombre de la playlist --- */}
+    {/* --- Preguntar nombre de la playlist --- */}
     <Dialog open={dialogStep === 'askingName'} onOpenChange={(isOpen) => !isOpen && resetState()}>
     <DialogContent>
     <DialogHeader>
@@ -234,11 +237,13 @@ export default function SurpriseMixButton() {
     </DialogHeader>
     <div className="py-4">
     <Label htmlFor="playlist-name">Nombre de la playlist</Label>
+    <div className="mt-3">
     <Input
     id="playlist-name"
     value={playlistName}
     onChange={(e) => setPlaylistName(e.target.value)}
     />
+    </div>
     </div>
     <DialogFooter className="sm:justify-between">
     <Button variant="ghost" onClick={() => setDialogStep('askingTrackCount')}>Atrás</Button>
