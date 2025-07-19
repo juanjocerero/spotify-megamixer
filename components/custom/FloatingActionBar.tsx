@@ -252,23 +252,34 @@ export default function FloatingActionBar() {
     }
   };
   
-  // Manejador para la opción "Actualizar y Reordenar"
+  // Manejador para la opción de actualizar
   const handleConfirmUpdate = async () => {
-    const { playlistId } = overwriteDialog;
+    const { playlistId, playlistName } = overwriteDialog;
     setOverwriteDialog({ ...overwriteDialog, open: false });
     setStep('processing');
-    
-    const toastId = toast.loading(`Actualizando "${overwriteDialog.playlistName}"...`);
+    const toastId = toast.loading(`Actualizando "${playlistName}"...`);
     
     try {
-      const { finalCount } = await addTracksToMegalistAction(playlistId, selectedPlaylistIds);
+      // Llamamos a la nueva acción incremental
+      const { finalCount, addedCount } = await addTracksToMegalistAction(
+        playlistId,
+        selectedPlaylistIds
+      );
+      
       updatePlaylistInCache(playlistId, { trackCount: finalCount });
       
-      toast.success(`¡Playlist actualizada con éxito! Ahora tiene ${finalCount} canciones.`, { id: toastId });
-      // Actualizamos el progreso para reflejar el estado final
-      setProgress({ added: finalCount, total: finalCount });
+      if (addedCount > 0) {
+        toast.success(`¡Playlist actualizada!`, {
+          id: toastId,
+          description: `Se añadieron ${addedCount} canciones. Ahora tiene ${finalCount} en total.`,
+        });
+      } else {
+        toast.info(`La playlist ya contenía todas las canciones.`, {
+          id: toastId,
+          description: 'No se añadieron canciones nuevas.'
+        });
+      }
       
-      // Limpiar selección actual tras éxito
       clearSelection();
     } catch (error: unknown) {
       console.error('[UI_ERROR:handleConfirmUpdate]', error);
@@ -738,7 +749,7 @@ export default function FloatingActionBar() {
     Reemplazar por Completo
     </Button>
     <Button onClick={handleConfirmUpdate}>
-    Actualizar y Reordenar
+    Actualizar
     </Button>
     </div>
     </DialogFooter>
