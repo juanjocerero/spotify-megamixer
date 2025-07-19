@@ -9,7 +9,8 @@ import { cn } from '@/lib/utils';
 import { 
   fetchMorePlaylists, 
   unfollowPlaylist, 
-  syncMegalist, 
+  previewMegalistSync, 
+  executeMegalistSync, 
   updatePlaylistDetailsAction 
 } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
@@ -102,6 +103,21 @@ export default function PlaylistDisplay({
   });
   const [isDeleting, setIsDeleting] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [syncPreviewAlert, setSyncPreviewAlert] = useState<{
+    open: boolean;
+    playlist: SpotifyPlaylist | null;
+    added: number;
+    removed: number;
+    finalCount: number;
+    isExecutingSync: boolean;
+  }>({
+    open: false,
+    playlist: null,
+    added: 0,
+    removed: 0,
+    finalCount: 0,
+    isExecutingSync: false,
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [trackSheetState, setTrackSheetState] = useState<{ 
     open: boolean; 
@@ -304,34 +320,66 @@ export default function PlaylistDisplay({
   
   // --- Lógica para manejar la sincronización desde la UI ---
   const handleSync = async (playlistToSync: SpotifyPlaylist) => {
-    if (syncingId) return; // Evitar clics múltiples
-    
+    if (syncingId) return; // Evitar múltiples clics
     setSyncingId(playlistToSync.id);
-    const toastId = toast.loading(`Sincronizando "${playlistToSync.name}"...`);
+    const toastId = toast.loading(`Calculando cambios para "${playlistToSync.name}"...`);
     
     try {
-      const result = await syncMegalist(playlistToSync.id);
-      
-      // Actualizamos el contador de canciones en la UI inmediatamente
-      updatePlaylistInCache(playlistToSync.id, { trackCount: result.finalCount });
+      const result = await previewMegalistSync(playlistToSync.id);
       
       if (result.message === "Ya estaba sincronizada.") {
-        toast.info(`"${playlistToSync.name}" ya estaba al día.`, { id: toastId });
+        toast.info(`"${playlistToSync.name}" ya está al día.`, { id: toastId });
       } else {
-        toast.success(`Sincronización de "${playlistToSync.name}" completada.`, {
-          id: toastId,
-          description: `Añadidas: ${result.added}, Eliminadas: ${result.removed}. Total: ${result.finalCount} canciones.`,
+        toast.dismiss(toastId); // Cierra el toast de carga
+        // Abre el diálogo de confirmación con los datos de la previsualización
+        setSyncPreviewAlert({
+          open: true,
+          playlist: playlistToSync,
+          added: result.added,
+          removed: result.removed,
+          finalCount: result.finalCount,
+          isExecutingSync: false,
         });
       }
-      
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo sincronizar la playlist.';
+      const message = error instanceof Error ? error.message : 'No se pudo previsualizar la sincronización.';
       toast.error(message, { id: toastId });
     } finally {
-      setSyncingId(null); // Reseteamos el estado de carga
+      setSyncingId(null); // Resetea el estado de carga del icono en la lista
     }
   };
   
+  const handleConfirmSync = async () => {
+    if (!syncPreviewAlert.playlist) return;
+    
+    setSyncPreviewAlert(prev => ({ ...prev, isExecutingSync: true })); // Muestra el loader en el botón
+    const toastId = toast.loading(`Sincronizando "${syncPreviewAlert.playlist.name}"...`);
+    
+    try {
+      const result = await executeMegalistSync(syncPreviewAlert.playlist.id);
+      
+      // Actualiza la caché de Zustand con el nuevo número de canciones
+      updatePlaylistInCache(syncPreviewAlert.playlist.id, { trackCount: result.finalCount });
+      
+      toast.success(`Sincronización de "${syncPreviewAlert.playlist.name}" completada.`, {
+        id: toastId,
+        description: `Añadidas: ${result.added}, Eliminadas: ${result.removed}. Total: ${result.finalCount} canciones.`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo completar la sincronización.';
+      toast.error(message, { id: toastId });
+    } finally {
+      // Cierra el diálogo y resetea el estado
+      setSyncPreviewAlert({
+        open: false,
+        playlist: null,
+        added: 0,
+        removed: 0,
+        finalCount: 0,
+        isExecutingSync: false,
+      });
+    }
+  };
   
   const handleConfirmDelete = async () => {
     if (!deleteAlert.playlist) return;
@@ -598,6 +646,53 @@ export default function PlaylistDisplay({
     </DialogFooter>
     </DialogContent>
     </Dialog>
+    
+    {/* Confirmación de sincronización */}
+    <AlertDialog
+    open={syncPreviewAlert.open}
+    onOpenChange={(isOpen) => {
+      if (!syncPreviewAlert.isExecutingSync) { // Evita cerrar el diálogo mientras se ejecuta la acción
+        setSyncPreviewAlert(prev => ({ ...prev, open: isOpen, playlist: isOpen ? prev.playlist : null }));
+      }
+    }}
+    >
+    <AlertDialogContent>
+    <AlertDialogHeader>
+    <AlertDialogTitle>Confirmar Sincronización</AlertDialogTitle>
+    <AlertDialogDescription asChild>
+    <div>
+    Vas a sincronizar la playlist{' '}
+    <strong className="text-white">{syncPreviewAlert.playlist?.name}</strong>.
+    <ul className="list-disc pl-5 mt-3 space-y-1">
+    <li className="text-green-400">
+    Se añadirán <strong className="text-green-300">{syncPreviewAlert.added}</strong> canciones nuevas.
+    </li>
+    <li className="text-red-400">
+    Se eliminarán <strong className="text-red-300">{syncPreviewAlert.removed}</strong> canciones obsoletas.
+    </li>
+    </ul>
+    <p className="mt-3">
+    La playlist tendrá un total de{' '}
+    <strong className="text-white">{syncPreviewAlert.finalCount}</strong> canciones. ¿Deseas continuar?
+    </p>
+    </div>
+    </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+    <AlertDialogCancel disabled={syncPreviewAlert.isExecutingSync}>Cancelar</AlertDialogCancel>
+    <AlertDialogAction
+    onClick={handleConfirmSync}
+    disabled={syncPreviewAlert.isExecutingSync}
+    className="bg-blue-600 hover:bg-blue-700 text-white"
+    >
+    {syncPreviewAlert.isExecutingSync ? (
+      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+    ) : null}
+    {syncPreviewAlert.isExecutingSync ? 'Sincronizando...' : 'Sí, continuar'}
+    </AlertDialogAction>
+    </AlertDialogFooter>
+    </AlertDialogContent>
+    </AlertDialog>
     
     {/* Sheet para la vista de canciones */}
     <Sheet open={trackSheetState.open} onOpenChange={(isOpen) => setTrackSheetState({ open: isOpen, playlistId: null, playlistName: null })}>
