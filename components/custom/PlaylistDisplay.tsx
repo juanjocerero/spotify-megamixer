@@ -6,7 +6,12 @@ import { useInView } from 'react-intersection-observer';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 import { SpotifyPlaylist } from '@/types/spotify';
 import { cn } from '@/lib/utils';
-import { fetchMorePlaylists, unfollowPlaylist, syncMegalist } from '@/lib/action';
+import { 
+  fetchMorePlaylists, 
+  unfollowPlaylist, 
+  syncMegalist, 
+  updatePlaylistDetailsAction 
+} from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 
 import { toast } from 'sonner';
@@ -101,12 +106,47 @@ export default function PlaylistDisplay({
   });
   const [isDeleting, setIsDeleting] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   const { ref, inView } = useInView({ threshold: 0 });
   
   useEffect(() => {
     setPlaylistCache(initialPlaylists);
   }, [initialPlaylists, setPlaylistCache]);
+  
+  // Maneja el guardado de cambios en la edición de información de playlists
+  const handleSaveChanges = async () => {
+    if (!editState.playlist || !editState.newName.trim()) {
+      toast.error('El nombre de la playlist no puede estar vacío.');
+      return;
+    }
+    
+    setIsSaving(true);
+    const toastId = toast.loading('Guardando cambios...');
+    
+    try {
+      await updatePlaylistDetailsAction(
+        editState.playlist.id,
+        editState.newName,
+        editState.newDescription
+      );
+      
+      // Actualizamos la caché local para que el cambio sea instantáneo
+      updatePlaylistInCache(editState.playlist.id, {
+        name: editState.newName,
+        description: editState.newDescription,
+      });
+      
+      toast.success('¡Playlist actualizada con éxito!', { id: toastId });
+      setEditState({ open: false, playlist: null, newName: '', newDescription: '' });
+      
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo guardar.';
+      toast.error(message, { id: toastId });
+    } finally {
+      setIsSaving(false);
+    }
+  };
   
   const loadMorePlaylists = useCallback(async () => {
     if (isLoading || !nextUrl || showOnlySelected) return;
@@ -461,11 +501,16 @@ export default function PlaylistDisplay({
     </div>
     </div>
     <DialogFooter>
-    <Button variant="outline" onClick={() => setEditState({ ...editState, open: false })}>
+    <Button 
+    variant="outline" 
+    onClick={() => setEditState({ ...editState, open: false })}
+    disabled={isSaving} // Deshabilitar mientras se guarda
+    >
     Cancelar
     </Button>
-    <Button onClick={() => { /* TODO: Hito 3 - Llamar a la server action */ }}>
-    Guardar Cambios
+    <Button onClick={handleSaveChanges} disabled={isSaving}>
+    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+    {isSaving ? 'Guardando...' : 'Guardar Cambios'}
     </Button>
     </DialogFooter>
     </DialogContent>

@@ -11,7 +11,8 @@ import {
   addTracksBatch,
   clearPlaylist,
   updateAndReorderPlaylist,
-  syncMegalist
+  syncMegalist, 
+  unfollowPlaylistsBatch
 } from '@/lib/action';
 
 // Componentes UI de Shadcn
@@ -43,6 +44,7 @@ export default function FloatingActionBar() {
     megamixCache,
     addPlaylistToCache,
     updatePlaylistInCache,
+    removeMultipleFromCache,
   } = usePlaylistStore();
   
   const [step, setStep] = useState<'idle' | 'fetching' | 'confirming' | 'processing'>('idle');
@@ -60,6 +62,7 @@ export default function FloatingActionBar() {
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [deleteBatchAlertOpen, setDeleteBatchAlertOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const isProcessing = step === 'fetching' || step === 'processing' || isSyncingAll;
   
@@ -416,6 +419,30 @@ export default function FloatingActionBar() {
     setIsSyncingAll(false);
   };
   
+  // Maneja la eliminación de playlists en lote
+  const handleConfirmDeleteBatch = async () => {
+    if (selectedPlaylistIds.length === 0) return;
+    
+    setIsDeleting(true);
+    const toastId = toast.loading(`Eliminando ${selectedPlaylistIds.length} playlist(s)...`);
+    
+    try {
+      await unfollowPlaylistsBatch(selectedPlaylistIds);
+      
+      removeMultipleFromCache(selectedPlaylistIds);
+      clearSelection(); // Limpiamos la selección tras el éxito
+      
+      toast.success('Playlists eliminadas con éxito.', { id: toastId });
+      setDeleteBatchAlertOpen(false);
+      
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudieron eliminar.';
+      toast.error(message, { id: toastId });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
   if (selectedPlaylistIds.length === 0 && !isResumable) {
     return null;
   }
@@ -653,12 +680,14 @@ export default function FloatingActionBar() {
     </AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
-    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+    <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
     <AlertDialogAction
+    disabled={isDeleting}
     className="bg-red-600 hover:bg-red-700"
-    onClick={() => { /* TODO: Hito 3 - Llamar a la server action de eliminación en lote */ }}
+    onClick={handleConfirmDeleteBatch} // Conectamos la función
     >
-    Sí, eliminar
+    {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+    {isDeleting ? 'Eliminando...' : 'Sí, eliminar'}
     </AlertDialogAction>
     </AlertDialogFooter>
     </AlertDialogContent>
