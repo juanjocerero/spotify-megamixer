@@ -185,7 +185,8 @@ export default function SurpriseMixButton() {
     id="source-count"
     type="number"
     value={sourceCount}
-    onChange={(e) => setSourceCount(Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1)))}
+    onChange={(e) => setSourceCount(Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1)))} 
+    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
     />
     </div>
     </div>
@@ -213,7 +214,8 @@ export default function SurpriseMixButton() {
     id="track-count"
     type="number"
     value={trackCount}
-    onChange={(e) => setTrackCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
+    onChange={(e) => setTrackCount(Math.max(1, parseInt(e.target.value, 10) || 1))} 
+    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
     /></div>
     </div>
     <DialogFooter className="sm:justify-between">
@@ -241,7 +243,8 @@ export default function SurpriseMixButton() {
     <Input
     id="playlist-name"
     value={playlistName}
-    onChange={(e) => setPlaylistName(e.target.value)}
+    onChange={(e) => setPlaylistName(e.target.value)} 
+    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
     />
     </div>
     </div>
@@ -258,7 +261,7 @@ export default function SurpriseMixButton() {
     </DialogContent>
     </Dialog>
     
-    {/* --- Diálogo NUEVO: Confirmar sobrescritura --- */}
+    {/* --- Confirmar sobrescritura --- */}
     <AlertDialog open={overwriteAlert.open} onOpenChange={(isOpen) => !isOpen && setOverwriteAlert({ open: false, playlistId: null })}>
     <AlertDialogContent>
     <AlertDialogHeader>
