@@ -12,7 +12,8 @@ import {
   addTracksToPlaylist, 
   replacePlaylistTracks,
   getPlaylistDetails, 
-  updatePlaylistDetails
+  updatePlaylistDetails,
+  getTracksDetails
 } from './spotify';
 import { shuffleArray } from './utils';
 
@@ -605,38 +606,38 @@ export async function createSurpriseMegalist(
 * @returns El objeto de la playlist enriquecida y actualizada.
 */
 /**
- * Sobrescribe una Megalista "Sorpresa" existente con un nuevo conjunto de canciones.
- */
+* Sobrescribe una Megalista "Sorpresa" existente con un nuevo conjunto de canciones.
+*/
 export async function overwriteSurpriseMegalist(
   playlistId: string,
   sourcePlaylistIds: string[],
   targetTrackCount: number
 ): Promise<SpotifyPlaylist> {
   console.log(`[ACTION:overwriteSurpriseMegalist] Iniciando sobrescritura para ${playlistId}.`);
-
+  
   const session = await auth();
   if (!session?.accessToken || !session.user?.id) {
     throw new Error('No autenticado, token o ID de usuario no disponible.');
   }
   const { accessToken } = session;
-
+  
   try {
     // Obtener y seleccionar las canciones
     const tracksPerPlaylistPromises = sourcePlaylistIds.map(id =>
       getAllPlaylistTracks(accessToken, id).catch(() => [])
     );
     const tracksPerPlaylist = await Promise.all(tracksPerPlaylistPromises);
-
+    
     let selectedTracks: string[];
     const allUniqueTracks = [...new Set(tracksPerPlaylist.flat())];
-
+    
     if (allUniqueTracks.length <= targetTrackCount) {
       selectedTracks = allUniqueTracks;
     } else {
       const selectedTracksSet = new Set<string>();
       const remainingTracksPool: string[] = [];
       const quota = Math.floor(targetTrackCount / sourcePlaylistIds.length);
-
+      
       tracksPerPlaylist.forEach(playlistTracks => {
         const shuffled = shuffleArray([...playlistTracks]);
         const toAdd = shuffled.slice(0, quota);
@@ -644,7 +645,7 @@ export async function overwriteSurpriseMegalist(
         toAdd.forEach(trackUri => selectedTracksSet.add(trackUri));
         remainingTracksPool.push(...remaining);
       });
-
+      
       const remainingNeeded = targetTrackCount - selectedTracksSet.size;
       if (remainingNeeded > 0) {
         const shuffledPool = shuffleArray(remainingTracksPool);
@@ -656,10 +657,10 @@ export async function overwriteSurpriseMegalist(
       selectedTracks = Array.from(selectedTracksSet);
     }
     const finalShuffledTracks = shuffleArray(selectedTracks).slice(0, targetTrackCount);
-
+    
     // Reemplazar el contenido de la playlist existente
     await replacePlaylistTracks(accessToken, playlistId, finalShuffledTracks);
-
+    
     // Actualizar el registro en nuestra base de datos
     await db.megalist.update({
       where: { id: playlistId },
@@ -673,7 +674,7 @@ export async function overwriteSurpriseMegalist(
     
     // Obtener los detalles actualizados de la playlist de Spotify
     const updatedPlaylistFromSpotify = await getPlaylistDetails(accessToken, playlistId);
-
+    
     // Devolver el objeto enriquecido
     return {
       ...updatedPlaylistFromSpotify,
@@ -684,9 +685,41 @@ export async function overwriteSurpriseMegalist(
         total: finalShuffledTracks.length,
       },
     };
-
+    
   } catch (error) {
     console.error(`[ACTION_ERROR:overwriteSurpriseMegalist] Fallo al sobrescribir ${playlistId}.`, error);
+    throw error;
+  }
+}
+
+/**
+* Server Action para obtener los nombres de las canciones y los artistas de una playlist.
+* @param playlistId El ID de la playlist de Spotify.
+* @returns Un array de objetos con el nombre y los artistas de cada canción.
+*/
+export async function getPlaylistTracksDetailsAction(
+  playlistId: string
+): Promise<{ name: string; artists: string; }[]> {
+  console.log(`[ACTION:getPlaylistTracksDetailsAction] Iniciando obtención de detalles para la playlist ${playlistId}`);
+  try {
+    const session = await auth();
+    if (!session?.accessToken) {
+      throw new Error('No autenticado o token no disponible.');
+    }
+    const { accessToken } = session;
+    
+    // Obtener todas las URIs de las canciones de la playlist
+    const trackUris = await getAllPlaylistTracks(accessToken, playlistId);
+    console.log(`[ACTION:getPlaylistTracksDetailsAction] Encontradas ${trackUris.length} URIs para la playlist ${playlistId}.`);
+    
+    // Obtener detalles (nombre y artistas) para esas URIs
+    const detailedTracks = await getTracksDetails(accessToken, trackUris);
+    console.log(`[ACTION:getPlaylistTracksDetailsAction] Obtenidos detalles para ${detailedTracks.length} canciones.`);
+    
+    return detailedTracks;
+  } catch (error) {
+    console.error(`[ACTION_ERROR:getPlaylistTracksDetailsAction] Fallo al obtener detalles de las canciones para la playlist ${playlistId}.`, error);
+    // Relanzar el error para que la UI pueda manejarlo
     throw error;
   }
 }

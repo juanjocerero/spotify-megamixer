@@ -64,14 +64,14 @@ export async function getAllPlaylistTracks(
       item.track.uri &&            // 4. La URI existe y no es una cadena vacía.
       !item.track.uri.startsWith('spotify:local:') // Excluimos específicamente archivos locales
     )
-
+    
     // Solo después del filtro, extraemos la URI del objeto 'track' que sabemos que es válido.
     .map(item => item.track!.uri);
     
     allTrackUris.push(...uris);
     
     nextUrl = data.next;
-
+    
   } while (nextUrl);
   
   return allTrackUris;
@@ -119,6 +119,66 @@ export async function getUserPlaylists(accessToken: string): Promise<PlaylistsAp
   }
   
   return response.json();
+}
+
+/**
+* Obtiene los detalles (nombre y artistas) para una lista de URIs de canciones.
+* Realiza llamadas a la API de Spotify en lotes de hasta 50 IDs.
+* @param accessToken Token de acceso de Spotify.
+* @param trackUris Array de URIs de canciones (ej: "spotify:track:12345").
+* @returns Un array de objetos con el nombre de la canción y los artistas.
+*/
+export async function getTracksDetails(
+  accessToken: string,
+  trackUris: string[]
+): Promise<{ name: string; artists: string; }[]> {
+  if (trackUris.length === 0) {
+    return [];
+  }
+  
+  const detailedTracks: { name: string; artists: string; }[] = [];
+  // Extrae los IDs de las URIs y filtra cualquier valor nulo/indefinido
+  const trackIds = trackUris.map(uri => uri.split(':').pop()).filter(Boolean) as string[];
+  
+  const batchSize = 50; // La API /tracks acepta hasta 50 IDs por petición
+  for (let i = 0; i < trackIds.length; i += batchSize) {
+    const batchIds = trackIds.slice(i, i + batchSize);
+    const idsString = batchIds.join(',');
+    const url = `${SPOTIFY_API_BASE}/tracks?ids=${idsString}`;
+    
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error(`[SPOTIFY_API] Fallo al obtener detalles de tracks (lote ${i}):`, errorData);
+        // Lanzamos el error para que la Server Action lo capture
+        throw new Error(`Fallo al obtener detalles de tracks. Estado: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      // Asegurarse de que `track` no sea nulo (puede ocurrir para IDs no válidos)
+      data.tracks.forEach((track: SpotifyTrack) => {
+        if (track) {
+          detailedTracks.push({
+            name: track.name,
+            artists: track.artists.map(artist => artist.name).join(', '), // Concatena nombres de artistas
+          });
+        }
+      });
+    } catch (error) {
+      console.error(`[SPOTIFY_API_ERROR:getTracksDetails] Error al obtener detalles de tracks para el lote que empieza en ${i}:`, error);
+      throw error; // Propagar el error
+    }
+    // Pequeño retardo para ser amigable con los límites de tasa de la API
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  
+  return detailedTracks;
 }
 
 
