@@ -401,6 +401,40 @@ export async function previewMegalistSync(playlistId: string) {
 }
 
 /**
+* Previsualiza los cambios para un lote de Megalistas.
+* @param playlistIds Los IDs de las Megalistas a previsualizar.
+* @returns Un informe agregado con el total de canciones a añadir y eliminar.
+*/
+export async function previewBatchSync(playlistIds: string[]) {
+  console.log(`[ACTION:previewBatchSync] Iniciando previsualización para un lote de ${playlistIds.length} playlists.`);
+  try {
+    const session = await auth();
+    if (!session?.accessToken) {
+      throw new Error('No autenticado o token no disponible.');
+    }
+    const { accessToken } = session;
+    
+    let totalAdded = 0;
+    let totalRemoved = 0;
+    
+    // Calculamos los cambios para cada playlist en paralelo
+    const previewPromises = playlistIds.map(id => _calculateSyncChanges(id, accessToken));
+    const results = await Promise.all(previewPromises);
+    
+    results.forEach(result => {
+      totalAdded += result.addedCount;
+      totalRemoved += result.removedCount;
+    });
+    
+    return { totalAdded, totalRemoved };
+    
+  } catch (error) {
+    console.error(`[ACTION_ERROR:previewBatchSync] Fallo al previsualizar el lote.`, error);
+    throw error;
+  }
+}
+
+/**
 * Ejecuta la sincronización de una Megalista.
 * Reemplaza el contenido en Spotify y actualiza la base de datos.
 * @param playlistId El ID de la Megalista a sincronizar.

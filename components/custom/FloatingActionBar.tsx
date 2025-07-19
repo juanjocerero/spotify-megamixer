@@ -11,7 +11,8 @@ import {
   addTracksBatch,
   clearPlaylist,
   updateAndReorderPlaylist,
-  syncMegalist, 
+  executeMegalistSync, 
+  previewBatchSync, 
   unfollowPlaylistsBatch
 } from '@/lib/action';
 
@@ -61,6 +62,11 @@ export default function FloatingActionBar() {
   const [addToDialog, setAddToDialog] = useState({ open: false });
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
+  const [batchSyncAlert, setBatchSyncAlert] = useState<{
+    open: boolean;
+    added: number;
+    removed: number;
+  }>({ open: false, added: 0, removed: 0 });
   const [deleteBatchAlertOpen, setDeleteBatchAlertOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -71,7 +77,13 @@ export default function FloatingActionBar() {
     () => megamixCache.filter(p => p.isSyncable),
     [megamixCache]
   );
-  const hasSyncableMegalists = syncableMegalists.length > 0;
+  const syncableMegalistsInSelection = useMemo(() =>
+    usePlaylistStore.getState().playlistCache.filter(p =>
+    selectedPlaylistIds.includes(p.id) && p.isSyncable), 
+    [selectedPlaylistIds]
+  );
+  
+  const hasSyncableMegalists = syncableMegalistsInSelection.length > 0;
   
   const handleInitiateMix = async () => {
     // Asegurarse de que cada nueva mezcla empiece de forma limpia.
@@ -376,46 +388,68 @@ export default function FloatingActionBar() {
   
   // Sincronizar todas las megalistas
   const handleSyncAll = async () => {
-    if (syncableMegalists.length === 0) {
-      toast.info("No se encontraron Megalistas para sincronizar.");
+    const syncableIds = syncableMegalistsInSelection.map(p => p.id);
+    if (syncableIds.length === 0) {
+      toast.info("Ninguna de las playlists seleccionadas es una Megalista sincronizable.");
       return;
     }
     
+    setIsSyncingAll(true); // Para el icono del botón
+    const toastId = toast.loading(`Calculando cambios para ${syncableIds.length} Megalista(s)...`);
+    
+    try {
+      const { totalAdded, totalRemoved } = await previewBatchSync(syncableIds);
+      
+      if (totalAdded === 0 && totalRemoved === 0) {
+        toast.success("¡Todo al día!", {
+          id: toastId,
+          description: "Las Megalistas seleccionadas ya están sincronizadas.",
+        });
+      } else {
+        toast.dismiss(toastId);
+        setBatchSyncAlert({ open: true, added: totalAdded, removed: totalRemoved });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo previsualizar la sincronización.";
+      toast.error(message, { id: toastId });
+    } finally {
+      setIsSyncingAll(false);
+    }
+  };
+  
+  const handleConfirmBatchSync = async () => {
+    const syncableIds = syncableMegalistsInSelection.map(p => p.id);
     setIsSyncingAll(true);
-    const toastId = toast.loading(`Sincronizando ${syncableMegalists.length} Megalista(s)...`);
+    setBatchSyncAlert({ ...batchSyncAlert, open: false }); // Cierra el diálogo
+    const toastId = toast.loading(`Sincronizando ${syncableIds.length} Megalista(s)...`);
     
-    // Creamos un array de promesas para cada sincronización
-    const syncPromises = syncableMegalists.map(p => syncMegalist(p.id));
-    
-    // Usamos Promise.allSettled para que no se detenga si una falla
+    const syncPromises = syncableIds.map(id => executeMegalistSync(id));
     const results = await Promise.allSettled(syncPromises);
     
     let successCount = 0;
     let failureCount = 0;
-    
-    // Procesamos los resultados
     results.forEach((result, index) => {
-      const playlistName = syncableMegalists[index].name;
+      const playlistId = syncableIds[index];
       if (result.status === 'fulfilled') {
         successCount++;
-        // Si la sincronización tuvo éxito, actualizamos la caché con el nuevo total de canciones
         const syncResult = result.value;
-        updatePlaylistInCache(syncableMegalists[index].id, { trackCount: syncResult.finalCount });
+        // Actualiza la caché con el nuevo conteo de canciones
+        updatePlaylistInCache(playlistId, { trackCount: syncResult.finalCount });
       } else {
         failureCount++;
-        console.error(`Fallo al sincronizar "${playlistName}":`, result.reason);
+        console.error(`Fallo al sincronizar la playlist ${playlistId}:`, result.reason);
       }
     });
     
-    // Mostramos un resumen al usuario
     if (failureCount === 0) {
-      toast.success(`¡${successCount} Megalista(s) sincronizadas con éxito!`, { id: toastId, duration: 5000 });
+      toast.success(`¡${successCount} Megalista(s) sincronizadas con éxito!`, { id: toastId });
     } else if (successCount > 0) {
-      toast.warning(`${successCount} sincronizadas, ${failureCount} fallaron.`, { id: toastId, duration: 5000, description: "Revisa la consola para más detalles." });
+      toast.warning(`${successCount} sincronizadas, ${failureCount} fallaron.`, { id: toastId, description: "Revisa la consola para más detalles." });
     } else {
-      toast.error("No se pudo sincronizar ninguna Megalista.", { id: toastId, duration: 5000, description: "Revisa la consola para más detalles." });
+      toast.error("No se pudo sincronizar ninguna Megalista.", { id: toastId, description: "Revisa la consola para más detalles." });
     }
     
+    clearSelection();
     setIsSyncingAll(false);
   };
   
@@ -706,6 +740,35 @@ export default function FloatingActionBar() {
     {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
     {isDeleting ? 'Eliminando...' : 'Sí, eliminar'}
     </AlertDialogAction>
+    </AlertDialogFooter>
+    </AlertDialogContent>
+    </AlertDialog>
+    
+    {/* Diálogo para sincronización en lote */}
+    <AlertDialog open={batchSyncAlert.open} onOpenChange={(isOpen) => setBatchSyncAlert({ ...batchSyncAlert, open: isOpen })}>
+    <AlertDialogContent>
+    <AlertDialogHeader>
+    <AlertDialogTitle>Confirmar Sincronización en Lote</AlertDialogTitle>
+    <AlertDialogDescription asChild>
+    <div>
+    Vas a sincronizar <strong className="text-white">{syncableMegalistsInSelection.length}</strong> Megalista(s).
+    <ul className="list-disc pl-5 mt-3 space-y-1">
+    <li className="text-green-400">
+    Se añadirán un total de <strong className="text-green-300">{batchSyncAlert.added}</strong> canciones.
+    </li>
+    <li className="text-red-400">
+    Se eliminarán un total de <strong className="text-red-300">{batchSyncAlert.removed}</strong> canciones.
+    </li>
+    </ul>
+    <p className="mt-3">
+    Los cambios se aplicarán a cada playlist correspondiente. ¿Deseas continuar?
+    </p>
+    </div>
+    </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+    <AlertDialogAction onClick={handleConfirmBatchSync}>Sí, continuar</AlertDialogAction>
     </AlertDialogFooter>
     </AlertDialogContent>
     </AlertDialog>
