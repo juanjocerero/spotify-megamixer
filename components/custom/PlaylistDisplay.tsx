@@ -380,63 +380,61 @@ export default function PlaylistDisplay({
         <TableCell className="py-2 text-right">{playlist.tracks.total}</TableCell>
         
         <TableCell className="py-2">
-        {isMegalista && (
-          <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-          <MoreHorizontal className="h-4 w-4" />
-          </Button>
-          </DropdownMenuTrigger>
-          
-          <DropdownMenuContent align="end">
-          {/* Opción de Editar */}
+        <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+        <MoreHorizontal className="h-4 w-4" />
+        </Button>
+        </DropdownMenuTrigger>
+        
+        <DropdownMenuContent align="end">
+        {/* Opción de Editar */}
+        <DropdownMenuItem
+        onClick={(e: React.MouseEvent) => {
+          e.stopPropagation();
+          setEditState({
+            open: true,
+            playlist: playlist,
+            newName: playlist.name,
+            newDescription: playlist.description || '',
+          });
+        }}
+        >
+        <Pencil className="mr-2 h-4 w-4" />
+        <span>Editar detalles</span>
+        </DropdownMenuItem>
+        {/* --- Opción de Sincronizar --- */}
+        {isSyncable && (
           <DropdownMenuItem
+          disabled={isSyncingThis}
           onClick={(e: React.MouseEvent) => {
             e.stopPropagation();
-            setEditState({
-              open: true,
-              playlist: playlist,
-              newName: playlist.name,
-              newDescription: playlist.description || '',
-            });
+            handleSync(playlist);
           }}
           >
-          <Pencil className="mr-2 h-4 w-4" />
-          <span>Editar detalles</span>
-          </DropdownMenuItem>
-          {/* --- Opción de Sincronizar --- */}
-          {isSyncable && (
-            <DropdownMenuItem
-            disabled={isSyncingThis}
-            onClick={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              handleSync(playlist);
-            }}
-            >
-            {isSyncingThis ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            <span>{isSyncingThis ? "Sincronizando..." : "Sincronizar"}</span>
-            </DropdownMenuItem>
+          {isSyncingThis ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="mr-2 h-4 w-4" />
           )}
-          
-          {/* Opción de Eliminar */}
-          <DropdownMenuItem
-          className="text-red-500 focus:text-red-500"
-          onClick={(e: React.MouseEvent) => {
-            e.stopPropagation();
-            setDeleteAlert({ open: true, playlist });
-          }}
-          >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Eliminar
+          <span>{isSyncingThis ? "Sincronizando..." : "Sincronizar"}</span>
           </DropdownMenuItem>
-          </DropdownMenuContent>
-          
-          </DropdownMenu>
         )}
+        
+        {/* Opción de Eliminar */}
+        <DropdownMenuItem
+        className="text-red-500 focus:text-red-500"
+        onClick={(e: React.MouseEvent) => {
+          e.stopPropagation();
+          setDeleteAlert({ open: true, playlist });
+        }}
+        >
+        <Trash2 className="mr-2 h-4 w-4" />
+        Eliminar
+        </DropdownMenuItem>
+        </DropdownMenuContent>
+        
+        </DropdownMenu>
         </TableCell>
         
         </TableRow>
