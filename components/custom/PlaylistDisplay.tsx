@@ -444,9 +444,11 @@ export default function PlaylistDisplay({
     
     {/* Cuerpo - Usa flexbox y virtualización */}
     <div
-    ref={parentRef} 
-    className="relative h-65vh overflow-auto pr-4 overflow-anchor-none"
+    ref={parentRef}
     style={{
+      height: '65vh',
+      overflow: 'auto',
+      position: 'relative',
       paddingRight: '10px'
     }}
     >
@@ -526,7 +528,7 @@ export default function PlaylistDisplay({
         {playlist.tracks.total}
         </div>
         
-        <div className="px-4 py-2 w-[50px] flex-shrink-0 pr-6">
+        <div className="px-4 py-2 w-[50px] flex-shrink-0">
         <DropdownMenu>
         <DropdownMenuTrigger asChild>
         <Button
