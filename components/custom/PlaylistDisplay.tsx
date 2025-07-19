@@ -587,17 +587,15 @@ export default function PlaylistDisplay({
           </DropdownMenuItem>
         )}
         
-        {isMegalista && (
-          <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            handleShuffle(playlist);
-          }}
-          >
-          <Shuffle className="mr-2 h-4 w-4" />
-          <span>Reordenar</span>
-          </DropdownMenuItem>
-        )}
+        <DropdownMenuItem
+        onClick={(e) => {
+          e.stopPropagation();
+          handleShuffle(playlist);
+        }}
+        >
+        <Shuffle className="mr-2 h-4 w-4" />
+        <span>Reordenar</span>
+        </DropdownMenuItem>
         
         {/* Eliminar */}
         <DropdownMenuItem
