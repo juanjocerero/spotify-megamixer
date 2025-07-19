@@ -528,7 +528,7 @@ export default function PlaylistDisplay({
         {playlist.tracks.total}
         </div>
         
-        <div className="px-4 py-2 w-[50px] flex-shrink-0">
+        <div className="px-4 py-2 w-[50px] flex-shrink-0 pr-6">
         <DropdownMenu>
         <DropdownMenuTrigger asChild>
         <Button
@@ -540,7 +540,7 @@ export default function PlaylistDisplay({
         <MoreHorizontal className="h-4 w-4" />
         </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="mr-4">
         
         {/* Preview */}
         <DropdownMenuItem
