@@ -19,7 +19,7 @@ Una potente herramienta web para mezclar, fusionar y gestionar tus playlists de 
     *   **Mezcla Estándar:** Selecciona dos o más de tus playlists y combínalas en una nueva "Megalista".
     *   **Actualización Inteligente:** Si una Megalista ya existe, puedes elegir entre **reemplazarla** por completo o **actualizarla**, fusionando las canciones, eliminando duplicados y reordenando todo.
     *   **Enriquecimiento Múltiple:** Añade canciones de una o varias playlists a una Megalista existente con un solo clic.
-    *   **Megamix Sorpresa:** Genera nuevas playlists con un número de canciones aleatorias, usando tus playlists seleccionadas como fuente o una selección aleatoria de tu librería si no hay nada seleccionado.
+    *   **Megamix Sorpresa:** Genera nuevas playlists con un número de canciones aleatorias. Esta función te permite **elegir un número específico (hasta 50) de tus playlists aleatorias como fuente** o usar tus playlists seleccionadas. **Si ya tienes una Megamix con el mismo nombre, la aplicación te permitirá sobrescribirla.**
 
 *   **Sincronización Fiable y Autocurativa:**
     *   Actualiza tus Megalistas con las últimas canciones de sus playlists de origen, ya sea individualmente o en lote.
@@ -33,7 +33,7 @@ Una potente herramienta web para mezclar, fusionar y gestionar tus playlists de 
 *   **Interfaz de Usuario Moderna y Eficiente:**
     *   **Controles Siempre Visibles:** Una cabecera de búsqueda fija y una barra de acciones flotante rediseñada (más limpia y responsiva para móviles) aseguran que siempre tengas el control.
     *   **Diseño Responsivo:** Experiencia de usuario optimizada para escritorio y móvil, con una interfaz más compacta en pantallas grandes.
-    *   **Carga Infinita:** Navega por todas tus playlists sin paginación gracias al scroll infinito.
+    *   **Carga Infinita y Virtualización de la Lista:** Navega por todas tus playlists sin paginación gracias al scroll infinito. **La virtualización avanzada garantiza un rendimiento fluido y eficiente, incluso con miles de playlists, cargando solo los elementos visibles en pantalla.**
 
 *   **Interacción Avanzada:**
     *   **Búsqueda Difusa (Fuzzy Search):** Encuentra playlists incluso si cometes errores tipográficos.
@@ -59,7 +59,7 @@ Una potente herramienta web para mezclar, fusionar y gestionar tus playlists de 
 *   **Base de Datos:** [Vercel Postgres](https://vercel.com/postgres) (proveído por Neon)
 *   **ORM:** [Prisma](https://www.prisma.io/)
 *   **Autenticación:** [NextAuth.js (Auth.js v5)](https://next-auth.js.org/)
-*   **UI y Estilos:** [Tailwind CSS](https://tailwindcss.com/) y [Shadcn/ui](https://ui.shadcn.com/)
+*   **UI y Estilos:** [Tailwind CSS](https://tailwindcss.com/), [Shadcn/ui](https://ui.shadcn.com/) y **[@tanstack/react-virtual](https://tanstack.com/virtual/latest/docs/framework/react) (para virtualización de listas)**
 *   **Gestión de Estado:** [Zustand](https://github.com/pmndrs/zustand)
 *   **Notificaciones:** [Sonner](https://sonner.emilkowal.ski/)
 *   **Despliegue:** [Vercel](https://vercel.com/)
@@ -72,7 +72,7 @@ Este proyecto sigue un patrón de arquitectura moderno que separa claramente las
 2.  **Componente Cliente Orquestador (`/components/custom/DashboardClient.tsx`):** Recibe los datos enriquecidos y gestiona el estado de la interfaz (filtros, búsqueda, **ordenación**).
 3.  **Componentes Especializados:**
     *   **`FloatingActionBar.tsx`:** Rediseñado para ser más limpio y responsivo. Centraliza la lógica de acciones del usuario (crear estándar, añadir, sincronizar en lote, crear sorpresa y eliminación en lote), sus estados y los diálogos correspondientes.
-    *   **`PlaylistDisplay.tsx`:** Muestra la lista de playlists, gestiona la interacción directa con la tabla (scroll, selección, navegación por teclado, **ordenación**) y provee menús contextuales universales para editar y eliminar playlists.
+    *   **`PlaylistDisplay.tsx`:** Muestra la lista de playlists, gestiona la interacción directa con la tabla (scroll, selección, navegación por teclado, **ordenación**). **Ha sido refactorizado para implementar virtualización de la lista usando `@tanstack/react-virtual`, lo que garantiza un alto rendimiento incluso con miles de playlists, recreando la estructura visual de tabla con `divs` y `flexbox` para una compatibilidad óptima.** Y provee menús contextuales universales para editar y eliminar playlists.
 
 Esta arquitectura, que combina la obtención de datos de APIs externas y de una base de datos propia en el servidor, resulta en una aplicación rápida, segura y escalable.
 
