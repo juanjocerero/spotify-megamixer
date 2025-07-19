@@ -12,6 +12,7 @@ import SurpriseMixButton from '@/components/custom/SurpriseMixButton';
 import HelpButton from '@/components/custom/HelpButton';
 import SyncAllButton from '@/components/custom/SyncAllButton';
 import ShuffleAllButton from '@/components/custom/ShuffleAllButton';
+import Footer from '@/components/custom/Footer';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -79,6 +80,8 @@ export default async function DashboardPage() {
     />
     
     <FloatingActionBar />
+
+    <Footer />
     </div>
     </div>
   );
