@@ -540,7 +540,7 @@ export default function PlaylistDisplay({
         <MoreHorizontal className="h-4 w-4" />
         </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="mr-4">
+        <DropdownMenuContent align="end" className="mr-6">
         
         {/* Preview */}
         <DropdownMenuItem
