@@ -3,6 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import { usePlaylistStore } from '@/lib/store';
+import { shuffleArray } from './../../lib/utils';
 
 // Lógica de acciones del backend
 import {
@@ -49,7 +50,7 @@ export default function FloatingActionBar() {
     removeMultipleFromCache,
   } = usePlaylistStore();
   
-  const [step, setStep] = useState<'idle' | 'fetching' | 'confirming' | 'processing'>('idle');
+  const [step, setStep] = useState<'idle' | 'fetching' | 'confirming' | 'askingOrder' | 'processing'>('idle');
   const [progress, setProgress] = useState({ added: 0, total: 0 });
   const [tracksToMix, setTracksToMix] = useState<string[]>([]);
   const [newPlaylistName, setNewPlaylistName] = useState('');
@@ -131,83 +132,65 @@ export default function FloatingActionBar() {
     
   };
   
-  const handleExecuteMix = async () => {
+  const handleExecuteMix = async (shuffle: boolean) => {
     if (!newPlaylistName.trim()) {
       toast.error('El nombre de la playlist no puede estar vacío.');
+      // Regresamos al paso anterior si hay un error
+      setStep('confirming'); 
       return;
     }
+    
+    // Barajamos la lista de canciones si el usuario lo ha elegido
+    const tracksForExecution = shuffle ? shuffleArray([...tracksToMix]) : [...tracksToMix];
+    // Actualizamos el estado para que la función de reanudar funcione correctamente
+    setTracksToMix(tracksForExecution);
+    
     setStep('processing');
     const toastId = toast.loading('Preparando la playlist de destino...');
-    
-    // Usamos una variable `let` en el ámbito de la función.
-    // Esto nos permitirá capturar el ID de la playlist creada y usarlo en el bloque `catch`.
     let createdPlaylistId: string | null = null;
     
     try {
       const { playlist, exists } = await findOrCreatePlaylist(
-        newPlaylistName, 
-        selectedPlaylistIds, 
-        progress.total
+        newPlaylistName,
+        selectedPlaylistIds,
+        tracksForExecution.length
       );
-      
       createdPlaylistId = playlist.id;
       
       if (exists) {
         setStep('idle');
         toast.dismiss(toastId);
-        setOverwriteDialog({
-          open: true,
-          playlistId: playlist.id,
-          playlistName: newPlaylistName,
-        });
+        setOverwriteDialog({ open: true, playlistId: playlist.id, playlistName: newPlaylistName });
         return;
       }
       
-      // Si la playlist no existía, significa que se acaba de crear.
-      // La añadimos a nuestro estado local para que la UI se actualice.
       addPlaylistToCache(playlist);
-      
-      // Guardamos el ID de la playlist en el estado inmediatamente.
       setPlaylistIdForResume(playlist.id);
       toast.loading('Playlist preparada, iniciando adición de canciones...', { id: toastId });
       
       const batchSize = 100;
-      for (let i = 0; i < tracksToMix.length; i += batchSize) {
-        const batch = tracksToMix.slice(i, i + batchSize);
+      for (let i = 0; i < tracksForExecution.length; i += batchSize) {
+        const batch = tracksForExecution.slice(i, i + batchSize);
         toast.loading(`Añadiendo canciones... ${i + batch.length} / ${progress.total}`, { id: toastId });
         await addTracksBatch(playlist.id, batch);
         setProgress((prev) => ({ ...prev, added: prev.added + batch.length }));
       }
       
       toast.success('¡Megalista creada con éxito!', { id: toastId, duration: 5000 });
-      
-      // Ahora que la playlist está llena, actualizamos su contador en la caché.
-      updatePlaylistInCache(playlist.id, { trackCount: tracksToMix.length });
-      
-      // Si todo va bien, nos aseguramos de desactivar el modo reanudación.
+      updatePlaylistInCache(playlist.id, { trackCount: tracksForExecution.length });
       setIsResumable(false);
-      
-      // Limpia la selección actual
       clearSelection();
       
-    } catch (error: unknown) { // CAMBIO 2: Tipado correcto del error
+    } catch (error: unknown) {
       console.error('[UI_ERROR:handleExecuteMix] Ocurrió un error durante la mezcla:', error);
-      
-      // Comprobar el tipo de error
       let errorMessage = 'Ocurrió un error durante la mezcla.';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
+      if (error instanceof Error) { errorMessage = error.message; }
       toast.error(errorMessage, { id: toastId });
-      
-      // La condición ahora usa la variable local `createdPlaylistId`.
-      // Si el error ocurrió después de crear la playlist, esta variable tendrá un valor
-      // y activaremos correctamente el modo de reanudación.
       if (createdPlaylistId) {
         setIsResumable(true);
       }
     } finally {
-      // Si la mezcla fue completamente exitosa, limpiamos el estado.
+      // Solo reseteamos todo si la mezcla fue exitosa
       if (progress.added > 0 && progress.added === progress.total) {
         setTracksToMix([]);
         setNewPlaylistName('');
@@ -698,10 +681,34 @@ export default function FloatingActionBar() {
     <Button variant="outline" onClick={() => setStep('idle')}>
     Cancelar
     </Button>
-    <Button onClick={handleExecuteMix}>Confirmar y Empezar</Button>
+    {/* Este botón ahora avanza al siguiente paso en lugar de ejecutar la mezcla */}
+    <Button onClick={() => setStep('askingOrder')}>Continuar</Button>
     </DialogFooter>
     </DialogContent>
     </Dialog>
+    
+    {/* Diálogo para reordenar o no los elementos de la playlist */}
+    <Dialog open={step === 'askingOrder'} onOpenChange={(isOpen) => !isOpen && setStep('idle')}>
+    <DialogContent>
+    <DialogHeader>
+    <DialogTitle>¿Cómo quieres ordenar las canciones?</DialogTitle>
+    <DialogDescription>
+    Puedes mantener el orden original de las canciones tal y como aparecen en tus playlists, o barajarlas para crear una mezcla aleatoria.
+    </DialogDescription>
+    </DialogHeader>
+    <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
+    {/* El botón de la izquierda llama a la ejecución sin barajar */}
+    <Button variant="outline" className="flex-1" onClick={() => handleExecuteMix(false)}>
+    Mantener Orden
+    </Button>
+    {/* El botón de la derecha llama a la ejecución CON barajado */}
+    <Button className="flex-1" onClick={() => handleExecuteMix(true)}>
+    Barajar Canciones
+    </Button>
+    </DialogFooter>
+    </DialogContent>
+    </Dialog>
+    
     
     {/* Diálogo de progreso */}
     <Dialog open={step === 'processing'}>

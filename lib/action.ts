@@ -34,16 +34,16 @@ export async function getTrackUris(playlistIds: string[]) {
     const { accessToken } = session;
     
     const trackPromises = playlistIds.map((id) =>
-      getAllPlaylistTracks(accessToken, id).then(tracks => tracks.map(t => t.uri))
-  );
-  const tracksPerPlaylist = await Promise.all(trackPromises);
-  const uniqueTrackUris = [...new Set(tracksPerPlaylist.flat())];
-  return shuffleArray(uniqueTrackUris);
-} catch (error) {
-  console.error('[ACTION_ERROR:getTrackUris] Fallo al obtener las URIs.', error);
-  // Relanzamos el error para que el cliente lo reciba
-  throw error;
-}
+      getAllPlaylistTracks(accessToken, id).then(tracks => tracks.map(t => t.uri)));
+    const tracksPerPlaylist = await Promise.all(trackPromises);
+    
+    const uniqueTrackUris = [...new Set(tracksPerPlaylist.flat())];
+    // Se elimina la llamada a shuffleArray. La función ahora es neutral.
+    return uniqueTrackUris; 
+  } catch (error) {
+    console.error('[ACTION_ERROR:getTrackUris] Fallo al obtener las URIs.', error);
+    throw error;
+  }
 }
 
 /**
