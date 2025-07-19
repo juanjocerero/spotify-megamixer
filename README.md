@@ -23,12 +23,12 @@ La función estrella de la aplicación, rediseñada para ser increíblemente rá
 *   **Previsualización y Confirmación:** Antes de ejecutar una sincronización (individual, en lote o global), la app te muestra un resumen exacto de los cambios. Tú siempre tienes el control.
 *   **Autocuración:** Si una de las playlists de origen fue eliminada en Spotify, la aplicación lo detecta y la excluye de futuras sincronizaciones para evitar errores.
 
-### 🔀 Barajado Explícito y Controlado
-Para darte el máximo control, la función de barajar ahora es una acción separada que puedes ejecutar cuando quieras.
+### 🔀 Reordenado Explícito y Controlado
+Para darte el máximo control, la función de reordenar ahora es una acción separada que puedes ejecutar cuando quieras.
 
-*   **Barajado Individual:** Desde el menú de una Megalista.
-*   **Barajado en Lote:** Seleccionando varias Megalistas y usando el botón de la barra de acciones.
-*   **Barajado Global:** Con un solo botón en la cabecera para reordenar todas tus Megalistas a la vez.
+*   **Reordenado Individual:** Desde el menú de una Megalista.
+*   **Reordenado en Lote:** Seleccionando varias Megalistas y usando el botón de la barra de acciones.
+*   **Reordenado Global:** Con un solo botón en la cabecera para reordenar todas tus Megalistas a la vez.
 
 ### ➕ Creación de Megalistas Avanzada
 *   **Mezcla Estándar:** Selecciona dos o más playlists y combínalas en una nueva "Megalista".
@@ -71,7 +71,7 @@ Este proyecto sigue un patrón de arquitectura moderno que separa claramente las
 2.  **Componente Cliente Orquestador (`/components/custom/DashboardClient.tsx`):** Recibe los datos enriquecidos y gestiona todo el estado de la interfaz (filtros, búsqueda, ordenación) usando Zustand. Este componente compone el layout principal y pasa los datos al componente de visualización.
 
 3.  **Componentes Especializados:**
-    *   **`PlaylistDisplay.tsx`:** Gestiona la renderización de la lista de playlists. Implementa **virtualización** para asegurar un alto rendimiento. También maneja la interacción directa con cada playlist (selección, menú contextual para editar, eliminar, sincronizar y barajar).
-    *   **Acciones Centralizadas (`FloatingActionBar.tsx`, `SyncAllButton.tsx`, `ShuffleAllButton.tsx`):** Las acciones que operan sobre una o varias playlists (crear, añadir, sincronizar, barajar, eliminar) se gestionan desde componentes dedicados, cada uno con su propia lógica de estado y diálogos de confirmación.
+    *   **`PlaylistDisplay.tsx`:** Gestiona la renderización de la lista de playlists. Implementa **virtualización** para asegurar un alto rendimiento. También maneja la interacción directa con cada playlist (selección, menú contextual para editar, eliminar, sincronizar y reordenar).
+    *   **Acciones Centralizadas (`FloatingActionBar.tsx`, `SyncAllButton.tsx`, `ShuffleAllButton.tsx`):** Las acciones que operan sobre una o varias playlists (crear, añadir, sincronizar, reordenar, eliminar) se gestionan desde componentes dedicados, cada uno con su propia lógica de estado y diálogos de confirmación.
 
 4.  **Lógica de Backend (`/lib/action.ts`):** Todas las operaciones de escritura y modificación se centralizan en Server Actions. Estas acciones se comunican tanto con la API de Spotify (para ejecutar los cambios) como con la base de datos de la aplicación (para mantener la persistencia y la consistencia del estado `Megalist`).

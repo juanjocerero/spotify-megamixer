@@ -140,7 +140,7 @@ export default function FloatingActionBar() {
       return;
     }
     
-    // Barajamos la lista de canciones si el usuario lo ha elegido
+    // Reordenamos la lista de canciones si el usuario lo ha elegido
     const tracksForExecution = shuffle ? shuffleArray([...tracksToMix]) : [...tracksToMix];
     // Actualizamos el estado para que la función de reanudar funcione correctamente
     setTracksToMix(tracksForExecution);
@@ -471,15 +471,15 @@ export default function FloatingActionBar() {
     if (megalistsInSelection.length === 0) return;
     
     setIsShuffling(true);
-    const toastId = toast.loading(`Barajando ${megalistsInSelection.length} playlist(s)...`);
+    const toastId = toast.loading(`Reordenando ${megalistsInSelection.length} playlist(s)...`);
     
     try {
       const idsToShuffle = megalistsInSelection.map(p => p.id);
       await shufflePlaylistsAction(idsToShuffle);
-      toast.success(`${megalistsInSelection.length} playlist(s) barajadas con éxito.`, { id: toastId });
+      toast.success(`${megalistsInSelection.length} playlist(s) reordenadas con éxito.`, { id: toastId });
       clearSelection();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudieron barajar las playlists.';
+      const message = error instanceof Error ? error.message : 'No se pudieron reordenar las playlists.';
       toast.error(message, { id: toastId });
     } finally {
       setBatchShuffleAlertOpen(false);
@@ -603,7 +603,7 @@ export default function FloatingActionBar() {
         </Button>
         </TooltipTrigger>
         <TooltipContent>
-        <p>Barajar {megalistsInSelection.length} Megalista(s) seleccionada(s)</p>
+        <p>Reordenar {megalistsInSelection.length} Megalista(s) seleccionada(s)</p>
         </TooltipContent>
         </Tooltip>
       )}
@@ -693,17 +693,17 @@ export default function FloatingActionBar() {
     <DialogHeader>
     <DialogTitle>¿Cómo quieres ordenar las canciones?</DialogTitle>
     <DialogDescription>
-    Puedes mantener el orden original de las canciones tal y como aparecen en tus playlists, o barajarlas para crear una mezcla aleatoria.
+    Puedes mantener el orden original de las canciones tal y como aparecen en tus playlists, o reordenarlas para crear una mezcla aleatoria.
     </DialogDescription>
     </DialogHeader>
     <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
-    {/* El botón de la izquierda llama a la ejecución sin barajar */}
+    {/* El botón de la izquierda llama a la ejecución sin reordenar */}
     <Button variant="outline" className="flex-1" onClick={() => handleExecuteMix(false)}>
     Mantener Orden
     </Button>
-    {/* El botón de la derecha llama a la ejecución CON barajado */}
+    {/* El botón de la derecha llama a la ejecución CON reordenado */}
     <Button className="flex-1" onClick={() => handleExecuteMix(true)}>
-    Barajar Canciones
+    Reordenar Canciones
     </Button>
     </DialogFooter>
     </DialogContent>
@@ -857,7 +857,7 @@ export default function FloatingActionBar() {
     <AlertDialogHeader>
     <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
     <AlertDialogDescription>
-    Vas a barajar las canciones de{' '}
+    Vas a reordenar las canciones de{' '}
     <strong className="text-white">{megalistsInSelection.length}</strong> Megalista(s)
     seleccionada(s). Esta acción reordenará completamente cada lista y no se puede deshacer.
     Este proceso puede ser lento.
@@ -871,7 +871,7 @@ export default function FloatingActionBar() {
     onClick={handleConfirmBatchShuffle}
     >
     {isShuffling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-    {isShuffling ? 'Barajando...' : 'Sí, barajar'}
+    {isShuffling ? 'Reordenando...' : 'Sí, reordenar'}
     </AlertDialogAction>
     </AlertDialogFooter>
     </AlertDialogContent>

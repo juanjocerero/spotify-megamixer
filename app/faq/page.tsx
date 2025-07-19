@@ -51,7 +51,7 @@ export default function FaqPage() {
     <div className="space-y-4">
     <div>
     <h3 className="font-semibold text-purple-300">Crear una Nueva Megalista</h3>
-    <p>Selecciona 2 o más playlists → pulsa el botón verde <strong>&quot;Crear&quot;</strong>. Esto une todas las canciones y quita los duplicados. La mezcla inicial no se baraja para preservar el orden.</p>
+    <p>Selecciona 2 o más playlists → pulsa el botón verde <strong>&quot;Crear&quot;</strong>. Esto une todas las canciones y quita los duplicados. La mezcla inicial no se reordena para preservar el orden.</p>
     </div>
     <div>
     <h3 className="font-semibold text-purple-300">Añadir a una Megalista Existente</h3>
@@ -66,15 +66,15 @@ export default function FaqPage() {
     </div>
     </SectionCard>
     
-    {/* Barajado */}
-    <SectionCard icon={<Shuffle className="h-6 w-6 text-orange-400" />} title="4. La Nueva Función de Barajado">
+    {/* Reordenado */}
+    <SectionCard icon={<Shuffle className="h-6 w-6 text-orange-400" />} title="4. La Nueva Función de Reordenado">
     <p>
-    Para darte más control, el barajado ahora es una acción explícita. ¡Así no pierdes el orden de tus canciones si no quieres!
+    Para darte más control, el reordenado ahora es una acción explícita. ¡Así no pierdes el orden de tus canciones si no quieres!
     </p>
     <ul className="list-disc list-inside space-y-2 text-slate-300">
-    <li><strong>Barajado Individual:</strong> En el menú <code className="bg-slate-700 px-1 rounded">⋯</code> de una Megalista, pulsa <strong>&quot;Reordenar&quot;</strong>.</li>
-    <li><strong>Barajado en Lote:</strong> Selecciona varias Megalistas → botón <Shuffle className="inline h-4 w-4" /> en la barra inferior.</li>
-    <li><strong>Barajado Global:</strong> Pulsa el botón <Shuffle className="inline h-4 w-4" /> en la cabecera para reordenar todas tus Megalistas a la vez.</li>
+    <li><strong>Reordenado Individual:</strong> En el menú <code className="bg-slate-700 px-1 rounded">⋯</code> de una Megalista, pulsa <strong>&quot;Reordenar&quot;</strong>.</li>
+    <li><strong>Reordenado en Lote:</strong> Selecciona varias Megalistas → botón <Shuffle className="inline h-4 w-4" /> en la barra inferior.</li>
+    <li><strong>Reordenado Global:</strong> Pulsa el botón <Shuffle className="inline h-4 w-4" /> en la cabecera para reordenar todas tus Megalistas a la vez.</li>
     </ul>
     </SectionCard>
     

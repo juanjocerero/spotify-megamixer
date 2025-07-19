@@ -176,23 +176,23 @@ export default function PlaylistDisplay({
     }
   };
   
-  // Maneja el barajado explícito del contenido de una playlist
+  // Maneja el reordenado explícito del contenido de una playlist
   const handleShuffle = (playlist: SpotifyPlaylist) => {
     setShuffleAlert({ open: true, playlist, isShuffling: false });
   };
   
-  // Maneja el flujo de confirmación del barajado
+  // Maneja el flujo de confirmación del reordenado
   const handleConfirmShuffle = async () => {
     if (!shuffleAlert.playlist) return;
     
     setShuffleAlert(prev => ({ ...prev, isShuffling: true }));
-    const toastId = toast.loading(`Barajando "${shuffleAlert.playlist.name}"...`);
+    const toastId = toast.loading(`Reordenando "${shuffleAlert.playlist.name}"...`);
     
     try {
       await shufflePlaylistsAction([shuffleAlert.playlist.id]);
-      toast.success(`Playlist "${shuffleAlert.playlist.name}" barajada con éxito.`, { id: toastId });
+      toast.success(`Playlist "${shuffleAlert.playlist.name}" reordenada con éxito.`, { id: toastId });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo barajar la playlist.';
+      const message = error instanceof Error ? error.message : 'No se pudo reordenar la playlist.';
       toast.error(message, { id: toastId });
     } finally {
       setShuffleAlert({ open: false, playlist: null, isShuffling: false });
@@ -740,9 +740,9 @@ export default function PlaylistDisplay({
     >
     <AlertDialogContent>
     <AlertDialogHeader>
-    <AlertDialogTitle>Confirmar Barajado</AlertDialogTitle>
+    <AlertDialogTitle>Confirmar Reordenado</AlertDialogTitle>
     <AlertDialogDescription>
-    Vas a barajar todas las canciones de la playlist{' '}
+    Vas a reordenar todas las canciones de la playlist{' '}
     <strong className="text-white">{shuffleAlert.playlist?.name}</strong>. Esta acción
     reordenará completamente la lista y no se puede deshacer. Este proceso puede ser lento.
     ¿Deseas continuar?
@@ -756,7 +756,7 @@ export default function PlaylistDisplay({
     className="bg-orange-600 hover:bg-orange-700 text-white"
     >
     {shuffleAlert.isShuffling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-    {shuffleAlert.isShuffling ? 'Barajando...' : 'Sí, barajar'}
+    {shuffleAlert.isShuffling ? 'Reordenando...' : 'Sí, reordenar'}
     </AlertDialogAction>
     </AlertDialogFooter>
     </AlertDialogContent>

@@ -328,7 +328,7 @@ async function _calculateSyncChanges(playlistId: string, accessToken: string) {
     }
   });
   
-  // Se elimina el barajado para preservar el orden original de las canciones.
+  // Se elimina el reordenado para preservar el orden original de las canciones.
   const uniqueFinalTracks = [...new Set(finalTrackUris)];
   const initialTracksSet = new Set(initialTrackUris);
   const finalTracksSet = new Set(uniqueFinalTracks);
@@ -485,7 +485,7 @@ export async function executeMegalistSync(playlistId: string) {
 }
 
 export async function shufflePlaylistsAction(playlistIds: string[]): Promise<void> {
-  console.log(`[ACTION:shufflePlaylistsAction] Iniciando barajado para ${playlistIds.length} playlist(s).`);
+  console.log(`[ACTION:shufflePlaylistsAction] Iniciando reordenado para ${playlistIds.length} playlist(s).`);
   try {
     const session = await auth();
     if (!session?.accessToken) {
@@ -499,22 +499,22 @@ export async function shufflePlaylistsAction(playlistIds: string[]): Promise<voi
       const trackUris = tracks.map(t => t.uri);
       
       if (trackUris.length <= 1) {
-        console.log(`[SHUFFLE] La playlist ${playlistId} tiene muy pocas canciones para barajar. Omitiendo.`);
+        console.log(`[SHUFFLE] La playlist ${playlistId} tiene muy pocas canciones para reordenar. Omitiendo.`);
         return;
       }
       
-      console.log(`[SHUFFLE] Barajando ${trackUris.length} canciones para ${playlistId}...`);
+      console.log(`[SHUFFLE] Reordenando ${trackUris.length} canciones para ${playlistId}...`);
       const shuffledUris = shuffleArray(trackUris);
       
       console.log(`[SHUFFLE] Reemplazando canciones en ${playlistId}...`);
       await replacePlaylistTracks(accessToken, playlistId, shuffledUris);
-      console.log(`[SHUFFLE] Playlist ${playlistId} barajada con éxito.`);
+      console.log(`[SHUFFLE] Playlist ${playlistId} reordenada con éxito.`);
     });
     
     await Promise.all(shufflePromises);
     
   } catch (error) {
-    console.error(`[ACTION_ERROR:shufflePlaylistsAction] Fallo al barajar las playlists.`, error);
+    console.error(`[ACTION_ERROR:shufflePlaylistsAction] Fallo al reordenar las playlists.`, error);
     throw error;
   }
 }
@@ -656,7 +656,7 @@ export async function createSurpriseMegalist(
       selectedTracksUris = Array.from(selectedTracksUrisSet);
     }
     
-    // Asegurar el recuento final y barajar
+    // Asegurar el recuento final y reordenar
     const finalShuffledTracksUris = shuffleArray(selectedTracksUris).slice(0, targetTrackCount);
     
     // Crear la playlist en Spotify y añadir las canciones
