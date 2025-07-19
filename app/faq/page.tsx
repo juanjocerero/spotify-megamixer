@@ -1,7 +1,7 @@
 // /app/faq/page.tsx
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Wand2, Search, Plus, RefreshCw, Trash2, Edit3 } from 'lucide-react';
+import { ArrowLeft, Wand2, Search, Plus, RefreshCw, Trash2, Edit3, Shuffle, Eye, ListFilter } from 'lucide-react';
 
 export default function FaqPage() {
   return (
@@ -22,77 +22,87 @@ export default function FaqPage() {
     🎧 Guía de Spotify Megamixer
     </h1>
     <p className="text-slate-300 text-lg">
-    Bienvenido a tu nueva super-poderosa herramienta de playlists. ¡Aquí te explicamos todo lo que puedes hacer!
+    ¡Bienvenido a tu centro de control de playlists! Aquí te explicamos todo lo que puedes hacer con esta herramienta.
     </p>
     </header>
     
     {/* Concepto básico */}
-    <SectionCard icon={<Plus className="h-6 w-6 text-green-400" />} title="1. ¿Qué hace Megamixer?">
+    <SectionCard icon={<Plus className="h-6 w-6 text-green-400" />} title="1. ¿Qué es una Megalista?">
     <p>
-    Spotify no permite mezclar varias playlists en una sola… ¡hasta ahora!  
-    Megamixer carga todas tus playlists y te deja combinarlas, sincronizarlas y administrarlas como un jefe.
+    Spotify no permite mezclar varias playlists en una sola... ¡hasta ahora! Megamixer te permite combinar las canciones de varias de tus playlists en una única "Megalista", eliminando duplicados automáticamente.
     </p>
     <p>
-    Con <strong className="text-green-400">carga infinita</strong> solo sigue haciendo scroll y más playlists aparecerán automáticamente.
+    Además, la aplicación está optimizada para el rendimiento: usa <strong className="text-green-400">scroll infinito y virtualización</strong>, lo que garantiza una navegación fluida incluso si tienes miles de playlists.
     </p>
     </SectionCard>
     
-    {/* Búsqueda */}
-    <SectionCard icon={<Search className="h-6 w-6 text-sky-400" />} title="2. Búsqueda y navegación rápida">
-    <ul className="list-disc list-inside space-y-2 text-slate-300">
-    <li><strong>Búsqueda inteligente:</strong> Filtra en tiempo real y perdona errores tipográficos.</li>
-    <li><strong>Seleccionar todo:</strong> Un botón aparece para marcar todos los resultados de golpe.</li>
-    <li><strong>Atajos de teclado:</strong> <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">↑</kbd> <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">↓</kbd> para moverte y <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">barra espaciadora</kbd> para marcar.</li>
+    {/* Búsqueda y Ordenación */}
+    <SectionCard icon={<ListFilter className="h-6 w-6 text-sky-400" />} title="2. Búsqueda, Ordenación y Navegación">
+    <ul className="list-disc list-inside space-y-3 text-slate-300">
+    <li><strong>Búsqueda Inteligente:</strong> Usa el campo <Search className="inline h-4 w-4" /> para filtrar en tiempo real. La búsqueda perdona errores tipográficos.</li>
+    <li><strong>Ordenación Flexible:</strong> Organiza tu lista por defecto, nombre, número de canciones, propietario o mostrando las Megalistas primero.</li>
+    <li><strong>Selección Rápida:</strong> Un botón aparece en la búsqueda para seleccionar todos los resultados de una vez.</li>
+    <li><strong>Atajos de Teclado:</strong> Usa <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">↑</kbd> <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">↓</kbd> para navegar por la lista y la <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">barra espaciadora</kbd> para seleccionar.</li>
     </ul>
     </SectionCard>
     
-    {/* Crear megalistas */}
-    <SectionCard icon={<Plus className="h-6 w-6 text-purple-400" />} title="3. Crear y gestionar Megalistas">
+    {/* Crear y gestionar Megalistas */}
+    <SectionCard icon={<Plus className="h-6 w-6 text-purple-400" />} title="3. Cómo Crear y Modificar Megalistas">
     <div className="space-y-4">
     <div>
-    <h3 className="font-semibold text-purple-300">Crear una nueva Megalista</h3>
-    <p>Selecciona 2 o más playlists → botón verde <strong>&quot;Crear&quot;</strong>. Se unen, se quitan duplicados, se barajan y se crea la playlist en tu cuenta.</p>
+    <h3 className="font-semibold text-purple-300">Crear una Nueva Megalista</h3>
+    <p>Selecciona 2 o más playlists → pulsa el botón verde <strong>"Crear"</strong>. Esto une todas las canciones y quita los duplicados. La mezcla inicial no se baraja para preservar el orden.</p>
     </div>
     <div>
-    <h3 className="font-semibold text-purple-300">Añadir a una Megalista existente</h3>
-    <p>Selecciona playlists → botón <strong>&quot;Añadir&quot;</strong> → elige la Megalista destino.</p>
+    <h3 className="font-semibold text-purple-300">Añadir a una Megalista Existente</h3>
+    <p>Selecciona playlists → pulsa el botón <strong>"Añadir"</strong> → elige la Megalista de destino en el diálogo. Se añadirán solo las canciones que no estuvieran ya.</p>
     </div>
     <div>
     <h3 className="font-semibold text-purple-300 flex items-center gap-2">
     <Wand2 className="h-5 w-5" /> Megamix Sorpresa ✨
     </h3>
-    <p>Crea una playlist aleatoria eligiendo cuántas canciones quieres. Si hay playlists seleccionadas, usa esas; si no, elige 10 al azar de tu librería.</p>
+    <p>Crea una playlist con un número de canciones aleatorias. Puedes usar tus playlists seleccionadas como fuente o, si no hay ninguna, la app te permite elegir hasta 50 playlists al azar de tu librería.</p>
     </div>
     </div>
     </SectionCard>
     
-    {/* Sincronización */}
-    <SectionCard icon={<RefreshCw className="h-6 w-6 text-amber-400" />} title="4. Sincronización inteligente">
+    {/* Barajado */}
+    <SectionCard icon={<Shuffle className="h-6 w-6 text-orange-400" />} title="4. La Nueva Función de Barajado">
+    <p>
+    Para darte más control, el barajado ahora es una acción explícita. ¡Así no pierdes el orden de tus canciones si no quieres!
+    </p>
     <ul className="list-disc list-inside space-y-2 text-slate-300">
-    <li><strong>Individual:</strong> En el menú <code className="bg-slate-700 px-1 rounded">⋯</code> de una Megalista pulsa <strong>&quot;Sincronizar&quot;</strong>.</li>
-    <li><strong>En lote:</strong> Selecciona varias → botón <strong>&quot;Sincronizar&quot;</strong> en la barra inferior.</li>
-    <li><strong>Autocuración:</strong> Si borras una playlist origen, la Megalista se actualiza sola y la quita de sus fuentes.</li>
+    <li><strong>Barajado Individual:</strong> En el menú <code className="bg-slate-700 px-1 rounded">⋯</code> de una Megalista, pulsa <strong>"Barajar"</strong>.</li>
+    <li><strong>Barajado en Lote:</strong> Selecciona varias Megalistas → botón <Shuffle className="inline h-4 w-4" /> en la barra inferior.</li>
+    <li><strong>Barajado Global:</strong> Pulsa el botón <Shuffle className="inline h-4 w-4" /> en la cabecera para barajar todas tus Megalistas a la vez.</li>
+    </ul>
+    </SectionCard>
+    
+    {/* Sincronización */}
+    <SectionCard icon={<RefreshCw className="h-6 w-6 text-amber-400" />} title="5. Sincronización Inteligente (¡Mejorado!)">
+    <p>
+    Esta es la función estrella. Mantiene tus Megalistas al día con los cambios en sus playlists de origen, pero de forma mucho más eficiente.
+    </p>
+    <ul className="list-disc list-inside space-y-3 text-slate-300">
+    <li><strong>Previsualiza Antes de Actuar:</strong> Antes de aplicar cualquier cambio, la app te mostrará un resumen de cuántas canciones se van a añadir y cuántas se van a eliminar. ¡Tú tienes la última palabra!</li>
+    <li><strong className="text-amber-300">Conserva Fecha y Orden:</strong> La nueva sincronización es incremental. Solo añade y quita lo necesario, por lo que las canciones que ya estaban en tu playlist conservan su fecha de adición y su orden original.</li>
+    <li><strong>Sincronización Múltiple:</strong> Puedes sincronizar una Megalista desde su menú <code className="bg-slate-700 px-1 rounded">⋯</code>, varias a la vez desde la barra inferior, o todas con el botón <RefreshCw className="inline h-4 w-4" /> de la cabecera.</li>
+    <li><strong>Autocuración:</strong> Si borras una playlist que era fuente de una Megalista, la app lo detecta y la limpia de la configuración para evitar errores.</li>
     </ul>
     </SectionCard>
     
     {/* Gestión avanzada */}
-    <SectionCard icon={<Edit3 className="h-6 w-6 text-rose-400" />} title="5. Gestión avanzada">
-    <ul className="list-disc list-inside space-y-2 text-slate-300">
-    <li><strong>Editar nombre/descripción:</strong> Desde el menú <code className="bg-slate-700 px-1 rounded">⋯</code> → <strong>&quot;Editar detalles&quot;</strong>.</li>
-    <li><strong>Eliminar:</strong> Individualmente desde <code className="bg-slate-700 px-1 rounded">⋯</code> o en lote tras seleccionar varias → botón <Trash2 className="inline h-4 w-4 text-rose-500" />.</li>
+    <SectionCard icon={<Edit3 className="h-6 w-6 text-rose-400" />} title="6. Gestión Avanzada de Playlists">
+    <ul className="list-disc list-inside space-y-3 text-slate-300">
+    <li><strong>Ver Canciones:</strong> ¿No recuerdas qué hay en una playlist? Usa la opción <Eye className="inline h-4 w-4" /> <strong>"Ver Canciones"</strong> en su menú para ver la lista completa en un panel lateral.</li>
+    <li><strong>Editar Nombre/Descripción:</strong> Desde el menú <code className="bg-slate-700 px-1 rounded">⋯</code> → <strong>"Editar detalles"</strong>. Funciona para CUALQUIER playlist, no solo Megalistas.</li>
+    <li><strong>Eliminar Playlists:</strong> Individualmente desde el menú <code className="bg-slate-700 px-1 rounded">⋯</code> o en lote seleccionando varias y usando el botón <Trash2 className="inline h-4 w-4 text-rose-500" /> de la barra inferior.</li>
+    <li><strong>Reanudar Mezclas:</strong> Si una creación de playlist muy grande falla (por ej. por un corte de red), aparecerá un botón para <strong>reanudarla</strong> justo donde se quedó.</li>
     </ul>
     </SectionCard>
     
-    {/* Tolerancia a fallos */}
-    <SectionCard icon={<RefreshCw className="h-6 w-6 text-indigo-400" />} title="6. Tolerancia a fallos">
-    <p>
-    ¿Se interrumpió una mezcla por un corte de red?  
-    Aparecerá un botón <strong>&quot;Reanudar mezcla&quot;</strong> para continuar justo donde la dejaste. Sin pérdidas.
-    </p>
-    </SectionCard>
-    
     {/* Footer */}
-    <footer className="text-center text-slate-500 text-sm">
+    <footer className="text-center text-slate-500 text-sm py-8">
     💚 ¡A disfrutar de la música sin límites!
     </footer>
     </div>
