@@ -13,7 +13,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Search, ListChecks, XCircle } from 'lucide-react';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { Search, ListChecks, XCircle, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Definimos las props que recibirá este componente desde la página del servidor
@@ -22,11 +30,21 @@ interface DashboardClientProps {
   initialNextUrl: string | null;
 }
 
+// Definimos los tipos de ordenación para evitar errores
+type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
+
+// Mapeo para mostrar un texto legible en el botón
+const sortLabels: Record<SortOption, string> = {
+  custom: 'Orden por defecto',
+  megalist_first: 'Megalistas Primero',
+  name_asc: 'Nombre (A-Z)',
+  name_desc: 'Nombre (Z-A)',
+  tracks_desc: 'Canciones (Más a Menos)',
+  tracks_asc: 'Canciones (Menos a Más)',
+  owner_asc: 'Propietario (A-Z)',
+};
+
 export default function DashboardClient({ initialPlaylists, initialNextUrl }: DashboardClientProps) {
-  // El estado se levanta aquí
-  // El estado para la búsqueda y el filtro ahora vive en este componente padre.
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredIds, setFilteredIds] = useState<string[]>([]);
   
   const { 
     selectedPlaylistIds, 
@@ -34,6 +52,12 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     showOnlySelected, 
     setShowOnlySelected 
   } = usePlaylistStore();
+  
+  // El estado se levanta aquí
+  // El estado para la búsqueda y el filtro ahora vive en este componente padre.
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredIds, setFilteredIds] = useState<string[]>([]);
+  const [sortOption, setSortOption] = useState<SortOption>('custom');
   
   const handleFilteredChange = useCallback((ids: string[]) => {
     setFilteredIds(ids);
@@ -61,7 +85,10 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     {/* Cabecera de control fija (Sticky) */}
     {/* Este div se quedará pegado en la parte superior de la página al hacer scroll */}
     <div className="sticky top-0 z-10 bg-gray-900/80 py-4 backdrop-blur-md">
-    <div className="relative">
+    
+    <div className="flex flex-col sm:flex-row items-center gap-4"></div>
+    
+    <div className="relative w-full sm:flex-grow">
     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
     <Input
     type="text"
@@ -107,7 +134,28 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     </div>
     </div>
     
+    <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+    <Button variant="outline" className="w-full sm:w-auto sm:flex-shrink-0">
+    <ArrowUpDown className="mr-2 h-4 w-4" />
+    {sortLabels[sortOption]}
+    </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end">
+    <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem onSelect={() => setSortOption('custom')}>Orden Personalizado</DropdownMenuItem>
+    <DropdownMenuItem onSelect={() => setSortOption('megalist_first')}>Megalistas Primero</DropdownMenuItem>
+    <DropdownMenuItem onSelect={() => setSortOption('name_asc')}>Nombre (A-Z)</DropdownMenuItem>
+    <DropdownMenuItem onSelect={() => setSortOption('name_desc')}>Nombre (Z-A)</DropdownMenuItem>
+    <DropdownMenuItem onSelect={() => setSortOption('tracks_desc')}>Nº de Canciones (Descendente)</DropdownMenuItem>
+    <DropdownMenuItem onSelect={() => setSortOption('tracks_asc')}>Nº de Canciones (Ascendente)</DropdownMenuItem>
+    <DropdownMenuItem onSelect={() => setSortOption('owner_asc')}>Propietario (A-Z)</DropdownMenuItem>
+    </DropdownMenuContent>
+    </DropdownMenu>
+    
     </div>
+    
     <div className="flex items-center space-x-2 pt-4">
     <Switch
     id="show-selected-main"
@@ -133,6 +181,7 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     showOnlySelected={showOnlySelected} 
     onClearSearch={handleClearSearch}
     onFilteredChange={handleFilteredChange}
+    sortOption={sortOption} 
     />
     </div>
     

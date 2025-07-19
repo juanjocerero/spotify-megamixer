@@ -48,6 +48,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw, Pencil } from 'lucide-react';
 
+type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
+
 interface PlaylistDisplayProps {
   initialPlaylists: SpotifyPlaylist[];
   initialNextUrl: string | null;
@@ -55,6 +57,7 @@ interface PlaylistDisplayProps {
   showOnlySelected: boolean;
   onClearSearch: () => void;
   onFilteredChange: (ids: string[]) => void;
+  sortOption: SortOption;
 }
 
 function Loader() {
@@ -72,7 +75,8 @@ export default function PlaylistDisplay({
   searchTerm,           
   showOnlySelected,
   onClearSearch, 
-  onFilteredChange
+  onFilteredChange, 
+  sortOption 
 }: PlaylistDisplayProps) {
   const { 
     togglePlaylist, 
@@ -178,22 +182,57 @@ export default function PlaylistDisplay({
     []
   );
   
-  // El filtrado depende de las props
+  // El filtrado depende de los parámetros de ordenación primero y luego con el filtrado y la búsqueda
   const filteredPlaylists = useMemo(() => {
-    let items = playlistCache;
+    // Hacemos una copia para no mutar la caché original
+    let sortedItems = [...playlistCache];
+    
+    // Primero, se aplica la ordenación
+    switch (sortOption) {
+      case 'name_asc':
+      sortedItems.sort((a, b) => a.name.localeCompare(b.name));
+      break;
+      case 'name_desc':
+      sortedItems.sort((a, b) => b.name.localeCompare(a.name));
+      break;
+      case 'tracks_desc':
+      sortedItems.sort((a, b) => b.tracks.total - a.tracks.total);
+      break;
+      case 'tracks_asc':
+      sortedItems.sort((a, b) => a.tracks.total - b.tracks.total);
+      break;
+      case 'owner_asc':
+      sortedItems.sort((a, b) => a.owner.display_name.localeCompare(b.owner.display_name));
+      break;
+      case 'megalist_first':
+      sortedItems.sort((a, b) => Number(b.isMegalist ?? false) - Number(a.isMegalist ?? false));
+      break;
+      case 'custom':
+      default:
+      // No hacemos nada, mantenemos el orden por defecto de la caché
+      break;
+    }
+    
+    let finalItems = sortedItems;
+    
+    // Aplica el filtro de mostrar solo la selección, si está activo
     if (showOnlySelected) {
-      items = items.filter((p) => selectedPlaylistIds.includes(p.id));
+      finalItems = finalItems.filter((p) => selectedPlaylistIds.includes(p.id));
     }
+    
+    // Aplica la búsqueda de filtro por nombre, si el campo está relleno
     if (searchTerm.trim() !== '') {
-      const fuseInstance = new Fuse(items, fuseOptions);
-      items = fuseInstance.search(searchTerm).map((result) => result.item);
+      const fuseInstance = new Fuse(finalItems, fuseOptions);
+      finalItems = fuseInstance.search(searchTerm).map((result) => result.item);
     }
-    return items;
-  }, [playlistCache, searchTerm, showOnlySelected, selectedPlaylistIds, fuseOptions]);
+    
+    return finalItems;
+    
+  }, [playlistCache, searchTerm, showOnlySelected, selectedPlaylistIds, fuseOptions, sortOption]);
   
   useEffect(() => {
     setFocusedIndex(null);
-  }, [searchTerm, showOnlySelected]);
+  }, [searchTerm, showOnlySelected, sortOption]);
   
   useEffect(() => {
     const ids = filteredPlaylists.map(p => p.id);

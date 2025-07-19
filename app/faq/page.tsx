@@ -1,89 +1,116 @@
 // /app/faq/page.tsx
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Wand2 } from 'lucide-react';
+import { ArrowLeft, Wand2, Search, Plus, RefreshCw, Trash2, Edit3 } from 'lucide-react';
 
 export default function FaqPage() {
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-200 p-4 sm:p-6 md:p-8">
-    <div className="max-w-3xl mx-auto prose prose-invert prose-headings:text-green-500 prose-a:text-green-400 hover:prose-a:text-green-300">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-200 p-4 sm:p-6 md:p-8">
+    <div className="max-w-4xl mx-auto space-y-10">
+    
+    {/* Botón volver */}
     <Link href="/dashboard" passHref>
-    <Button variant="ghost" className="mb-8">
+    <Button variant="ghost" className="mb-2 text-green-400 hover:text-green-300">
     <ArrowLeft className="mr-2 h-4 w-4" />
     Volver al Dashboard
     </Button>
     </Link>
     
-    <h1>Guía de Funcionalidades de Spotify Megamixer</h1>
-    
-    <p>
-    ¡Bienvenido a la guía de Spotify Megamixer! Esta aplicación ha sido diseñada para darte superpoderes sobre tus playlists. Aquí te explicamos todo lo que puedes hacer.
+    {/* Hero */}
+    <header className="space-y-2">
+    <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500">
+    🎧 Guía de Spotify Megamixer
+    </h1>
+    <p className="text-slate-300 text-lg">
+    Bienvenido a tu nueva super-poderosa herramienta de playlists. ¡Aquí te explicamos todo lo que puedes hacer!
     </p>
+    </header>
     
-    <h2>Concepto Básico: Mezcla y Carga de Playlists</h2>
+    {/* Concepto básico */}
+    <SectionCard icon={<Plus className="h-6 w-6 text-green-400" />} title="1. ¿Qué hace Megamixer?">
     <p>
-    La función principal de la aplicación es solucionar una carencia de Spotify: la capacidad de mezclar el contenido de varias playlists en una sola. Al entrar, la aplicación carga tus playlists de Spotify. Si tienes muchas, simplemente haz scroll hacia abajo y la aplicación cargará más automáticamente gracias a la <strong>carga infinita</strong>.
+    Spotify no permite mezclar varias playlists en una sola… ¡hasta ahora!  
+    Megamixer carga todas tus playlists y te deja combinarlas, sincronizarlas y administrarlas como un jefe.
     </p>
+    <p>
+    Con <strong className="text-green-400">carga infinita</strong> solo sigue haciendo scroll y más playlists aparecerán automáticamente.
+    </p>
+    </SectionCard>
     
-    <h2>Búsqueda y Navegación</h2>
-    <ul>
-    <li><strong>Búsqueda Inteligente:</strong> Usa la barra de búsqueda para filtrar tus playlists en tiempo real. La búsqueda perdona errores tipográficos, así que no te preocupes si escribes algo mal.</li>
-    <li><strong>Seleccionar Búsqueda:</strong> Cuando filtras, aparece un botón para seleccionar todos los resultados de la búsqueda con un solo clic.</li>
-    <li><strong>Navegación por Teclado:</strong> Usa las teclas <kbd>↑</kbd> y <kbd>↓</kbd> para moverte por la lista, y la <kbd>barra espaciadora</kbd> para seleccionar o deseleccionar la playlist enfocada.</li>
+    {/* Búsqueda */}
+    <SectionCard icon={<Search className="h-6 w-6 text-sky-400" />} title="2. Búsqueda y navegación rápida">
+    <ul className="list-disc list-inside space-y-2 text-slate-300">
+    <li><strong>Búsqueda inteligente:</strong> Filtra en tiempo real y perdona errores tipográficos.</li>
+    <li><strong>Seleccionar todo:</strong> Un botón aparece para marcar todos los resultados de golpe.</li>
+    <li><strong>Atajos de teclado:</strong> <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">↑</kbd> <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">↓</kbd> para moverte y <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">barra espaciadora</kbd> para marcar.</li>
     </ul>
+    </SectionCard>
     
-    <h2>Crear y Gestionar Megalistas</h2>
-    <h3>Crear una Nueva Megalista</h3>
-    <p>
-    Selecciona dos o más playlists. En la barra de acciones inferior, pulsa el botón verde &quot;Crear&quot;. La aplicación unificará todas las canciones, eliminará duplicados, las barajará y creará una nueva playlist en tu cuenta de Spotify.
-    </p>
-    <h3>Añadir a una Megalista Existente</h3>
-    <p>
-    Selecciona una o más playlists y pulsa el botón &quot;Añadir&quot;. Se abrirá un diálogo donde podrás elegir una de tus Megalistas creadas previamente para añadirle las nuevas canciones.
-    </p>
-    <h3>Megamix Sorpresa ✨</h3>
-    <p>
-    Pulsa el botón de la varita mágica (<Wand2 className="inline h-4 w-4" />) en la cabecera. Esta función te permite crear una playlist con un número determinado de canciones aleatorias.
-    </p>
-    <ul>
-    <li><strong>Con selección:</strong> Si tienes playlists seleccionadas, las usará como fuente.</li>
-    <li><strong>Sin selección:</strong> Si no tienes nada seleccionado, usará hasta 10 playlists al azar de tu librería para crear la mezcla.</li>
-    </ul>
-    
-    <h2>Sincronización Inteligente</h2>
-    <p>
-    Las Megalistas creadas con la app guardan la información de sus playlists de origen. Esto permite una sincronización inteligente.
-    </p>
-    <ul>
-    <li><strong>Sincronización Individual:</strong> En el menú de acciones (<code>...</code>) de una Megalista, pulsa &quot;Sincronizar&quot; para actualizarla con las últimas canciones de sus fuentes.</li>
-    <li><strong>Sincronización en Lote:</strong> Si tienes playlists seleccionadas, aparecerá un botón &quot;Sincronizar&quot; en la barra inferior para actualizar todas tus Megalistas a la vez.</li>
-    <li><strong>Autocuración:</strong> Si eliminas una de las playlists que componían una Megalista, la aplicación lo detectará en la siguiente sincronización y la eliminará de las fuentes para evitar errores. ¡Se arregla sola!</li>
-    </ul>
-    
-    <h2>Gestión Avanzada de Playlists</h2>
-    <h3>Menús de Acciones</h3>
-    <p>
-    Cada playlist en la lista tiene un menú de acciones (<code>...</code>) a la derecha. Este menú te da acceso a funciones de gestión para esa playlist específica.
-    </p>
-    <h3>Editar Nombre y Descripción</h3>
-    <p>
-    Desde el menú de acciones de cualquier playlist, puedes elegir &quot;Editar detalles&quot; para cambiar su nombre y descripción directamente desde la aplicación.
-    </p>
-    <h3>Eliminar Playlists</h3>
-    <p>
-    Puedes eliminar playlists de dos maneras:
-    </p>
-    <ul>
-    <li><strong>Individual:</strong> Desde el menú de acciones (<code>...</code>) de cualquier playlist.</li>
-    <li><strong>En Lote:</strong> Seleccionando una o más playlists y usando el botón &quot;Eliminar&quot; de la barra de acciones inferior.</li>
-    </ul>
-    
-    <h2>Tolerancia a Fallos</h2>
-    <h3>Reanudar Mezclas Fallidas</h3>
-    <p>
-    Si estás creando una Megalista muy grande y el proceso falla (por ejemplo, por una pérdida de conexión), ¡no te preocupes! La barra de acciones se transformará y te dará la opción de <strong>reanudar la mezcla</strong> desde el punto exacto donde se detuvo.
-    </p>
+    {/* Crear megalistas */}
+    <SectionCard icon={<Plus className="h-6 w-6 text-purple-400" />} title="3. Crear y gestionar Megalistas">
+    <div className="space-y-4">
+    <div>
+    <h3 className="font-semibold text-purple-300">Crear una nueva Megalista</h3>
+    <p>Selecciona 2 o más playlists → botón verde <strong>&quot;Crear&quot;</strong>. Se unen, se quitan duplicados, se barajan y se crea la playlist en tu cuenta.</p>
+    </div>
+    <div>
+    <h3 className="font-semibold text-purple-300">Añadir a una Megalista existente</h3>
+    <p>Selecciona playlists → botón <strong>&quot;Añadir&quot;</strong> → elige la Megalista destino.</p>
+    </div>
+    <div>
+    <h3 className="font-semibold text-purple-300 flex items-center gap-2">
+    <Wand2 className="h-5 w-5" /> Megamix Sorpresa ✨
+    </h3>
+    <p>Crea una playlist aleatoria eligiendo cuántas canciones quieres. Si hay playlists seleccionadas, usa esas; si no, elige 10 al azar de tu librería.</p>
     </div>
     </div>
+    </SectionCard>
+    
+    {/* Sincronización */}
+    <SectionCard icon={<RefreshCw className="h-6 w-6 text-amber-400" />} title="4. Sincronización inteligente">
+    <ul className="list-disc list-inside space-y-2 text-slate-300">
+    <li><strong>Individual:</strong> En el menú <code className="bg-slate-700 px-1 rounded">⋯</code> de una Megalista pulsa <strong>&quot;Sincronizar&quot;</strong>.</li>
+    <li><strong>En lote:</strong> Selecciona varias → botón <strong>&quot;Sincronizar&quot;</strong> en la barra inferior.</li>
+    <li><strong>Autocuración:</strong> Si borras una playlist origen, la Megalista se actualiza sola y la quita de sus fuentes.</li>
+    </ul>
+    </SectionCard>
+    
+    {/* Gestión avanzada */}
+    <SectionCard icon={<Edit3 className="h-6 w-6 text-rose-400" />} title="5. Gestión avanzada">
+    <ul className="list-disc list-inside space-y-2 text-slate-300">
+    <li><strong>Editar nombre/descripción:</strong> Desde el menú <code className="bg-slate-700 px-1 rounded">⋯</code> → <strong>&quot;Editar detalles&quot;</strong>.</li>
+    <li><strong>Eliminar:</strong> Individualmente desde <code className="bg-slate-700 px-1 rounded">⋯</code> o en lote tras seleccionar varias → botón <Trash2 className="inline h-4 w-4 text-rose-500" />.</li>
+    </ul>
+    </SectionCard>
+    
+    {/* Tolerancia a fallos */}
+    <SectionCard icon={<RefreshCw className="h-6 w-6 text-indigo-400" />} title="6. Tolerancia a fallos">
+    <p>
+    ¿Se interrumpió una mezcla por un corte de red?  
+    Aparecerá un botón <strong>&quot;Reanudar mezcla&quot;</strong> para continuar justo donde la dejaste. Sin pérdidas.
+    </p>
+    </SectionCard>
+    
+    {/* Footer */}
+    <footer className="text-center text-slate-500 text-sm">
+    💚 ¡A disfrutar de la música sin límites!
+    </footer>
+    </div>
+    </div>
+  );
+}
+
+/* Componente auxiliar para las cards */
+function SectionCard({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+  return (
+    <section className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-slate-700/50 space-y-4">
+    <h2 className="flex items-center gap-3 text-2xl font-bold text-slate-100">
+    {icon}
+    {title}
+    </h2>
+    <div className="text-slate-300 leading-relaxed space-y-2">
+    {children}
+    </div>
+    </section>
   );
 }
