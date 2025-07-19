@@ -259,7 +259,7 @@ export default function SurpriseMixButton() {
     <AlertDialogHeader>
     <AlertDialogTitle>La playlist ya existe</AlertDialogTitle>
     <AlertDialogDescription>
-    Ya tienes una playlist llamada "{playlistName}". ¿Quieres reemplazar su contenido con este nuevo Megamix? Esta acción no se puede deshacer.
+    Ya tienes una playlist llamada &quot;{playlistName}&quot;. ¿Quieres reemplazar su contenido con este nuevo Megamix? Esta acción no se puede deshacer.
     </AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
