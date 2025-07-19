@@ -343,158 +343,233 @@ export default function PlaylistDisplay({
   };
   
   return (
-    
     <div>
     <div className="rounded-md border border-gray-700 overflow-hidden">
-    <Table className="table-fixed">
-    <TableHeader>
-    <TableRow className="hover:bg-transparent bg-gray-900">
-    <TableHead className="w-[60px] sm:w-[80px]"></TableHead>
-    <TableHead>Nombre</TableHead>
-    <TableHead className="hidden sm:table-cell w-[120px]">Propietario</TableHead>
-    <TableHead className="w-[80px] sm:w-[100px] text-right">Canciones</TableHead>
-    <TableHead className="w-[50px]"></TableHead>
-    </TableRow>
-    </TableHeader>
-    {/* TableBody se convierte en el contenedor de scroll.La referencia 'parentRef' ahora apunta aquí.*/}
-    <TableBody
+    <div className="w-full">
+    {/* CABECERA - Ahora usa flexbox */}
+    <div className="flex items-center bg-gray-900 text-sm font-semibold text-white">
+    <div className="w-[60px] sm:w-[80px] flex-shrink-0"></div>
+    <div className="flex-grow min-w-0 px-4 py-3">Nombre</div>
+    <div className="hidden sm:block w-[120px] flex-shrink-0 px-4 py-3">Propietario</div>
+    <div className="w-[80px] sm:w-[100px] flex-shrink-0 px-4 py-3 text-right">Canciones</div>
+    <div className="w-[50px] flex-shrink-0"></div>
+    </div>
+    
+    {/* CUERPO - Usa flexbox y virtualización */}
+    <div
     ref={parentRef}
     style={{
-      display: 'block', // Permite que TableBody actúe como un div para el scroll
       height: '65vh',
       overflow: 'auto',
-      position: 'relative', // Contenedor para los elementos posicionados absolutamente
+      position: 'relative',
     }}
     >
-    {/* Div "fantasma" que crea la altura total para el scrollbar */}
     <div
     style={{
       height: `${rowVirtualizer.getTotalSize()}px`,
       width: '100%',
     }}
     />
-    {/* 
-      El bucle mapea sobre los items virtuales y los posiciona de forma absoluta dentro del TableBody. */}
-      {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-        const playlist = filteredPlaylists[virtualRow.index];
-        if (!playlist) return null;
+    {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+      const playlist = filteredPlaylists[virtualRow.index];
+      if (!playlist) return null;
+      
+      const isMegalista = playlist.isMegalist ?? false;
+      const isSyncable = playlist.isSyncable ?? false;
+      const isSyncingThis = syncingId === playlist.id;
+      const selected = isSelected(playlist.id);
+      const focused = virtualRow.index === focusedIndex;
+      
+      return (
+        <div
+        key={playlist.id}
+        onClick={() => togglePlaylist(playlist.id)}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: `${virtualRow.size}px`,
+          transform: `translateY(${virtualRow.start}px)`,
+        }}
+        className={cn(
+          'flex items-center border-b border-gray-800 transition-colors cursor-pointer',
+          {
+            'bg-green-900/40 hover:bg-green-900/60': selected,
+            'hover:bg-white/5': !selected,
+            'outline outline-2 outline-offset-[-2px] outline-blue-500': focused,
+          }
+        )}
+        >
+        <div className="pl-4 py-2 w-[60px] sm:w-[80px] flex-shrink-0">
+        <Avatar className="h-12 w-12">
+        <AvatarImage src={playlist.images?.[0]?.url} alt={playlist.name} />
+        <AvatarFallback><Music /></AvatarFallback>
+        </Avatar>
+        </div>
         
-        const isMegalista = playlist.isMegalist ?? false;
-        const isSyncable = playlist.isSyncable ?? false;
-        const isSyncingThis = syncingId === playlist.id;
-        const selected = isSelected(playlist.id);
-        const focused = virtualRow.index === focusedIndex;
-        
-        return (
-          <TableRow
-          key={playlist.id}
-          onClick={() => togglePlaylist(playlist.id)}
-          // Los estilos de posicionamiento se aplican directamente a la fila
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: `${virtualRow.size}px`,
-            transform: `translateY(${virtualRow.start}px)`,
-          }}
-          // Flexbox asegura que las celdas se comporten correctamente
+        <div className="font-medium py-2 flex-grow min-w-0 px-4">
+        <div className="flex items-start justify-between gap-x-3">
+        <div className="flex-grow min-w-0">
+        <span className="block break-words pr-2">{playlist.name}</span>
+        <span className="block text-xs text-muted-foreground sm:hidden break-words">
+        {playlist.owner.display_name}
+        </span>
+        </div>
+        {isMegalista && (
+          <Badge
+          variant="outline"
           className={cn(
-            'flex items-center border-b border-gray-800 transition-colors cursor-pointer',
-            {
-              'bg-green-900/40 hover:bg-green-900/60': selected,
-              'hover:bg-white/5': !selected,
-              'outline outline-2 outline-offset-[-2px] outline-blue-500': focused,
-            }
+            'whitespace-nowrap shrink-0 mt-1 sm:mt-0',
+            isSyncable
+            ? 'border-green-500 text-green-500'
+            : 'border-yellow-500 text-yellow-500'
           )}
           >
-          {/* Las celdas tienen clases de ancho y flex para alinearse con el header */}
-          <TableCell className="pl-4 py-2 w-[60px] sm:w-[80px] flex-shrink-0">
-          <Avatar className="h-12 w-12"><AvatarImage src={playlist.images?.[0]?.url} alt={playlist.name} /><AvatarFallback><Music /></AvatarFallback></Avatar>
-          </TableCell>
-          <TableCell className="font-medium py-2 flex-grow min-w-0">
-          <div className="flex items-start justify-between gap-x-3">
-          <div className="flex-grow min-w-0"><span className="block break-words pr-2">{playlist.name}</span><span className="block text-xs text-muted-foreground sm:hidden break-words">{playlist.owner.display_name}</span></div>
-          {isMegalista && (<Badge variant="outline" className={cn("whitespace-nowrap shrink-0", "mt-1 sm:mt-0", isSyncable ? "border-green-500 text-green-500" : "border-yellow-500 text-yellow-500")}>Megalista</Badge>)}
-          </div>
-          </TableCell>
-          <TableCell className="hidden sm:table-cell py-2 w-[120px] break-words flex-shrink-0">{playlist.owner.display_name}</TableCell>
-          <TableCell className="py-2 text-right w-[80px] sm:w-[100px] flex-shrink-0">{playlist.tracks.total}</TableCell>
-          <TableCell className="py-2 w-[50px] flex-shrink-0">
-          <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditState({ open: true, playlist: playlist, newName: playlist.name, newDescription: playlist.description || '' }); }}><Pencil className="mr-2 h-4 w-4" /><span>Editar detalles</span></DropdownMenuItem>
-          {isSyncable && (<DropdownMenuItem disabled={isSyncingThis} onClick={(e) => { e.stopPropagation(); handleSync(playlist); }}>{isSyncingThis ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}<span>{isSyncingThis ? "Sincronizando..." : "Sincronizar"}</span></DropdownMenuItem>)}
-          <DropdownMenuItem className="text-red-500 focus:text-red-500" onClick={(e) => { e.stopPropagation(); setDeleteAlert({ open: true, playlist: playlist }); }}><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
-          </DropdownMenuContent>
-          </DropdownMenu>
-          </TableCell>
-          </TableRow>
-        );
-      })}
-      </TableBody>
-      </Table>
-      </div>
-      
-      <AlertDialog open={deleteAlert.open} onOpenChange={(open) => setDeleteAlert({ ...deleteAlert, open })}>
-      <AlertDialogContent>
-      <AlertDialogHeader>
-      <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
-      <AlertDialogDescription>
-      Esta acción es irreversible. Estás a punto de eliminar la playlist{' '}
-      <strong className="text-white">{deleteAlert.playlist?.name}</strong> de tu librería de Spotify.
-      </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-      <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-      <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="text-white bg-red-600 hover:bg-red-700">
-      {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-      Sí, eliminar
-      </AlertDialogAction>
-      </AlertDialogFooter>
-      </AlertDialogContent>
-      </AlertDialog>
-      
-      <Dialog open={editState.open} onOpenChange={(isOpen) => setEditState({ ...editState, open: isOpen })}>
-      <DialogContent>
-      <DialogHeader>
-      <DialogTitle>Editar: {editState.playlist?.name}</DialogTitle>
-      <DialogDescription>
-      Modifica el nombre y la descripción de tu playlist. Los cambios se reflejarán en Spotify.
-      </DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-4">
-      <div className="grid gap-4 py-4">
-      <div className="grid gap-2">
-      <Label htmlFor="playlist-name">Nombre</Label>
-      <Input
-      id="playlist-name"
-      value={editState.newName}
-      onChange={(e) => setEditState({ ...editState, newName: e.target.value })}
-      />
-      </div>
-      <div className="grid gap-2">
-      <Label htmlFor="playlist-description">Descripción</Label>
-      <Textarea
-      id="playlist-description"
-      value={editState.newDescription}
-      onChange={(e) => setEditState({ ...editState, newDescription: e.target.value })}
-      placeholder="Añade una descripción (opcional)"
-      />
-      </div>
-      </div>
-      </div>
-      <DialogFooter>
-      <Button variant="outline" onClick={() => setEditState({ ...editState, open: false })} disabled={isSaving}>Cancelar</Button>
-      <Button onClick={handleSaveChanges} disabled={isSaving}>
-      {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-      </Button>
-      </DialogFooter>
-      </DialogContent>
-      </Dialog>
-      </div>
-      
-    );
-  }
+          Megalista
+          </Badge>
+        )}
+        </div>
+        </div>
+        
+        <div className="hidden sm:flex items-center px-4 py-2 w-[120px] break-words flex-shrink-0">
+        {playlist.owner.display_name}
+        </div>
+        
+        <div className="px-4 py-2 text-right w-[80px] sm:w-[100px] flex-shrink-0">
+        {playlist.tracks.total}
+        </div>
+        
+        <div className="px-4 py-2 w-[50px] flex-shrink-0">
+        <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+        <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={(e) => e.stopPropagation()}
+        >
+        <MoreHorizontal className="h-4 w-4" />
+        </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+        <DropdownMenuItem
+        onClick={(e) => {
+          e.stopPropagation();
+          setEditState({
+            open: true,
+            playlist: playlist,
+            newName: playlist.name,
+            newDescription: playlist.description || '',
+          });
+        }}
+        >
+        <Pencil className="mr-2 h-4 w-4" />
+        <span>Editar detalles</span>
+        </DropdownMenuItem>
+        {isSyncable && (
+          <DropdownMenuItem
+          disabled={isSyncingThis}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSync(playlist);
+          }}
+          >
+          {isSyncingThis ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="mr-2 h-4 w-4" />
+          )}
+          <span>{isSyncingThis ? 'Sincronizando...' : 'Sincronizar'}</span>
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem
+        className="text-red-500 focus:text-red-500"
+        onClick={(e) => {
+          e.stopPropagation();
+          setDeleteAlert({ open: true, playlist: playlist });
+        }}
+        >
+        <Trash2 className="mr-2 h-4 w-4" />
+        Eliminar
+        </DropdownMenuItem>
+        </DropdownMenuContent>
+        </DropdownMenu>
+        </div>
+        </div>
+      );
+    })}
+    </div>
+    </div>
+    </div>
+    
+    {/* Diálogo de confirmación de eliminación */}
+    <AlertDialog open={deleteAlert.open} onOpenChange={(open) => setDeleteAlert({ ...deleteAlert, open })}>
+    <AlertDialogContent>
+    <AlertDialogHeader>
+    <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
+    <AlertDialogDescription>
+    Esta acción es irreversible. Estás a punto de eliminar la playlist{' '}
+    <strong className="text-white">{deleteAlert.playlist?.name}</strong> de tu librería de Spotify.
+    </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+    <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+    <AlertDialogAction
+    onClick={handleConfirmDelete}
+    disabled={isDeleting}
+    className="text-white bg-red-600 hover:bg-red-700"
+    >
+    {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+    Sí, eliminar
+    </AlertDialogAction>
+    </AlertDialogFooter>
+    </AlertDialogContent>
+    </AlertDialog>
+    
+    {/* Diálogo de edición */}
+    <Dialog open={editState.open} onOpenChange={(isOpen) => setEditState({ ...editState, open: isOpen })}>
+    <DialogContent>
+    <DialogHeader>
+    <DialogTitle>Editar: {editState.playlist?.name}</DialogTitle>
+    <DialogDescription>
+    Modifica el nombre y la descripción de tu playlist. Los cambios se reflejarán en Spotify.
+    </DialogDescription>
+    </DialogHeader>
+    <div className="grid gap-4 py-4">
+    <div className="grid gap-2">
+    <Label htmlFor="playlist-name">Nombre</Label>
+    <Input
+    id="playlist-name"
+    value={editState.newName}
+    onChange={(e) => setEditState({ ...editState, newName: e.target.value })}
+    />
+    </div>
+    <div className="grid gap-2">
+    <Label htmlFor="playlist-description">Descripción</Label>
+    <Textarea
+    id="playlist-description"
+    value={editState.newDescription}
+    onChange={(e) => setEditState({ ...editState, newDescription: e.target.value })}
+    placeholder="Añade una descripción (opcional)"
+    />
+    </div>
+    </div>
+    <DialogFooter>
+    <Button
+    variant="outline"
+    onClick={() => setEditState({ ...editState, open: false })}
+    disabled={isSaving}
+    >
+    Cancelar
+    </Button>
+    <Button onClick={handleSaveChanges} disabled={isSaving}>
+    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+    {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+    </Button>
+    </DialogFooter>
+    </DialogContent>
+    </Dialog>
+    </div>
+  );
+}
