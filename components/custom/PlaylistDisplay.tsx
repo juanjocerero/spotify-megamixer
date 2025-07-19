@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useInView } from 'react-intersection-observer';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 import { SpotifyPlaylist } from '@/types/spotify';
 import { cn } from '@/lib/utils';
@@ -60,15 +60,6 @@ interface PlaylistDisplayProps {
   sortOption: SortOption;
 }
 
-function Loader() {
-  return (
-    <div className="flex items-center justify-center gap-2 text-muted-foreground py-4">
-    <Loader2 className="h-5 w-5 animate-spin" />
-    <span>Cargando más playlists...</span>
-    </div>
-  );
-}
-
 export default function PlaylistDisplay({ 
   initialPlaylists, 
   initialNextUrl, 
@@ -112,7 +103,8 @@ export default function PlaylistDisplay({
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
-  const { ref, inView } = useInView({ threshold: 0 });
+  // Referencia para el contenedor de scroll ---
+  const parentRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     setPlaylistCache(initialPlaylists);
@@ -165,12 +157,6 @@ export default function PlaylistDisplay({
       setIsLoading(false);
     }
   }, [nextUrl, isLoading, showOnlySelected, addMoreToCache]);
-  
-  useEffect(() => {
-    if (inView) {
-      loadMorePlaylists();
-    }
-  }, [inView, loadMorePlaylists]);
   
   const fuseOptions: IFuseOptions<SpotifyPlaylist> = useMemo(
     () => ({
@@ -239,39 +225,65 @@ export default function PlaylistDisplay({
     onFilteredChange(ids);
   }, [filteredPlaylists, onFilteredChange]);
   
+  const rowVirtualizer = useVirtualizer({
+    count: filteredPlaylists.length,
+    getScrollElement: () => parentRef.current,
+    // Estimamos la altura de cada fila. 76px es un buen punto de partida.
+    estimateSize: () => 76, 
+    // Renderiza 5 elementos extra para un scroll más suave
+    overscan: 5,
+  });
+  
+  // --- Lógica para el scroll infinito adaptada a la virtualización ---
+  useEffect(() => {
+    const virtualItems = rowVirtualizer.getVirtualItems();
+    if (virtualItems.length === 0) return;
+    
+    const lastItem = virtualItems[virtualItems.length - 1];
+    if (lastItem && lastItem.index >= filteredPlaylists.length - 1 && nextUrl && !isLoading) {
+      loadMorePlaylists();
+    }
+  }, [rowVirtualizer.getVirtualItems(), filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
+  
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (filteredPlaylists.length === 0) return;
+    
+    let newIndex = focusedIndex;
     
     switch (event.key) {
       case 'ArrowDown':
       event.preventDefault();
-      const nextIndex = focusedIndex === null ? 0 : Math.min(focusedIndex + 1, filteredPlaylists.length - 1);
-      setFocusedIndex(nextIndex);
-      rowRefs.current.get(nextIndex)?.scrollIntoView({ block: 'nearest' });
+      newIndex = focusedIndex === null ? 0 : Math.min(focusedIndex + 1, filteredPlaylists.length - 1);
       break;
       
       case 'ArrowUp':
       event.preventDefault();
-      const prevIndex = focusedIndex === null ? 0 : Math.max(focusedIndex - 1, 0);
-      setFocusedIndex(prevIndex);
-      rowRefs.current.get(prevIndex)?.scrollIntoView({ block: 'nearest' });
+      newIndex = focusedIndex === null ? 0 : Math.max(focusedIndex - 1, 0);
       break;
       
-      case ' ': // Barra espaciadora
+      case ' ': 
       if (focusedIndex !== null) {
         event.preventDefault();
-        const focusedPlaylistId = filteredPlaylists[focusedIndex].id;
-        togglePlaylist(focusedPlaylistId);
+        togglePlaylist(filteredPlaylists[focusedIndex].id);
       }
-      break;
+      return; // Evita el scroll y la actualización de foco
       
       case 'Escape':
       event.preventDefault();
       setFocusedIndex(null);
       onClearSearch();
-      break;
+      return;
+      
+      default:
+      return;
     }
-  }, [focusedIndex, filteredPlaylists, togglePlaylist, onClearSearch]);
+    
+    if (newIndex !== null && newIndex !== focusedIndex) {
+      setFocusedIndex(newIndex);
+      // --- Usamos el método del virtualizador para hacer scroll ---
+      rowVirtualizer.scrollToIndex(newIndex, { align: 'auto' });
+    }
+  }, [focusedIndex, filteredPlaylists, togglePlaylist, onClearSearch, rowVirtualizer]);
   
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
@@ -345,27 +357,51 @@ export default function PlaylistDisplay({
     <TableHead className="w-[50px]"></TableHead>
     </TableRow>
     </TableHeader>
+    </Table>
     
     
-    <TableBody>
-    {filteredPlaylists.map((playlist, index) => {
+    <div
+    ref={parentRef}
+    style={{
+      height: `65vh`, // Altura fija para el área de scroll
+      overflow: 'auto',
+    }}
+    >
+    {/* Div "fantasma" que ocupa la altura total para que el scrollbar sea correcto */}
+    <div
+    style={{
+      height: `${rowVirtualizer.getTotalSize()}px`,
+      width: '100%',
+      position: 'relative',
+    }}
+    >
+    {/* --- Bucle de renderizado virtualizado --- */}
+    {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+      const playlist = filteredPlaylists[virtualRow.index];
       const isMegalista = playlist.isMegalist ?? false;
-      
       const isSyncable = playlist.isSyncable ?? false;
       const isSyncingThis = syncingId === playlist.id;
       const selected = isSelected(playlist.id);
-      const focused = index === focusedIndex;
+      const focused = virtualRow.index === focusedIndex;
       
       return (
-        <TableRow
+        <Table
         key={playlist.id}
-        ref={(node) => {
-          if (node) rowRefs.current.set(index, node);
-          else rowRefs.current.delete(index);
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          // El transform posiciona la fila en su lugar correcto
+          transform: `translateY(${virtualRow.start}px)`,
         }}
+        >
+        <TableBody>
+        <TableRow
         onClick={() => togglePlaylist(playlist.id)}
         className={cn(
           'border-gray-800 transition-colors cursor-pointer',
+          // ... clases de estilo sin cambios
           {
             'bg-green-900/40 hover:bg-green-900/60': selected,
             'hover:bg-white/5': !selected,
@@ -477,18 +513,13 @@ export default function PlaylistDisplay({
         </TableCell>
         
         </TableRow>
+        </TableBody>
+        </Table>
       );
     })}
-    </TableBody>
-    </Table>
     </div>
-    
-    {/* Trigger y Loader para Scroll Infinito */}
-    {!showOnlySelected && nextUrl && (
-      <div ref={ref} className="w-full h-10 mt-4">
-      {isLoading && <Loader />}
-      </div>
-    )}
+    </div>
+    </div>
     
     <AlertDialog open={deleteAlert.open} onOpenChange={(open: boolean) => setDeleteAlert({ open, playlist: open ? deleteAlert.playlist : null })}>
     <AlertDialogContent>
