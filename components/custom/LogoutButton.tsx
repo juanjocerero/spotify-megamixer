@@ -9,7 +9,6 @@ export default function LogoutButton() {
   return (
     <Button variant="ghost" onClick={() => signOut({ redirectTo: '/' })}>
     <LogOut className="mr-2 h-4 w-4" />
-    Cerrar sesión
     </Button>
   );
 }
