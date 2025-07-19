@@ -683,7 +683,7 @@ export default function FloatingActionBar() {
     <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
     <AlertDialogAction
     disabled={isDeleting}
-    className="bg-red-600 hover:bg-red-700"
+    className="text-white bg-red-600 hover:bg-red-700"
     onClick={handleConfirmDeleteBatch} // Conectamos la función
     >
     {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

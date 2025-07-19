@@ -462,7 +462,7 @@ export default function PlaylistDisplay({
     </AlertDialogHeader>
     <AlertDialogFooter>
     <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-    <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="bg-red-600 hover:bg-red-700">
+    <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="text-white bg-red-600 hover:bg-red-700">
     {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
     Sí, eliminar
     </AlertDialogAction>
