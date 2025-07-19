@@ -10,6 +10,7 @@ import DashboardClient from '@/components/custom/DashboardClient';
 import FloatingActionBar from '@/components/custom/FloatingActionBar';
 import SurpriseMixButton from '@/components/custom/SurpriseMixButton';
 import HelpButton from '@/components/custom/HelpButton';
+import SyncAllButton from '@/components/custom/SyncAllButton';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -45,7 +46,7 @@ export default async function DashboardPage() {
   const finalPlaylists = initialPlaylists.map(p => {
     const isMegalist = megalistIds.has(p.id);
     if (isMegalist) {
-      // Todas las megalistas en nuestra db son sincronizables por definición
+      // Marcarla como Megalista y sincronizable si se encuentra en la db
       return { ...p, isMegalist: true, isSyncable: true };
     }
     return p;
@@ -63,6 +64,7 @@ export default async function DashboardPage() {
     <div className="flex items-center gap-2">
     <HelpButton />
     <SurpriseMixButton />
+    <SyncAllButton />
     <LogoutButton />
     </div>
     
