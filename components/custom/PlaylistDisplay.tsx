@@ -15,7 +15,6 @@ import {
 import { usePlaylistStore } from '@/lib/store';
 
 import { toast } from 'sonner';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,7 +45,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw, Pencil } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw, Pencil, Eye } from 'lucide-react';
+
+import TrackDetailView from './TrackDetailView'; // Importa el nuevo componente TrackDetailView
 
 type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
 
@@ -102,6 +104,15 @@ export default function PlaylistDisplay({
   const [isDeleting, setIsDeleting] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [trackSheetState, setTrackSheetState] = useState<{ 
+    open: boolean; 
+    playlistId: string | null; 
+    playlistName: string | null 
+  }>({ 
+    open: 
+    false, playlistId: null, 
+    playlistName: null }
+  );
   
   // Referencia para el contenedor de scroll ---
   const parentRef = useRef<HTMLTableSectionElement>(null);
@@ -346,7 +357,7 @@ export default function PlaylistDisplay({
     <div>
     <div className="rounded-md border border-gray-700 overflow-hidden">
     <div className="w-full">
-    {/* CABECERA - Ahora usa flexbox */}
+    {/* Cabecera - Ahora usa flexbox */}
     <div className="flex items-center bg-gray-900 text-sm font-semibold text-white">
     <div className="w-[60px] sm:w-[80px] flex-shrink-0"></div>
     <div className="flex-grow min-w-0 px-4 py-3">Nombre</div>
@@ -355,7 +366,7 @@ export default function PlaylistDisplay({
     <div className="w-[50px] flex-shrink-0"></div>
     </div>
     
-    {/* CUERPO - Usa flexbox y virtualización */}
+    {/* Cuerpo - Usa flexbox y virtualización */}
     <div
     ref={parentRef}
     style={{
@@ -454,6 +465,19 @@ export default function PlaylistDisplay({
         </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+        
+        {/* Preview */}
+        <DropdownMenuItem
+        onClick={(e) => {
+          e.stopPropagation();
+          setTrackSheetState({ open: true, playlistId: playlist.id, playlistName: playlist.name });
+        }}
+        >
+        <Eye className="mr-2 h-4 w-4" />
+        <span>Ver Canciones</span>
+        </DropdownMenuItem>
+        
+        {/* Editar detalles */}
         <DropdownMenuItem
         onClick={(e) => {
           e.stopPropagation();
@@ -468,6 +492,8 @@ export default function PlaylistDisplay({
         <Pencil className="mr-2 h-4 w-4" />
         <span>Editar detalles</span>
         </DropdownMenuItem>
+        
+        {/* Sincronizar */}
         {isSyncable && (
           <DropdownMenuItem
           disabled={isSyncingThis}
@@ -484,6 +510,8 @@ export default function PlaylistDisplay({
           <span>{isSyncingThis ? 'Sincronizando...' : 'Sincronizar'}</span>
           </DropdownMenuItem>
         )}
+        
+        {/* Eliminar */}
         <DropdownMenuItem
         className="text-red-500 focus:text-red-500"
         onClick={(e) => {
@@ -571,6 +599,25 @@ export default function PlaylistDisplay({
     </DialogFooter>
     </DialogContent>
     </Dialog>
+    
+    {/* Sheet para la vista de canciones */}
+    <Sheet open={trackSheetState.open} onOpenChange={(isOpen) => setTrackSheetState({ open: isOpen, playlistId: null, playlistName: null })}>
+    {/* Usamos w-full para móviles y un ancho fijo para pantallas más grandes */}
+    <SheetContent className="w-full sm:max-w-[500px] flex flex-col p-0">
+    <SheetHeader className="p-4 pb-0">
+    <SheetTitle className="text-white">{trackSheetState.playlistName ? `Canciones en "${trackSheetState.playlistName}"` : "Cargando canciones..."}</SheetTitle>
+    <SheetDescription>
+    Aquí se muestran todas las canciones de esta playlist.
+    </SheetDescription>
+    </SheetHeader>
+    {trackSheetState.playlistId && (
+      <TrackDetailView
+      playlistId={trackSheetState.playlistId}
+      playlistName={trackSheetState.playlistName || ''}
+      />
+    )}
+    </SheetContent>
+    </Sheet>
     </div>
   );
 }
