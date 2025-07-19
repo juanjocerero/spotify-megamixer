@@ -48,7 +48,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw, Pencil, Eye } from 'lucide-react';
 
-import TrackDetailView from './TrackDetailView'; // Importa el nuevo componente TrackDetailView
+import TrackDetailView from './TrackDetailView';
 
 type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
 
@@ -85,7 +85,6 @@ export default function PlaylistDisplay({
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
-  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map());
   const [deleteAlert, setDeleteAlert] = useState<{ open: boolean; playlist: SpotifyPlaylist | null }>({
     open: false,
     playlist: null,
@@ -254,7 +253,7 @@ export default function PlaylistDisplay({
     if (lastItem && lastItem.index >= filteredPlaylists.length - 1 && nextUrl && !isLoading) {
       loadMorePlaylists();
     }
-  }, [rowVirtualizer.getVirtualItems(), filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
+  }, [rowVirtualizer, filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
   
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (filteredPlaylists.length === 0) return;
