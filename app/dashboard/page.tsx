@@ -9,6 +9,7 @@ import LogoutButton from '@/components/custom/LogoutButton';
 import DashboardClient from '@/components/custom/DashboardClient';
 import FloatingActionBar from '@/components/custom/FloatingActionBar';
 import SurpriseMixButton from '@/components/custom/SurpriseMixButton';
+import HelpButton from '@/components/custom/HelpButton';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -60,6 +61,7 @@ export default async function DashboardPage() {
     
     {/* Agrupador de botones */}
     <div className="flex items-center gap-2">
+    <HelpButton />
     <SurpriseMixButton />
     <LogoutButton />
     </div>
