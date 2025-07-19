@@ -102,7 +102,7 @@ export default function SurpriseMixButton() {
     </Button>
     </TooltipTrigger>
     <TooltipContent>
-    {/* Contenido vacío para renderizar solo el icono*/}
+    Crear Megamix Sorpresa
     </TooltipContent>
     </Tooltip>
     
