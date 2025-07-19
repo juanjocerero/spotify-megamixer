@@ -1,5 +1,3 @@
-// components/custom/ShuffleAllButton.tsx
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -28,7 +26,7 @@ import { Shuffle, Loader2 } from 'lucide-react';
 export default function ShuffleAllButton() {
   const { megamixCache } = usePlaylistStore();
   const [isLoading, setIsLoading] = useState(false);
-  const [shuffleAlert, setShuffleAlert] = useState({ open: false, isShuffling: false });
+  const [shuffleAlertOpen, setShuffleAlertOpen] = useState(false);
   
   const allMegalists = useMemo(() => megamixCache.filter(p => p.isMegalist), [megamixCache]);
   
@@ -37,11 +35,11 @@ export default function ShuffleAllButton() {
       toast.info("No se encontraron Megalistas para reordenar.");
       return;
     }
-    setShuffleAlert({ open: true, isShuffling: false });
+    setShuffleAlertOpen(true);
   };
   
   const handleConfirmGlobalShuffle = async () => {
-    setShuffleAlert(prev => ({ ...prev, isShuffling: true }));
+    setIsLoading(true);
     const toastId = toast.loading(`Reordenando ${allMegalists.length} Megalista(s)...`);
     
     try {
@@ -52,7 +50,8 @@ export default function ShuffleAllButton() {
       const message = error instanceof Error ? error.message : "No se pudo completar el reordenado global.";
       toast.error(message, { id: toastId });
     } finally {
-      setShuffleAlert({ open: false, isShuffling: false });
+      setIsLoading(false);
+      setShuffleAlertOpen(false);
     }
   };
   
@@ -74,8 +73,8 @@ export default function ShuffleAllButton() {
     </TooltipContent>
     </Tooltip>
     <AlertDialog
-    open={shuffleAlert.open}
-    onOpenChange={(isOpen) => !shuffleAlert.isShuffling && setShuffleAlert(prev => ({ ...prev, open: isOpen }))}
+    open={shuffleAlertOpen}
+    onOpenChange={(isOpen) => !isLoading && setShuffleAlertOpen(isOpen)}
     >
     <AlertDialogContent>
     <AlertDialogHeader>
@@ -90,14 +89,14 @@ export default function ShuffleAllButton() {
     </AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
-    <AlertDialogCancel disabled={shuffleAlert.isShuffling}>Cancelar</AlertDialogCancel>
+    <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
     <AlertDialogAction
     onClick={handleConfirmGlobalShuffle}
-    disabled={shuffleAlert.isShuffling}
+    disabled={isLoading}
     className="bg-orange-600 hover:bg-orange-700 text-white"
     >
-    {shuffleAlert.isShuffling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-    {shuffleAlert.isShuffling ? 'Reordenando...' : 'Sí, continuar'}
+    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+    {isLoading ? 'Reordenando...' : 'Sí, continuar'}
     </AlertDialogAction>
     </AlertDialogFooter>
     </AlertDialogContent>

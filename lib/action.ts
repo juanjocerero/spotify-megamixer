@@ -838,9 +838,9 @@ export async function sendContactEmailAction(formData: {
     await resend.emails.send({
       from: 'Spotify Megamixer <onboarding@resend.dev>',
       to: process.env.CONTACT_EMAIL_TO,
-      reply_to: email,
+      replyTo: email,
       subject: `Nuevo Mensaje: ${subject}`,
-      react: ContactEmailTemplate({ name, email, subject, message }),
+      react: ContactEmailTemplate({ name, email, subject, message }) as React.ReactElement,
     });
     return { success: true };
   } catch (error) {
