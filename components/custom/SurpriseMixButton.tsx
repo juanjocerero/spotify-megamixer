@@ -5,12 +5,22 @@ import { useState } from 'react';
 import { usePlaylistStore } from '@/lib/store';
 import { SpotifyPlaylist } from '@/types/spotify';
 import { shuffleArray } from '@/lib/utils';
-import { createSurpriseMegalist } from '@/lib/action';
+import { createSurpriseMegalist, overwriteSurpriseMegalist } from '@/lib/action';
 
 // UI Components
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
@@ -22,38 +32,56 @@ export default function SurpriseMixButton() {
     selectedPlaylistIds, 
     playlistCache, 
     addPlaylistToCache, 
+    updatePlaylistInCache, 
     clearSelection 
   } = usePlaylistStore();
   
   // Estado para manejar el flujo de los diálogos y los datos
-  const [dialogStep, setDialogStep] = useState<'idle' | 'askingCount' | 'askingName'>('idle');
+  const [dialogStep, setDialogStep] = useState<'idle' | 'askingSourceCount' | 'askingTrackCount' | 'askingName'>('idle');
   const [sourcePlaylists, setSourcePlaylists] = useState<SpotifyPlaylist[]>([]);
+  const [sourceCount, setSourceCount] = useState(10);
   const [trackCount, setTrackCount] = useState(50);
   const [playlistName, setPlaylistName] = useState('Megamix Sorpresa');
-  const [isProcessing, setIsProcessing] = useState(false); // Para el Hito 3
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [overwriteAlert, setOverwriteAlert] = useState<{ open: boolean; playlistId: string | null }>({
+    open: false,
+    playlistId: null,
+  });
   
   // Inicia el flujo: determina las fuentes y abre el primer diálogo
   const handleInitiateMix = () => {
     let sources: SpotifyPlaylist[] = [];
     
-    if (selectedPlaylistIds.length >= 2) {
-      // Caso 1: El usuario ha seleccionado playlists
-      sources = playlistCache.filter(p => selectedPlaylistIds.includes(p.id));
+    if (selectedPlaylistIds.length >= 1) {
+      // El usuario ha seleccionado playlists, saltamos al paso de contar canciones
+      const sources = playlistCache.filter(p => selectedPlaylistIds.includes(p.id));
+      setSourcePlaylists(sources);
+      setDialogStep('askingTrackCount');
     } else {
-      // Caso 2: Sin selección, coger hasta 10 al azar de la caché
-      const shuffledCache = shuffleArray([...playlistCache]);
-      sources = shuffledCache.slice(0, 10);
+      // Sin selección, preguntamos cuántas playlists al azar usar
+      if (playlistCache.length === 0) {
+        toast.error('No hay playlists cargadas para crear un mix.');
+        return;
+      }
+      setDialogStep('askingSourceCount');
     }
+  };
+  
+  const handleSelectSources = () => {
+    // Esta función se llama después de que el usuario elige el número de fuentes
+    const shuffledCache = shuffleArray([...playlistCache]);
+    // Nos aseguramos de no coger más de las que hay o del máximo de 50
+    const finalSourceCount = Math.min(sourceCount, playlistCache.length, 50);
+    const sources = shuffledCache.slice(0, finalSourceCount);
     
     if (sources.length === 0) {
-      toast.error('No hay playlists disponibles para crear un mix.', {
-        description: 'Carga más playlists o selecciona algunas para empezar.'
-      });
+      toast.error('No se pudieron seleccionar playlists de origen.');
+      resetState();
       return;
     }
     
     setSourcePlaylists(sources);
-    setDialogStep('askingCount');
+    setDialogStep('askingTrackCount'); // Avanzamos al siguiente paso
   };
   
   const handleCreateSurpriseMix = async () => {
@@ -72,15 +100,50 @@ export default function SurpriseMixButton() {
         playlistName
       );
       
-      // Si la acción tiene éxito, actualizamos la UI
       addPlaylistToCache(newPlaylist);
-      clearSelection(); // Limpiamos la selección por si el usuario usó esa vía
+      clearSelection();
       toast.success(`¡"${newPlaylist.name}" creada con éxito!`, { id: toastId });
-      
-      resetState(); // Cierra los diálogos y resetea el estado
+      resetState();
       
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo crear la playlist.';
+      // --- Lógica para manejar la sobrescritura ---
+      if (error instanceof Error && error.message.startsWith('PLAYLIST_EXISTS::')) {
+        const existingPlaylistId = error.message.split('::')[1];
+        setOverwriteAlert({ open: true, playlistId: existingPlaylistId });
+        toast.dismiss(toastId); // Cerramos el toast de "cargando"
+      } else {
+        const message = error instanceof Error ? error.message : 'No se pudo crear la playlist.';
+        toast.error(message, { id: toastId });
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  const handleConfirmOverwrite = async () => {
+    if (!overwriteAlert.playlistId) return;
+    
+    setOverwriteAlert({ open: false, playlistId: null }); // Cerramos la alerta
+    setIsProcessing(true);
+    const toastId = toast.loading(`Sobrescribiendo "${playlistName}"...`);
+    
+    try {
+      const updatedPlaylist = await overwriteSurpriseMegalist(
+        overwriteAlert.playlistId,
+        sourcePlaylists.map(p => p.id),
+        trackCount
+      );
+      
+      // Actualizamos la playlist en la caché local
+      updatePlaylistInCache(updatedPlaylist.id, {
+        trackCount: updatedPlaylist.tracks.total
+      });
+      clearSelection();
+      toast.success(`¡"${updatedPlaylist.name}" sobrescrita con éxito!`, { id: toastId });
+      resetState();
+      
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo sobrescribir la playlist.';
       toast.error(message, { id: toastId });
     } finally {
       setIsProcessing(false);
@@ -91,6 +154,7 @@ export default function SurpriseMixButton() {
     setDialogStep('idle');
     setSourcePlaylists([]);
     setPlaylistName('Megamix Sorpresa');
+    setOverwriteAlert({ open: false, playlistId: null });
   };
   
   return (
@@ -106,8 +170,33 @@ export default function SurpriseMixButton() {
     </TooltipContent>
     </Tooltip>
     
-    {/* --- Diálogo 1: Preguntar número de canciones --- */}
-    <Dialog open={dialogStep === 'askingCount'} onOpenChange={(isOpen) => !isOpen && resetState()}>
+    {/* --- Diálogo NUEVO: Preguntar número de fuentes --- */}
+    <Dialog open={dialogStep === 'askingSourceCount'} onOpenChange={(isOpen) => !isOpen && resetState()}>
+    <DialogContent>
+    <DialogHeader>
+    <DialogTitle>Megamix Sorpresa</DialogTitle>
+    <DialogDescription>
+    Primero, elige de cuántas playlists aleatorias quieres obtener las canciones.
+    </DialogDescription>
+    </DialogHeader>
+    <div className="py-4">
+    <Label htmlFor="source-count">Número de Playlists (máx. 50)</Label>
+    <Input
+    id="source-count"
+    type="number"
+    value={sourceCount}
+    onChange={(e) => setSourceCount(Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1)))}
+    />
+    </div>
+    <DialogFooter>
+    <Button variant="outline" onClick={resetState}>Cancelar</Button>
+    <Button onClick={handleSelectSources}>Continuar</Button>
+    </DialogFooter>
+    </DialogContent>
+    </Dialog>
+    
+    {/* --- Diálogo 1 (antes): Preguntar número de canciones --- */}
+    <Dialog open={dialogStep === 'askingTrackCount'} onOpenChange={(isOpen) => !isOpen && resetState()}>
     <DialogContent>
     <DialogHeader>
     <DialogTitle>Megamix Sorpresa</DialogTitle>
@@ -125,14 +214,17 @@ export default function SurpriseMixButton() {
     onChange={(e) => setTrackCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
     />
     </div>
-    <DialogFooter>
+    <DialogFooter className="sm:justify-between">
+    <Button variant="ghost" onClick={() => selectedPlaylistIds.length >= 1 ? resetState() : setDialogStep('askingSourceCount')}>Atrás</Button>
+    <div className="flex gap-2">
     <Button variant="outline" onClick={resetState}>Cancelar</Button>
     <Button onClick={() => setDialogStep('askingName')}>Continuar</Button>
+    </div>
     </DialogFooter>
     </DialogContent>
     </Dialog>
     
-    {/* --- Diálogo 2: Preguntar nombre de la playlist --- */}
+    {/* --- Diálogo 2 (antes): Preguntar nombre de la playlist --- */}
     <Dialog open={dialogStep === 'askingName'} onOpenChange={(isOpen) => !isOpen && resetState()}>
     <DialogContent>
     <DialogHeader>
@@ -150,7 +242,7 @@ export default function SurpriseMixButton() {
     />
     </div>
     <DialogFooter className="sm:justify-between">
-    <Button variant="ghost" onClick={() => setDialogStep('askingCount')}>Atrás</Button>
+    <Button variant="ghost" onClick={() => setDialogStep('askingTrackCount')}>Atrás</Button>
     <div className="flex gap-2">
     <Button variant="outline" onClick={resetState}>Cancelar</Button>
     <Button onClick={handleCreateSurpriseMix} disabled={isProcessing}>
@@ -161,6 +253,23 @@ export default function SurpriseMixButton() {
     </DialogFooter>
     </DialogContent>
     </Dialog>
+    
+    {/* --- Diálogo NUEVO: Confirmar sobrescritura --- */}
+    <AlertDialog open={overwriteAlert.open} onOpenChange={(isOpen) => !isOpen && setOverwriteAlert({ open: false, playlistId: null })}>
+    <AlertDialogContent>
+    <AlertDialogHeader>
+    <AlertDialogTitle>La playlist ya existe</AlertDialogTitle>
+    <AlertDialogDescription>
+    Ya tienes una playlist llamada "{playlistName}". ¿Quieres reemplazar su contenido con este nuevo Megamix? Esta acción no se puede deshacer.
+    </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+    <AlertDialogCancel onClick={() => setOverwriteAlert({ open: false, playlistId: null })}>Cancelar</AlertDialogCancel>
+    <AlertDialogAction onClick={handleConfirmOverwrite}>Sí, sobrescribir</AlertDialogAction>
+    </AlertDialogFooter>
+    </AlertDialogContent>
+    </AlertDialog>
+    
     </TooltipProvider>
   );
 }

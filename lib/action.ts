@@ -11,6 +11,7 @@ import {
   clearPlaylistTracks,
   addTracksToPlaylist, 
   replacePlaylistTracks,
+  getPlaylistDetails, 
   updatePlaylistDetails
 } from './spotify';
 import { shuffleArray } from './utils';
@@ -507,6 +508,13 @@ export async function createSurpriseMegalist(
   const { accessToken, user } = session;
   
   try {
+    // Comprar si existe una playlist con este nombre. Si ya existe,
+    // lanzar un error con el id existente para confirmar sobrescritura.
+    const existingPlaylist = await findUserPlaylistByName(accessToken, newPlaylistName);
+    if (existingPlaylist) {
+      throw new Error(`PLAYLIST_EXISTS::${existingPlaylist.id}`);
+    }
+    
     // Obtener todas las canciones de las fuentes de forma robusta
     const tracksPerPlaylistPromises = sourcePlaylistIds.map(id =>
       getAllPlaylistTracks(accessToken, id).catch(err => {
@@ -584,6 +592,101 @@ export async function createSurpriseMegalist(
     
   } catch (error) {
     console.error('[ACTION_ERROR:createSurpriseMegalist] Fallo al crear la Megalista Sorpresa.', error);
+    throw error;
+  }
+}
+
+/**
+* Sobrescribe una Megalista "Sorpresa" existente con un nuevo conjunto de canciones.
+*
+* @param playlistId - El ID de la playlist a sobrescribir.
+* @param sourcePlaylistIds - Los IDs de las nuevas playlists de origen.
+* @param targetTrackCount - El número deseado de canciones.
+* @returns El objeto de la playlist enriquecida y actualizada.
+*/
+/**
+ * Sobrescribe una Megalista "Sorpresa" existente con un nuevo conjunto de canciones.
+ */
+export async function overwriteSurpriseMegalist(
+  playlistId: string,
+  sourcePlaylistIds: string[],
+  targetTrackCount: number
+): Promise<SpotifyPlaylist> {
+  console.log(`[ACTION:overwriteSurpriseMegalist] Iniciando sobrescritura para ${playlistId}.`);
+
+  const session = await auth();
+  if (!session?.accessToken || !session.user?.id) {
+    throw new Error('No autenticado, token o ID de usuario no disponible.');
+  }
+  const { accessToken } = session;
+
+  try {
+    // Obtener y seleccionar las canciones
+    const tracksPerPlaylistPromises = sourcePlaylistIds.map(id =>
+      getAllPlaylistTracks(accessToken, id).catch(() => [])
+    );
+    const tracksPerPlaylist = await Promise.all(tracksPerPlaylistPromises);
+
+    let selectedTracks: string[];
+    const allUniqueTracks = [...new Set(tracksPerPlaylist.flat())];
+
+    if (allUniqueTracks.length <= targetTrackCount) {
+      selectedTracks = allUniqueTracks;
+    } else {
+      const selectedTracksSet = new Set<string>();
+      const remainingTracksPool: string[] = [];
+      const quota = Math.floor(targetTrackCount / sourcePlaylistIds.length);
+
+      tracksPerPlaylist.forEach(playlistTracks => {
+        const shuffled = shuffleArray([...playlistTracks]);
+        const toAdd = shuffled.slice(0, quota);
+        const remaining = shuffled.slice(quota);
+        toAdd.forEach(trackUri => selectedTracksSet.add(trackUri));
+        remainingTracksPool.push(...remaining);
+      });
+
+      const remainingNeeded = targetTrackCount - selectedTracksSet.size;
+      if (remainingNeeded > 0) {
+        const shuffledPool = shuffleArray(remainingTracksPool);
+        for (const track of shuffledPool) {
+          if (selectedTracksSet.size >= targetTrackCount) break;
+          selectedTracksSet.add(track);
+        }
+      }
+      selectedTracks = Array.from(selectedTracksSet);
+    }
+    const finalShuffledTracks = shuffleArray(selectedTracks).slice(0, targetTrackCount);
+
+    // Reemplazar el contenido de la playlist existente
+    await replacePlaylistTracks(accessToken, playlistId, finalShuffledTracks);
+
+    // Actualizar el registro en nuestra base de datos
+    await db.megalist.update({
+      where: { id: playlistId },
+      data: {
+        sourcePlaylistIds: sourcePlaylistIds,
+        trackCount: finalShuffledTracks.length,
+        updatedAt: new Date(),
+      },
+    });
+    console.log(`[DB] Actualizado el registro para la Megalista Sorpresa ${playlistId}`);
+    
+    // Obtener los detalles actualizados de la playlist de Spotify
+    const updatedPlaylistFromSpotify = await getPlaylistDetails(accessToken, playlistId);
+
+    // Devolver el objeto enriquecido
+    return {
+      ...updatedPlaylistFromSpotify,
+      isMegalist: true,
+      isSyncable: true,
+      tracks: {
+        ...updatedPlaylistFromSpotify.tracks,
+        total: finalShuffledTracks.length,
+      },
+    };
+
+  } catch (error) {
+    console.error(`[ACTION_ERROR:overwriteSurpriseMegalist] Fallo al sobrescribir ${playlistId}.`, error);
     throw error;
   }
 }
