@@ -185,7 +185,7 @@ export default function PlaylistDisplay({
   // El filtrado depende de los parámetros de ordenación primero y luego con el filtrado y la búsqueda
   const filteredPlaylists = useMemo(() => {
     // Hacemos una copia para no mutar la caché original
-    let sortedItems = [...playlistCache];
+    const sortedItems = [...playlistCache];
     
     // Primero, se aplica la ordenación
     switch (sortOption) {
