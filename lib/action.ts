@@ -137,58 +137,53 @@ export async function addTracksBatch(
   }
 }
 
-/**
-* Acción para actualizar una playlist con nuevas canciones, metadatos y reordenarla.
-* Ahora actualiza la descripción con las nuevas fuentes y devuelve si sigue siendo sincronizable.
-*/
-export async function updateAndReorderPlaylist(
+export async function addTracksToMegalistAction(
   targetPlaylistId: string,
   newSourceIds: string[]
-): Promise<{ finalCount: number; }> {
+): Promise<{ finalCount: number; addedCount: number; }> {
   try {
     const session = await auth();
-    if (!session?.accessToken) {
+    if (!session?.accessToken || !session.user?.id) {
       throw new Error('No autenticado o token no disponible.');
     }
     const { accessToken } = session;
     
+    // Obtiene el estado actual de la megalista y las nuevas canciones
     const megalist = await db.megalist.findUnique({ where: { id: targetPlaylistId } });
+    const allSourceIds = Array.from(new Set([...(megalist?.sourcePlaylistIds || []), ...newSourceIds]));
     
-    const existingSourceIds = megalist ? megalist.sourcePlaylistIds : [];
-    const allSourceIds = Array.from(new Set([...existingSourceIds, ...newSourceIds]));
-    
-    const [existingTracksUris, newTracksUris] = await Promise.all([
-      getAllPlaylistTracks(accessToken, targetPlaylistId).then(tracks => tracks.map(t => t.uri)),
+    const [existingTracks, newTracksFromSources] = await Promise.all([
+      getAllPlaylistTracks(accessToken, targetPlaylistId),
       getTrackUris(newSourceIds)
     ]);
     
-    const combinedTracksUris = [...new Set([...existingTracksUris, ...newTracksUris])];
-    const shuffledTracksUris = shuffleArray(combinedTracksUris);
+    const existingTracksSet = new Set(existingTracks.map(t => t.uri));
     
-    await replacePlaylistTracks(accessToken, targetPlaylistId, shuffledTracksUris);
+    // Calcula solo las canciones que realmente son nuevas
+    const tracksToAdd = newTracksFromSources.filter(uri => !existingTracksSet.has(uri));
     
-    try {
-      await db.megalist.upsert({
-        where: { id: targetPlaylistId },
-        update: {
-          sourcePlaylistIds: allSourceIds,
-          trackCount: shuffledTracksUris.length,
-        },
-        create: {
-          id: targetPlaylistId,
-          spotifyUserId: session.user.id!,
-          sourcePlaylistIds: allSourceIds,
-          trackCount: shuffledTracksUris.length,
-        },
-      });
-      console.log(`[DB] Actualizado el registro para la Megalista ${targetPlaylistId}`);
-    } catch (dbError) {
-      console.error(`[DB_ERROR] Fallo al actualizar el registro para la Megalista ${targetPlaylistId}`, dbError);
+    // Si hay canciones nuevas, las añade al final de la playlist
+    if (tracksToAdd.length > 0) {
+      await addTracksToPlaylist(accessToken, targetPlaylistId, tracksToAdd);
     }
     
-    return { finalCount: shuffledTracksUris.length };
+    const finalCount = existingTracks.length + tracksToAdd.length;
+    
+    // Actualiza el registro en la base de datos
+    await db.megalist.upsert({
+      where: { id: targetPlaylistId },
+      update: { sourcePlaylistIds: allSourceIds, trackCount: finalCount },
+      create: {
+        id: targetPlaylistId,
+        spotifyUserId: session.user.id,
+        sourcePlaylistIds: allSourceIds,
+        trackCount: finalCount,
+      },
+    });
+    
+    return { finalCount, addedCount: tracksToAdd.length };
   } catch (error) {
-    console.error(`[ACTION_ERROR:updateAndReorderPlaylist] Fallo al actualizar la playlist ${targetPlaylistId}.`, error);
+    console.error(`[ACTION_ERROR:addTracksToMegalistAction] Fallo al añadir canciones a ${targetPlaylistId}.`, error);
     throw error;
   }
 }

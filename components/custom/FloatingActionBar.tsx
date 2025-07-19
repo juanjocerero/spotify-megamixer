@@ -10,7 +10,7 @@ import {
   findOrCreatePlaylist,
   addTracksBatch,
   clearPlaylist,
-  updateAndReorderPlaylist,
+  addTracksToMegalistAction,
   executeMegalistSync, 
   previewBatchSync, 
   unfollowPlaylistsBatch,
@@ -261,7 +261,7 @@ export default function FloatingActionBar() {
     const toastId = toast.loading(`Actualizando "${overwriteDialog.playlistName}"...`);
     
     try {
-      const { finalCount } = await updateAndReorderPlaylist(playlistId, selectedPlaylistIds);
+      const { finalCount } = await addTracksToMegalistAction(playlistId, selectedPlaylistIds);
       updatePlaylistInCache(playlistId, { trackCount: finalCount });
       
       toast.success(`¡Playlist actualizada con éxito! Ahora tiene ${finalCount} canciones.`, { id: toastId });
@@ -373,15 +373,25 @@ export default function FloatingActionBar() {
     try {
       // La llamada a la acción ahora es más simple desde el cliente.
       // Le pasamos los IDs y la acción se encarga de todo.
-      const { finalCount } = await updateAndReorderPlaylist(targetPlaylistId, sourcePlaylistIds);
+      const { finalCount, addedCount } = await addTracksToMegalistAction(
+        targetPlaylistId,
+        sourcePlaylistIds
+      );
       
       // Actualizamos la caché con toda la nueva información.
       updatePlaylistInCache(targetPlaylistId, { trackCount: finalCount });
       
-      toast.success(`¡Megalista actualizada con éxito!`, {
-        id: toastId,
-        description: `Ahora tiene ${finalCount} canciones.`,
-      });
+      if (addedCount > 0) {
+        toast.success(`¡Megalista actualizada!`, {
+          id: toastId,
+          description: `Se añadieron ${addedCount} canciones. Ahora tiene ${finalCount} en total.`,
+        });
+      } else {
+        toast.info(`No se añadieron canciones nuevas.`, {
+          id: toastId,
+          description: `La Megalista ya contenía todas las canciones de tu selección.`,
+        });
+      }
       
       clearSelection();
       
