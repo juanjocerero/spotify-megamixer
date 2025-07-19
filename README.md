@@ -15,22 +15,39 @@ Una potente herramienta web para mezclar, fusionar y gestionar tus playlists de 
 
 ## ✨ Características Principales
 
-*   **Mezcla sin Límites:** Selecciona dos o más de tus playlists y combínalas en una nueva "Megalista".
-*   **Actualización Inteligente:** Si una Megalista ya existe, puedes elegir entre **reemplazarla** por completo o **actualizarla**, fusionando las canciones, eliminando duplicados y reordenando todo.
-*   **Enriquecimiento Múltiple:** Añade canciones de una o varias playlists a una Megalista existente con un solo clic.
-*   **Sincronización Fiable y Persistente:** Actualiza tus Megalistas con las últimas canciones de sus playlists de origen. Gracias a la base de datos dedicada, esta función es totalmente robusta e independiente de las limitaciones de la API de Spotify.
+*   **Creación de Megalistas Avanzada:**
+    *   **Mezcla Estándar:** Selecciona dos o más de tus playlists y combínalas en una nueva "Megalista".
+    *   **Actualización Inteligente:** Si una Megalista ya existe, puedes elegir entre **reemplazarla** por completo o **actualizarla**, fusionando las canciones, eliminando duplicados y reordenando todo.
+    *   **Enriquecimiento Múltiple:** Añade canciones de una o varias playlists a una Megalista existente con un solo clic.
+    *   **Megamix Sorpresa:** Genera nuevas playlists con un número de canciones aleatorias, usando tus playlists seleccionadas como fuente o una selección aleatoria de tu librería si no hay nada seleccionado.
+
+*   **Sincronización Fiable y Autocurativa:**
+    *   Actualiza tus Megalistas con las últimas canciones de sus playlists de origen, ya sea individualmente o en lote.
+    *   Gracias a la base de datos dedicada, esta función es totalmente robusta e independiente de las limitaciones de la API de Spotify.
+    *   **Autocuración:** Detecta y corrige automáticamente fuentes de playlist eliminadas, eliminando las referencias "fantasma" para prevenir errores futuros y manteniendo tus Megalistas funcionales.
+
+*   **Gestión Universal de Playlists:**
+    *   **Edición Directa:** Edita el nombre y la descripción de **CUALQUIER** playlist de Spotify directamente desde la aplicación.
+    *   **Eliminación Flexible:** Elimina playlists individualmente desde su menú contextual o elimina **múltiples playlists** a la vez seleccionándolas y usando el botón de la barra de acciones.
+
 *   **Interfaz de Usuario Moderna y Eficiente:**
-    *   **Controles Siempre Visibles:** Una cabecera de búsqueda fija y una barra de acciones flotante aseguran que siempre tengas el control, sin importar cuánto te desplaces.
-    *   **Diseño Responsivo:** Experiencia de usuario optimizada tanto para escritorio como para dispositivos móviles.
+    *   **Controles Siempre Visibles:** Una cabecera de búsqueda fija y una barra de acciones flotante rediseñada (más limpia y responsiva para móviles) aseguran que siempre tengas el control.
+    *   **Diseño Responsivo:** Experiencia de usuario optimizada para escritorio y móvil, con una interfaz más compacta en pantallas grandes.
     *   **Carga Infinita:** Navega por todas tus playlists sin paginación gracias al scroll infinito.
+
 *   **Interacción Avanzada:**
     *   **Búsqueda Difusa (Fuzzy Search):** Encuentra playlists incluso si cometes errores tipográficos.
     *   **Selección Rápida:** Selecciona todos los resultados de una búsqueda con un solo botón.
     *   **Navegación por Teclado:** Usa las flechas (▲/▼) para navegar, la barra espaciadora para seleccionar y `Esc` para limpiar.
+    *   **Ordenación Flexible:** Organiza tus playlists por múltiples criterios: orden personalizado (Spotify), nombre (A-Z/Z-A), número de canciones (ascendente/descendente), propietario o visualiza tus Megalistas primero.
+
 *   **Robusto y Resiliente:**
     *   **Manejo de Rate Limiting:** La aplicación reintenta automáticamente las peticiones a la API de Spotify si se excede el límite de velocidad.
     *   **Mezclas Reanudables:** Si una mezcla larga falla, puedes reanudarla exactamente desde donde se quedó.
+    *   **Filtrado Inteligente de Canciones:** Previene errores de la API ignorando y filtrando elementos no válidos (ej. archivos locales o episodios de podcast) en las playlists de origen.
+
 *   **Seguridad:** Autenticación segura a través del flujo oficial OAuth 2.0 de Spotify con NextAuth.js.
+*   **Guía de Ayuda Integrada:** Accede a una página de FAQ dentro de la aplicación para entender todas las funcionalidades.
 
 ## 🛠️ Stack Tecnológico y Arquitectura
 
@@ -52,10 +69,10 @@ Una potente herramienta web para mezclar, fusionar y gestionar tus playlists de 
 Este proyecto sigue un patrón de arquitectura moderno que separa claramente las responsabilidades:
 
 1.  **Componente de Servidor (`/app/dashboard/page.tsx`):** La página principal tiene un rol doble. Primero, obtiene las playlists del usuario desde la API de Spotify. Segundo, consulta la **base de datos propia** de la aplicación para obtener los metadatos de las Megalistas. Finalmente, "enriquece" la lista de playlists con esta información antes de pasarla al cliente.
-2.  **Componente Cliente Orquestador (`/components/custom/DashboardClient.tsx`):** Recibe los datos enriquecidos y gestiona el estado de la interfaz (filtros, búsqueda).
+2.  **Componente Cliente Orquestador (`/components/custom/DashboardClient.tsx`):** Recibe los datos enriquecidos y gestiona el estado de la interfaz (filtros, búsqueda, **ordenación**).
 3.  **Componentes Especializados:**
-    *   **`FloatingActionBar.tsx`:** Gestiona toda la lógica de acciones del usuario (crear, añadir, sincronizar), sus estados y los diálogos correspondientes.
-    *   **`PlaylistDisplay.tsx`:** Muestra la lista de playlists y gestiona la interacción directa con la tabla (scroll, selección, navegación por teclado).
+    *   **`FloatingActionBar.tsx`:** Rediseñado para ser más limpio y responsivo. Centraliza la lógica de acciones del usuario (crear estándar, añadir, sincronizar en lote, crear sorpresa y eliminación en lote), sus estados y los diálogos correspondientes.
+    *   **`PlaylistDisplay.tsx`:** Muestra la lista de playlists, gestiona la interacción directa con la tabla (scroll, selección, navegación por teclado, **ordenación**) y provee menús contextuales universales para editar y eliminar playlists.
 
 Esta arquitectura, que combina la obtención de datos de APIs externas y de una base de datos propia en el servidor, resulta en una aplicación rápida, segura y escalable.
 
