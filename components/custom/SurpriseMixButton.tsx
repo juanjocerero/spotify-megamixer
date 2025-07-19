@@ -50,8 +50,7 @@ export default function SurpriseMixButton() {
   
   // Inicia el flujo: determina las fuentes y abre el primer diálogo
   const handleInitiateMix = () => {
-    let sources: SpotifyPlaylist[] = [];
-    
+   
     if (selectedPlaylistIds.length >= 1) {
       // El usuario ha seleccionado playlists, saltamos al paso de contar canciones
       const sources = playlistCache.filter(p => selectedPlaylistIds.includes(p.id));
