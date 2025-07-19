@@ -53,7 +53,7 @@ export default async function DashboardPage() {
   
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-3xl mx-auto">
     <header className="flex justify-between items-center mb-6">
     <h1 className="text-3xl font-thin text-green-500">
     Spotify Megamixer
