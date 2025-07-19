@@ -7,7 +7,6 @@ export default function FaqPage() {
   return (
     <div className="min-h-screen bg-gray-900 text-gray-200 p-4 sm:p-6 md:p-8">
     <div className="max-w-3xl mx-auto prose prose-invert prose-headings:text-green-500 prose-a:text-green-400 hover:prose-a:text-green-300">
-    
     <Link href="/dashboard" passHref>
     <Button variant="ghost" className="mb-8">
     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -23,7 +22,7 @@ export default function FaqPage() {
     
     <h2>Concepto Básico: Mezcla y Carga de Playlists</h2>
     <p>
-    La función principal de la aplicación es solucionar una carencia de Spotify: la capacidad de mezclar el contenido de varias playlists en una sola. Al entrar, la aplicación carga tus playlists de Spotify. Si tienes muchas, simplemente haz scroll hacia abajo y la aplicación cargará más automáticamente gracias a la **carga infinita**.
+    La función principal de la aplicación es solucionar una carencia de Spotify: la capacidad de mezclar el contenido de varias playlists en una sola. Al entrar, la aplicación carga tus playlists de Spotify. Si tienes muchas, simplemente haz scroll hacia abajo y la aplicación cargará más automáticamente gracias a la <strong>carga infinita</strong>.
     </p>
     
     <h2>Búsqueda y Navegación</h2>
@@ -36,11 +35,11 @@ export default function FaqPage() {
     <h2>Crear y Gestionar Megalistas</h2>
     <h3>Crear una Nueva Megalista</h3>
     <p>
-    Selecciona dos o más playlists. En la barra de acciones inferior, pulsa el botón verde "Crear". La aplicación unificará todas las canciones, eliminará duplicados, las barajará y creará una nueva playlist en tu cuenta de Spotify.
+    Selecciona dos o más playlists. En la barra de acciones inferior, pulsa el botón verde &quot;Crear&quot;. La aplicación unificará todas las canciones, eliminará duplicados, las barajará y creará una nueva playlist en tu cuenta de Spotify.
     </p>
     <h3>Añadir a una Megalista Existente</h3>
     <p>
-    Selecciona una o más playlists y pulsa el botón "Añadir". Se abrirá un diálogo donde podrás elegir una de tus Megalistas creadas previamente para añadirle las nuevas canciones.
+    Selecciona una o más playlists y pulsa el botón &quot;Añadir&quot;. Se abrirá un diálogo donde podrás elegir una de tus Megalistas creadas previamente para añadirle las nuevas canciones.
     </p>
     <h3>Megamix Sorpresa ✨</h3>
     <p>
@@ -56,33 +55,33 @@ export default function FaqPage() {
     Las Megalistas creadas con la app guardan la información de sus playlists de origen. Esto permite una sincronización inteligente.
     </p>
     <ul>
-    <li><strong>Sincronización Individual:</strong> En el menú de acciones (`...`) de una Megalista, pulsa "Sincronizar" para actualizarla con las últimas canciones de sus fuentes.</li>
-    <li><strong>Sincronización en Lote:</strong> Si tienes playlists seleccionadas, aparecerá un botón "Sincronizar" en la barra inferior para actualizar todas tus Megalistas a la vez.</li>
+    <li><strong>Sincronización Individual:</strong> En el menú de acciones (<code>...</code>) de una Megalista, pulsa &quot;Sincronizar&quot; para actualizarla con las últimas canciones de sus fuentes.</li>
+    <li><strong>Sincronización en Lote:</strong> Si tienes playlists seleccionadas, aparecerá un botón &quot;Sincronizar&quot; en la barra inferior para actualizar todas tus Megalistas a la vez.</li>
     <li><strong>Autocuración:</strong> Si eliminas una de las playlists que componían una Megalista, la aplicación lo detectará en la siguiente sincronización y la eliminará de las fuentes para evitar errores. ¡Se arregla sola!</li>
     </ul>
     
     <h2>Gestión Avanzada de Playlists</h2>
     <h3>Menús de Acciones</h3>
     <p>
-    Cada playlist en la lista tiene un menú de acciones (`...`) a la derecha. Este menú te da acceso a funciones de gestión para esa playlist específica.
+    Cada playlist en la lista tiene un menú de acciones (<code>...</code>) a la derecha. Este menú te da acceso a funciones de gestión para esa playlist específica.
     </p>
     <h3>Editar Nombre y Descripción</h3>
     <p>
-    Desde el menú de acciones de cualquier playlist, puedes elegir "Editar detalles" para cambiar su nombre y descripción directamente desde la aplicación.
+    Desde el menú de acciones de cualquier playlist, puedes elegir &quot;Editar detalles&quot; para cambiar su nombre y descripción directamente desde la aplicación.
     </p>
     <h3>Eliminar Playlists</h3>
     <p>
     Puedes eliminar playlists de dos maneras:
     </p>
     <ul>
-    <li><strong>Individual:</strong> Desde el menú de acciones (`...`) de cualquier playlist.</li>
-    <li><strong>En Lote:</strong> Seleccionando una o más playlists y usando el botón "Eliminar" de la barra de acciones inferior.</li>
+    <li><strong>Individual:</strong> Desde el menú de acciones (<code>...</code>) de cualquier playlist.</li>
+    <li><strong>En Lote:</strong> Seleccionando una o más playlists y usando el botón &quot;Eliminar&quot; de la barra de acciones inferior.</li>
     </ul>
     
     <h2>Tolerancia a Fallos</h2>
     <h3>Reanudar Mezclas Fallidas</h3>
     <p>
-    Si estás creando una Megalista muy grande y el proceso falla (por ejemplo, por una pérdida de conexión), ¡no te preocupes! La barra de acciones se transformará y te dará la opción de **reanudar la mezcla** desde el punto exacto donde se detuvo.
+    Si estás creando una Megalista muy grande y el proceso falla (por ejemplo, por una pérdida de conexión), ¡no te preocupes! La barra de acciones se transformará y te dará la opción de <strong>reanudar la mezcla</strong> desde el punto exacto donde se detuvo.
     </p>
     </div>
     </div>
