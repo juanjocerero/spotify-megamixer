@@ -480,3 +480,110 @@ export async function unfollowPlaylistsBatch(playlistIds: string[]): Promise<voi
     throw error;
   }
 }
+
+/**
+* Crea una Megalista "Sorpresa" con un número específico de canciones
+* seleccionadas aleatoriamente de un conjunto de playlists de origen.
+*
+* @param sourcePlaylistIds - Los IDs de las playlists de las que se cogerán las canciones.
+* @param targetTrackCount - El número deseado de canciones en la playlist final.
+* @param newPlaylistName - El nombre para la nueva playlist.
+* @returns El objeto de la playlist enriquecida y recién creada.
+*/
+export async function createSurpriseMegalist(
+  sourcePlaylistIds: string[],
+  targetTrackCount: number,
+  newPlaylistName: string
+): Promise<SpotifyPlaylist> {
+  console.log(`[ACTION:createSurpriseMegalist] Iniciando. 
+    Fuentes: ${sourcePlaylistIds.length},
+     Objetivo: ${targetTrackCount} canciones.`
+  );
+  
+  const session = await auth();
+  if (!session?.accessToken || !session.user?.id) {
+    throw new Error('No autenticado, token o ID de usuario no disponible.');
+  }
+  const { accessToken, user } = session;
+  
+  try {
+    // Obtener todas las canciones de las fuentes de forma robusta
+    const tracksPerPlaylistPromises = sourcePlaylistIds.map(id =>
+      getAllPlaylistTracks(accessToken, id).catch(err => {
+        console.warn(`[SURPRISE_MIX] No se pudo obtener la playlist ${id}, se omitirá.`, err);
+        return []; // Si una falla, la tratamos como si estuviera vacía
+      })
+    );
+    const tracksPerPlaylist = await Promise.all(tracksPerPlaylistPromises);
+    
+    // Algoritmo de selección de canciones
+    let selectedTracks: string[];
+    const allUniqueTracks = [...new Set(tracksPerPlaylist.flat())];
+    
+    if (allUniqueTracks.length <= targetTrackCount) {
+      // Caso simple: no hay suficientes canciones, se usan todas
+      console.log(`[SURPRISE_MIX] Menos canciones (${allUniqueTracks.length}) que el objetivo. Se usarán todas.`);
+      selectedTracks = allUniqueTracks;
+    } else {
+      // Caso complejo: selección proporcional + relleno
+      const selectedTracksSet = new Set<string>();
+      const remainingTracksPool: string[] = [];
+      const quota = Math.floor(targetTrackCount / sourcePlaylistIds.length);
+      
+      // Fase de cuota proporcional
+      tracksPerPlaylist.forEach(playlistTracks => {
+        const shuffled = shuffleArray([...playlistTracks]);
+        const toAdd = shuffled.slice(0, quota);
+        const remaining = shuffled.slice(quota);
+        toAdd.forEach(track => selectedTracksSet.add(track));
+        remainingTracksPool.push(...remaining);
+      });
+      
+      // Fase de relleno si es necesario
+      const remainingNeeded = targetTrackCount - selectedTracksSet.size;
+      if (remainingNeeded > 0) {
+        const shuffledPool = shuffleArray(remainingTracksPool);
+        for (const track of shuffledPool) {
+          if (selectedTracksSet.size >= targetTrackCount) break;
+          selectedTracksSet.add(track);
+        }
+      }
+      
+      selectedTracks = Array.from(selectedTracksSet);
+    }
+    
+    // Asegurar el recuento final y barajar
+    const finalShuffledTracks = shuffleArray(selectedTracks).slice(0, targetTrackCount);
+    
+    // Crear la playlist en Spotify y añadir las canciones
+    const newPlaylist = await createNewPlaylist(accessToken, user.id, newPlaylistName);
+    await replacePlaylistTracks(accessToken, newPlaylist.id, finalShuffledTracks);
+    
+    // Persistir la nueva Megalista en nuestra base de datos
+    await db.megalist.create({
+      data: {
+        id: newPlaylist.id,
+        spotifyUserId: user.id,
+        sourcePlaylistIds: sourcePlaylistIds,
+        trackCount: finalShuffledTracks.length,
+      },
+    });
+    console.log(`[DB] Creado el registro para la nueva Megalista Sorpresa ${newPlaylist.id}`);
+    
+    // Devolver el objeto enriquecido para la UI
+    const enrichedPlaylist: SpotifyPlaylist = {
+      ...newPlaylist,
+      isMegalist: true,
+      isSyncable: true, // Por definición, una nueva megalista es sincronizable
+      tracks: {
+        ...newPlaylist.tracks,
+        total: finalShuffledTracks.length,
+      },
+    };
+    return enrichedPlaylist;
+    
+  } catch (error) {
+    console.error('[ACTION_ERROR:createSurpriseMegalist] Fallo al crear la Megalista Sorpresa.', error);
+    throw error;
+  }
+}

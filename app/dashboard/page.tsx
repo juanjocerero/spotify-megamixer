@@ -8,6 +8,7 @@ import { getUserPlaylists } from '@/lib/spotify';
 import LogoutButton from '@/components/custom/LogoutButton';
 import DashboardClient from '@/components/custom/DashboardClient';
 import FloatingActionBar from '@/components/custom/FloatingActionBar';
+import SurpriseMixButton from '@/components/custom/SurpriseMixButton';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -56,7 +57,13 @@ export default async function DashboardPage() {
     <h1 className="text-3xl font-thin text-green-500">
     Spotify Megamixer
     </h1>
+    
+    {/* Agrupador de botones */}
+    <div className="flex items-center gap-2">
+    <SurpriseMixButton />
     <LogoutButton />
+    </div>
+    
     </header>
     
     {/* 6. Pasamos los datos ya corregidos y enriquecidos al cliente */}
