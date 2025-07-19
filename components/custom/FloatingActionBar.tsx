@@ -801,7 +801,7 @@ export default function FloatingActionBar() {
     <DialogHeader>
     <DialogTitle>¿Cómo quieres ordenar las canciones?</DialogTitle>
     <DialogDescription>
-    Se añadirán canciones a "{shuffleChoice.playlistName}". Puedes mantenerlas al final o reordenar la lista completa de forma aleatoria.
+    Se añadirán canciones a &quot;{shuffleChoice.playlistName}&quot;. Puedes mantenerlas al final o reordenar la lista completa de forma aleatoria.
     </DialogDescription>
     </DialogHeader>
     <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">

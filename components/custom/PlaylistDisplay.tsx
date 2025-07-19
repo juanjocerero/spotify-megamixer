@@ -740,7 +740,7 @@ export default function PlaylistDisplay({
     <DialogHeader>
     <DialogTitle>¿Reordenar la playlist tras sincronizar?</DialogTitle>
     <DialogDescription>
-    La playlist "{shuffleSyncChoice.playlist?.name}" será actualizada. ¿Quieres reordenar su contenido de forma aleatoria después?
+    La playlist &quot;{shuffleSyncChoice.playlist?.name}&quot; será actualizada. ¿Quieres reordenar su contenido de forma aleatoria después?
     </DialogDescription>
     </DialogHeader>
     <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
