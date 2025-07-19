@@ -13,7 +13,8 @@ import {
   updateAndReorderPlaylist,
   executeMegalistSync, 
   previewBatchSync, 
-  unfollowPlaylistsBatch
+  unfollowPlaylistsBatch,
+  shufflePlaylistsAction
 } from '@/lib/action';
 
 // Componentes UI de Shadcn
@@ -69,10 +70,12 @@ export default function FloatingActionBar() {
   }>({ open: false, added: 0, removed: 0 });
   const [deleteBatchAlertOpen, setDeleteBatchAlertOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [batchShuffleAlertOpen, setBatchShuffleAlertOpen] = useState(false);
+  const [isShuffling, setIsShuffling] = useState(false);
   
-  const isProcessing = step === 'fetching' || step === 'processing' || isSyncingAll;
+  const isProcessing = step === 'fetching' || step === 'processing' || isSyncingAll || isShuffling;
   
-  // Memoizamos el cálculo para saber si hay algo que sincronizar
+  // Saber si hay algo que sincronizar
   const syncableMegalists = useMemo(
     () => megamixCache.filter(p => p.isSyncable),
     [megamixCache]
@@ -84,6 +87,13 @@ export default function FloatingActionBar() {
   );
   
   const hasSyncableMegalists = syncableMegalistsInSelection.length > 0;
+  
+  // Comprobación de megalistas en selección
+  const megalistsInSelection = useMemo(
+    () => megamixCache.filter(p => selectedPlaylistIds.includes(p.id) && p.isMegalist),
+    [selectedPlaylistIds, megamixCache]
+  );
+  const hasMegalistsInSelection = megalistsInSelection.length > 0;
   
   const handleInitiateMix = async () => {
     // Asegurarse de que cada nueva mezcla empiece de forma limpia.
@@ -453,6 +463,26 @@ export default function FloatingActionBar() {
     setIsSyncingAll(false);
   };
   
+  const handleConfirmBatchShuffle = async () => {
+    if (megalistsInSelection.length === 0) return;
+    
+    setIsShuffling(true);
+    const toastId = toast.loading(`Barajando ${megalistsInSelection.length} playlist(s)...`);
+    
+    try {
+      const idsToShuffle = megalistsInSelection.map(p => p.id);
+      await shufflePlaylistsAction(idsToShuffle);
+      toast.success(`${megalistsInSelection.length} playlist(s) barajadas con éxito.`, { id: toastId });
+      clearSelection();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudieron barajar las playlists.';
+      toast.error(message, { id: toastId });
+    } finally {
+      setBatchShuffleAlertOpen(false);
+      setIsShuffling(false);
+    }
+  };
+  
   // Maneja la eliminación de playlists en lote
   const handleConfirmDeleteBatch = async () => {
     if (selectedPlaylistIds.length === 0) return;
@@ -493,11 +523,10 @@ export default function FloatingActionBar() {
     <p>seleccionada(s)</p>
     </div>
     
-    {/* Reemplaza desde este div... */}
     <div className="flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-end">
     {isResumable ? (
       <>
-      {/* --- Botones de Reanudar/Cancelar (estilo actualizado) --- */}
+      {/* --- Botones de Reanudar/Cancelar --- */}
       <Tooltip>
       <TooltipTrigger asChild>
       <Button variant="ghost" onClick={handleCancelResume} className="h-14 w-14 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2">
@@ -526,7 +555,7 @@ export default function FloatingActionBar() {
       <>
       {/* --- Botonera Principal (reordenada y rediseñada) --- */}
       
-      {/* 1. Limpiar */}
+      {/* Limpiar */}
       <Tooltip>
       <TooltipTrigger asChild>
       <Button variant="ghost" size="lg" onClick={clearSelection} className="h-14 w-14 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2">
@@ -554,7 +583,28 @@ export default function FloatingActionBar() {
       <TooltipContent><p>Eliminar Seleccionada(s)</p></TooltipContent>
       </Tooltip>
       
-      {/* 3. Sincronizar */}
+      {/* Reordenar */}
+      {hasMegalistsInSelection && (
+        <Tooltip>
+        <TooltipTrigger asChild>
+        <Button
+        variant="ghost"
+        size="lg"
+        onClick={() => setBatchShuffleAlertOpen(true)}
+        disabled={isProcessing}
+        className="h-14 w-14 text-orange-500 hover:bg-orange-500/10 hover:text-orange-500 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2"
+        >
+        <Shuffle className="h-6 w-6 sm:h-5 sm:w-5" />
+        <span className="hidden sm:inline-block text-sm">Reordenar</span>
+        </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+        <p>Barajar {megalistsInSelection.length} Megalista(s) seleccionada(s)</p>
+        </TooltipContent>
+        </Tooltip>
+      )}
+      
+      {/* Sincronizar */}
       {hasSyncableMegalists && (
         <Tooltip>
         <TooltipTrigger asChild>
@@ -573,7 +623,7 @@ export default function FloatingActionBar() {
         </Tooltip>
       )}
       
-      {/* 4. Añadir */}
+      {/* Añadir */}
       <Tooltip>
       <TooltipTrigger asChild>
       <Button variant="ghost" size="lg" onClick={handleInitiateAddToExisting} disabled={isProcessing} className="h-14 w-14 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2">
@@ -584,7 +634,7 @@ export default function FloatingActionBar() {
       <TooltipContent><p>Añadir a Megalista Existente</p></TooltipContent>
       </Tooltip>
       
-      {/* 5. Crear */}
+      {/* Crear */}
       {selectedPlaylistIds.length >= 2 && (
         <Tooltip>
         <TooltipTrigger asChild>
@@ -769,6 +819,32 @@ export default function FloatingActionBar() {
     <AlertDialogFooter>
     <AlertDialogCancel>Cancelar</AlertDialogCancel>
     <AlertDialogAction onClick={handleConfirmBatchSync}>Sí, continuar</AlertDialogAction>
+    </AlertDialogFooter>
+    </AlertDialogContent>
+    </AlertDialog>
+    
+    {/* Diálogo para reordenación en lote */}
+    <AlertDialog open={batchShuffleAlertOpen} onOpenChange={setBatchShuffleAlertOpen}>
+    <AlertDialogContent>
+    <AlertDialogHeader>
+    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+    <AlertDialogDescription>
+    Vas a barajar las canciones de{' '}
+    <strong className="text-white">{megalistsInSelection.length}</strong> Megalista(s)
+    seleccionada(s). Esta acción reordenará completamente cada lista y no se puede deshacer.
+    Este proceso puede ser lento.
+    </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+    <AlertDialogCancel disabled={isShuffling}>Cancelar</AlertDialogCancel>
+    <AlertDialogAction
+    disabled={isShuffling}
+    className="text-white bg-orange-600 hover:bg-orange-700"
+    onClick={handleConfirmBatchShuffle}
+    >
+    {isShuffling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+    {isShuffling ? 'Barajando...' : 'Sí, barajar'}
+    </AlertDialogAction>
     </AlertDialogFooter>
     </AlertDialogContent>
     </AlertDialog>

@@ -11,7 +11,8 @@ import {
   unfollowPlaylist, 
   previewMegalistSync, 
   executeMegalistSync, 
-  updatePlaylistDetailsAction 
+  updatePlaylistDetailsAction, 
+  shufflePlaylistsAction
 } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 
@@ -47,7 +48,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw, Pencil, Eye } from 'lucide-react';
+import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw, Pencil, Eye, Shuffle } from 'lucide-react';
 
 import TrackDetailView from './TrackDetailView';
 
@@ -128,6 +129,11 @@ export default function PlaylistDisplay({
     false, playlistId: null, 
     playlistName: null }
   );
+  const [shuffleAlert, setShuffleAlert] = useState<{
+    open: boolean;
+    playlist: SpotifyPlaylist | null;
+    isShuffling: boolean;
+  }>({ open: false, playlist: null, isShuffling: false });
   
   // Referencia para el contenedor de scroll ---
   const parentRef = useRef<HTMLTableSectionElement>(null);
@@ -167,6 +173,29 @@ export default function PlaylistDisplay({
       toast.error(message, { id: toastId });
     } finally {
       setIsSaving(false);
+    }
+  };
+  
+  // Maneja el barajado explícito del contenido de una playlist
+  const handleShuffle = (playlist: SpotifyPlaylist) => {
+    setShuffleAlert({ open: true, playlist, isShuffling: false });
+  };
+  
+  // Maneja el flujo de confirmación del barajado
+  const handleConfirmShuffle = async () => {
+    if (!shuffleAlert.playlist) return;
+    
+    setShuffleAlert(prev => ({ ...prev, isShuffling: true }));
+    const toastId = toast.loading(`Barajando "${shuffleAlert.playlist.name}"...`);
+    
+    try {
+      await shufflePlaylistsAction([shuffleAlert.playlist.id]);
+      toast.success(`Playlist "${shuffleAlert.playlist.name}" barajada con éxito.`, { id: toastId });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo barajar la playlist.';
+      toast.error(message, { id: toastId });
+    } finally {
+      setShuffleAlert({ open: false, playlist: null, isShuffling: false });
     }
   };
   
@@ -558,6 +587,18 @@ export default function PlaylistDisplay({
           </DropdownMenuItem>
         )}
         
+        {isMegalista && (
+          <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            handleShuffle(playlist);
+          }}
+          >
+          <Shuffle className="mr-2 h-4 w-4" />
+          <span>Reordenar</span>
+          </DropdownMenuItem>
+        )}
+        
         {/* Eliminar */}
         <DropdownMenuItem
         className="text-red-500 focus:text-red-500"
@@ -689,6 +730,35 @@ export default function PlaylistDisplay({
       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
     ) : null}
     {syncPreviewAlert.isExecutingSync ? 'Sincronizando...' : 'Sí, continuar'}
+    </AlertDialogAction>
+    </AlertDialogFooter>
+    </AlertDialogContent>
+    </AlertDialog>
+    
+    {/* Confirmación de reordenado de lista */}
+    <AlertDialog
+    open={shuffleAlert.open}
+    onOpenChange={(open) => !shuffleAlert.isShuffling && setShuffleAlert({ ...shuffleAlert, open })}
+    >
+    <AlertDialogContent>
+    <AlertDialogHeader>
+    <AlertDialogTitle>Confirmar Barajado</AlertDialogTitle>
+    <AlertDialogDescription>
+    Vas a barajar todas las canciones de la playlist{' '}
+    <strong className="text-white">{shuffleAlert.playlist?.name}</strong>. Esta acción
+    reordenará completamente la lista y no se puede deshacer. Este proceso puede ser lento.
+    ¿Deseas continuar?
+    </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+    <AlertDialogCancel disabled={shuffleAlert.isShuffling}>Cancelar</AlertDialogCancel>
+    <AlertDialogAction
+    onClick={handleConfirmShuffle}
+    disabled={shuffleAlert.isShuffling}
+    className="bg-orange-600 hover:bg-orange-700 text-white"
+    >
+    {shuffleAlert.isShuffling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+    {shuffleAlert.isShuffling ? 'Barajando...' : 'Sí, barajar'}
     </AlertDialogAction>
     </AlertDialogFooter>
     </AlertDialogContent>

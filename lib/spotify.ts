@@ -284,6 +284,59 @@ export async function addTracksToPlaylist(
   }
 }
 
+export async function removeTracksFromPlaylist(
+  accessToken: string,
+  playlistId: string,
+  trackUris: string[]
+): Promise<void> {
+  const spotifyApiUrl = `${SPOTIFY_API_BASE}/playlists/${playlistId}/tracks`;
+  const batchSize = 100;
+  let i = 0;
+  while (i < trackUris.length) {
+    const batchUris = trackUris.slice(i, i + batchSize);
+    const tracksToRemove = batchUris.map(uri => ({ uri }));
+    
+    const response = await fetch(spotifyApiUrl, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ tracks: tracksToRemove }),
+    });
+    
+    if (response.ok) {
+      console.log(
+        `[SPOTIFY_API] Eliminado un lote de ${batchUris.length} canciones.`
+      );
+      i += batchSize;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      continue;
+    }
+    
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After');
+      const waitSeconds = retryAfter ? parseInt(retryAfter, 10) : 5;
+      console.warn(
+        `[SPOTIFY_API] Rate limited. Esperando ${waitSeconds} segundos para reintentar la eliminación.`
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000 + 500));
+      continue;
+    }
+    
+    const errorData = await response.json();
+    console.error(
+      `[SPOTIFY_API] Fallo al eliminar un lote de canciones de la playlist ${playlistId}`,
+      { status: response.status, error: errorData }
+    );
+    throw new Error(
+      `Fallo al eliminar canciones. Spotify respondió con ${response.status}: ${
+        errorData.error?.message || 'Error desconocido'
+      }`
+    );
+  }
+}
+
 /**
 * Reemplaza todas las canciones de una playlist con un nuevo conjunto de URIs.
 * Esta función primero vacía la playlist y luego añade las nuevas canciones en lotes.

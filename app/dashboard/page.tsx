@@ -11,6 +11,7 @@ import FloatingActionBar from '@/components/custom/FloatingActionBar';
 import SurpriseMixButton from '@/components/custom/SurpriseMixButton';
 import HelpButton from '@/components/custom/HelpButton';
 import SyncAllButton from '@/components/custom/SyncAllButton';
+import ShuffleAllButton from '@/components/custom/ShuffleAllButton';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -64,6 +65,7 @@ export default async function DashboardPage() {
     <div className="flex items-center gap-2">
     <HelpButton />
     <SurpriseMixButton />
+    <ShuffleAllButton />
     <SyncAllButton />
     <LogoutButton />
     </div>

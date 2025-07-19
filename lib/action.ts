@@ -12,7 +12,8 @@ import {
   addTracksToPlaylist, 
   replacePlaylistTracks,
   getPlaylistDetails, 
-  updatePlaylistDetails
+  updatePlaylistDetails, 
+  removeTracksFromPlaylist
 } from './spotify';
 import { shuffleArray } from './utils';
 
@@ -152,23 +153,20 @@ export async function updateAndReorderPlaylist(
     const { accessToken } = session;
     
     const megalist = await db.megalist.findUnique({ where: { id: targetPlaylistId } });
+    
     const existingSourceIds = megalist ? megalist.sourcePlaylistIds : [];
     const allSourceIds = Array.from(new Set([...existingSourceIds, ...newSourceIds]));
     
-    // Obtener todas las canciones (existentes y nuevas)
     const [existingTracksUris, newTracksUris] = await Promise.all([
       getAllPlaylistTracks(accessToken, targetPlaylistId).then(tracks => tracks.map(t => t.uri)),
-      getTrackUris(newSourceIds) // getTrackUris ya devuelve URIs
+      getTrackUris(newSourceIds)
     ]);
     
-    // Combinar, eliminar duplicados y barajar
     const combinedTracksUris = [...new Set([...existingTracksUris, ...newTracksUris])];
     const shuffledTracksUris = shuffleArray(combinedTracksUris);
     
-    // Reemplazar el contenido de la playlist con el nuevo conjunto
     await replacePlaylistTracks(accessToken, targetPlaylistId, shuffledTracksUris);
     
-    // Persistir en base de datos
     try {
       await db.megalist.upsert({
         where: { id: targetPlaylistId },
@@ -178,7 +176,7 @@ export async function updateAndReorderPlaylist(
         },
         create: {
           id: targetPlaylistId,
-          spotifyUserId: session.user.id,
+          spotifyUserId: session.user.id!,
           sourcePlaylistIds: allSourceIds,
           trackCount: shuffledTracksUris.length,
         },
@@ -188,9 +186,7 @@ export async function updateAndReorderPlaylist(
       console.error(`[DB_ERROR] Fallo al actualizar el registro para la Megalista ${targetPlaylistId}`, dbError);
     }
     
-    // Devolver el resultado completo
     return { finalCount: shuffledTracksUris.length };
-    
   } catch (error) {
     console.error(`[ACTION_ERROR:updateAndReorderPlaylist] Fallo al actualizar la playlist ${targetPlaylistId}.`, error);
     throw error;
@@ -305,17 +301,17 @@ export async function unfollowPlaylist(playlistId: string): Promise<void> {
 * @returns Un objeto con los datos calculados para la previsualización y ejecución.
 */
 async function _calculateSyncChanges(playlistId: string, accessToken: string) {
-  const megalist = await db.megalist.findUnique({ where: { id: playlistId } });
+  const megalist = await db.megalist.findUnique({
+    where: { id: playlistId },
+  });
   if (!megalist) {
     throw new Error("Esta Megalista no es sincronizable o no fue creada por la aplicación.");
   }
   
-  // Obtener URIs actuales de la Megalista
   const initialTracks = await getAllPlaylistTracks(accessToken, playlistId);
   const initialTrackUris = initialTracks.map(t => t.uri);
-  
-  // Obtener URIs de todas las playlists fuente, manejando errores (autocuración)
   const sourceIds = megalist.sourcePlaylistIds;
+  
   const trackUrisPromises = sourceIds.map(id =>
     getAllPlaylistTracks(accessToken, id)
     .then(tracks => tracks.map(t => t.uri))
@@ -324,22 +320,19 @@ async function _calculateSyncChanges(playlistId: string, accessToken: string) {
       return { id, error: true };
     })
   );
-  
   const results = await Promise.all(trackUrisPromises);
+  
   const validSourceIds: string[] = [];
   const finalTrackUris: string[] = [];
-  
   results.forEach((result, index) => {
-    if (Array.isArray(result)) { // Si el resultado es un array de URIs, es válido
+    if (Array.isArray(result)) {
       validSourceIds.push(sourceIds[index]);
       finalTrackUris.push(...result);
     }
-    // Si tiene la propiedad 'error', se ignora (playlist eliminada)
   });
   
-  const uniqueFinalTracks = shuffleArray([...new Set(finalTrackUris)]);
-  
-  // Calcular diferencias
+  // Se elimina el barajado para preservar el orden original de las canciones.
+  const uniqueFinalTracks = [...new Set(finalTrackUris)];
   const initialTracksSet = new Set(initialTrackUris);
   const finalTracksSet = new Set(uniqueFinalTracks);
   
@@ -449,18 +442,36 @@ export async function executeMegalistSync(playlistId: string) {
     }
     const { accessToken } = session;
     
-    const { megalist, addedCount, removedCount, validSourceIds, uniqueFinalTracks } = await _calculateSyncChanges(playlistId, accessToken);
+    const {
+      megalist,
+      initialTrackUris,
+      uniqueFinalTracks,
+      validSourceIds,
+      addedCount,
+      removedCount,
+    } = await _calculateSyncChanges(playlistId, accessToken);
     
-    // Si no hay cambios, no hagas nada y devuelve un mensaje informativo.
     if (addedCount === 0 && removedCount === 0 && validSourceIds.length === megalist.sourcePlaylistIds.length) {
-      console.log(`[ACTION:executeMegalistSync] La playlist ${playlistId} ya estaba sincronizada. No se requiere ejecución.`);
+      console.log(`[ACTION:executeMegalistSync] La playlist ${playlistId} ya estaba sincronizada.`);
       return { success: true, added: 0, removed: 0, finalCount: uniqueFinalTracks.length, message: "Ya estaba sincronizada." };
     }
     
-    console.log(`[ACTION:executeMegalistSync] Ejecutando actualización para ${playlistId}. Añadiendo: ${addedCount}, Eliminando: ${removedCount}`);
+    const initialTracksSet = new Set(initialTrackUris);
+    const finalTracksSet = new Set(uniqueFinalTracks);
     
-    // Ejecuta las operaciones de escritura
-    await replacePlaylistTracks(accessToken, playlistId, uniqueFinalTracks);
+    const tracksToAdd = uniqueFinalTracks.filter(uri => !initialTracksSet.has(uri));
+    const tracksToRemove = initialTrackUris.filter(uri => !finalTracksSet.has(uri));
+    
+    console.log(`[ACTION:executeMegalistSync] Ejecutando actualización para ${playlistId}. A añadir: ${tracksToAdd.length}, A eliminar: ${tracksToRemove.length}`);
+    
+    // Se reemplaza `replacePlaylistTracks` por las dos operaciones incrementales
+    if (tracksToRemove.length > 0) {
+      await removeTracksFromPlaylist(accessToken, playlistId, tracksToRemove);
+    }
+    if (tracksToAdd.length > 0) {
+      await addTracksToPlaylist(accessToken, playlistId, tracksToAdd);
+    }
+    
     await db.megalist.update({
       where: { id: playlistId },
       data: {
@@ -469,9 +480,44 @@ export async function executeMegalistSync(playlistId: string) {
       },
     });
     
-    return { success: true, added: addedCount, removed: removedCount, finalCount: uniqueFinalTracks.length };
+    return { success: true, added: tracksToAdd.length, removed: tracksToRemove.length, finalCount: uniqueFinalTracks.length };
   } catch (error) {
     console.error(`[ACTION_ERROR:executeMegalistSync] Fallo al ejecutar la sincronización para ${playlistId}.`, error);
+    throw error;
+  }
+}
+
+export async function shufflePlaylistsAction(playlistIds: string[]): Promise<void> {
+  console.log(`[ACTION:shufflePlaylistsAction] Iniciando barajado para ${playlistIds.length} playlist(s).`);
+  try {
+    const session = await auth();
+    if (!session?.accessToken) {
+      throw new Error('No autenticado o token no disponible.');
+    }
+    const { accessToken } = session;
+    
+    const shufflePromises = playlistIds.map(async (playlistId) => {
+      console.log(`[SHUFFLE] Obteniendo canciones para ${playlistId}...`);
+      const tracks = await getAllPlaylistTracks(accessToken, playlistId);
+      const trackUris = tracks.map(t => t.uri);
+      
+      if (trackUris.length <= 1) {
+        console.log(`[SHUFFLE] La playlist ${playlistId} tiene muy pocas canciones para barajar. Omitiendo.`);
+        return;
+      }
+      
+      console.log(`[SHUFFLE] Barajando ${trackUris.length} canciones para ${playlistId}...`);
+      const shuffledUris = shuffleArray(trackUris);
+      
+      console.log(`[SHUFFLE] Reemplazando canciones en ${playlistId}...`);
+      await replacePlaylistTracks(accessToken, playlistId, shuffledUris);
+      console.log(`[SHUFFLE] Playlist ${playlistId} barajada con éxito.`);
+    });
+    
+    await Promise.all(shufflePromises);
+    
+  } catch (error) {
+    console.error(`[ACTION_ERROR:shufflePlaylistsAction] Fallo al barajar las playlists.`, error);
     throw error;
   }
 }
