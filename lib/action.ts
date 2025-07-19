@@ -141,7 +141,8 @@ export async function addTracksBatch(
 
 export async function addTracksToMegalistAction(
   targetPlaylistId: string,
-  newSourceIds: string[]
+  newSourceIds: string[], 
+  shouldShuffle: boolean
 ): Promise<{ finalCount: number; addedCount: number; }> {
   try {
     const session = await auth();
@@ -170,6 +171,12 @@ export async function addTracksToMegalistAction(
     }
     
     const finalCount = existingTracks.length + tracksToAdd.length;
+    
+    // Si se añadieron canciones y el usuario eligió reordenar, se ejecuta la acción de reordenado.
+    if (tracksToAdd.length > 0 && shouldShuffle) {
+      console.log(`[ACTION:addTracksToMegalistAction] Reordenando la playlist ${targetPlaylistId} tras la actualización.`);
+      await shufflePlaylistsAction([targetPlaylistId]);
+    }
     
     // Actualiza el registro en la base de datos
     await db.megalist.upsert({
@@ -430,7 +437,7 @@ export async function previewBatchSync(playlistIds: string[]) {
 * @param playlistId El ID de la Megalista a sincronizar.
 * @returns Un informe del resultado de la sincronización.
 */
-export async function executeMegalistSync(playlistId: string) {
+export async function executeMegalistSync(playlistId: string, shouldShuffle: boolean) {
   console.log(`[ACTION:executeMegalistSync] Iniciando ejecución de sincronización para ${playlistId}`);
   try {
     const session = await auth();
@@ -448,14 +455,15 @@ export async function executeMegalistSync(playlistId: string) {
       removedCount,
     } = await _calculateSyncChanges(playlistId, accessToken);
     
-    if (addedCount === 0 && removedCount === 0 && validSourceIds.length === megalist.sourcePlaylistIds.length) {
+    const hasChanges = addedCount > 0 || removedCount > 0;
+    
+    if (!hasChanges && validSourceIds.length === megalist.sourcePlaylistIds.length) {
       console.log(`[ACTION:executeMegalistSync] La playlist ${playlistId} ya estaba sincronizada.`);
       return { success: true, added: 0, removed: 0, finalCount: uniqueFinalTracks.length, message: "Ya estaba sincronizada." };
     }
     
     const initialTracksSet = new Set(initialTrackUris);
     const finalTracksSet = new Set(uniqueFinalTracks);
-    
     const tracksToAdd = uniqueFinalTracks.filter(uri => !initialTracksSet.has(uri));
     const tracksToRemove = initialTrackUris.filter(uri => !finalTracksSet.has(uri));
     
@@ -467,6 +475,11 @@ export async function executeMegalistSync(playlistId: string) {
     }
     if (tracksToAdd.length > 0) {
       await addTracksToPlaylist(accessToken, playlistId, tracksToAdd);
+    }
+    
+    if (hasChanges && shouldShuffle) {
+      console.log(`[ACTION:executeMegalistSync] Reordenando la playlist ${playlistId} tras la sincronización.`);
+      await shufflePlaylistsAction([playlistId]);
     }
     
     await db.megalist.update({

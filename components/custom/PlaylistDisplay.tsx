@@ -134,6 +134,10 @@ export default function PlaylistDisplay({
     playlist: SpotifyPlaylist | null;
     isShuffling: boolean;
   }>({ open: false, playlist: null, isShuffling: false });
+  const [shuffleSyncChoice, setShuffleSyncChoice] = useState<{
+    open: boolean;
+    playlist: SpotifyPlaylist | null;
+  }>({ open: false, playlist: null });
   
   // Referencia para el contenedor de scroll ---
   const parentRef = useRef<HTMLTableSectionElement>(null);
@@ -381,32 +385,29 @@ export default function PlaylistDisplay({
   const handleConfirmSync = async () => {
     if (!syncPreviewAlert.playlist) return;
     
-    setSyncPreviewAlert(prev => ({ ...prev, isExecutingSync: true })); // Muestra el loader en el botón
-    const toastId = toast.loading(`Sincronizando "${syncPreviewAlert.playlist.name}"...`);
+    // Cierra el diálogo de previsualización
+    setSyncPreviewAlert(prev => ({ ...prev, open: false, isExecutingSync: false }));
+    // Abre el diálogo para preguntar sobre el reordenado
+    setShuffleSyncChoice({ open: true, playlist: syncPreviewAlert.playlist });
+  };
+  
+  const handleExecuteSync = async (shouldShuffle: boolean) => {
+    if (!shuffleSyncChoice.playlist) return;
     
+    const playlistToSync = shuffleSyncChoice.playlist;
+    setShuffleSyncChoice({ open: false, playlist: null }); // Cierra el diálogo actual
+    
+    const toastId = toast.loading(`Sincronizando "${playlistToSync.name}"...`);
     try {
-      const result = await executeMegalistSync(syncPreviewAlert.playlist.id);
-      
-      // Actualiza la caché de Zustand con el nuevo número de canciones
-      updatePlaylistInCache(syncPreviewAlert.playlist.id, { trackCount: result.finalCount });
-      
-      toast.success(`Sincronización de "${syncPreviewAlert.playlist.name}" completada.`, {
+      const result = await executeMegalistSync(playlistToSync.id, shouldShuffle);
+      updatePlaylistInCache(playlistToSync.id, { trackCount: result.finalCount });
+      toast.success(`Sincronización de "${playlistToSync.name}" completada.`, {
         id: toastId,
-        description: `Añadidas: ${result.added}, Eliminadas: ${result.removed}. Total: ${result.finalCount} canciones.`,
+        description: `Añadidas: ${result.added}, Eliminadas: ${result.removed}. ${shouldShuffle ? 'La playlist fue reordenada.' : ''}`,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo completar la sincronización.';
       toast.error(message, { id: toastId });
-    } finally {
-      // Cierra el diálogo y resetea el estado
-      setSyncPreviewAlert({
-        open: false,
-        playlist: null,
-        added: 0,
-        removed: 0,
-        finalCount: 0,
-        isExecutingSync: false,
-      });
     }
   };
   
@@ -732,6 +733,26 @@ export default function PlaylistDisplay({
     </AlertDialogFooter>
     </AlertDialogContent>
     </AlertDialog>
+    
+    {/* Diálogo para la decisión de reordenado */}
+    <Dialog open={shuffleSyncChoice.open} onOpenChange={(isOpen) => !isOpen && setShuffleSyncChoice({ open: false, playlist: null })}>
+    <DialogContent>
+    <DialogHeader>
+    <DialogTitle>¿Reordenar la playlist tras sincronizar?</DialogTitle>
+    <DialogDescription>
+    La playlist "{shuffleSyncChoice.playlist?.name}" será actualizada. ¿Quieres reordenar su contenido de forma aleatoria después?
+    </DialogDescription>
+    </DialogHeader>
+    <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
+    <Button variant="outline" className="flex-1" onClick={() => handleExecuteSync(false)}>
+    No, Mantener Orden
+    </Button>
+    <Button className="flex-1" onClick={() => handleExecuteSync(true)}>
+    Sí, Reordenar
+    </Button>
+    </DialogFooter>
+    </DialogContent>
+    </Dialog>
     
     {/* Confirmación de reordenado de lista */}
     <AlertDialog

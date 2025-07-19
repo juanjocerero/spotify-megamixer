@@ -7,7 +7,24 @@ import { previewBatchSync, executeMegalistSync } from '@/lib/action';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, AlertDialogHeader, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { 
+  AlertDialog, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogTitle, 
+  AlertDialogHeader, 
+  AlertDialogFooter, 
+  AlertDialogCancel, 
+  AlertDialogAction 
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogContent,
+  DialogDescription, 
+  DialogFooter
+} from '@/components/ui/dialog';
 import { RefreshCw, Loader2 } from 'lucide-react';
 
 export default function SyncAllButton() {
@@ -19,6 +36,7 @@ export default function SyncAllButton() {
     removed: 0,
     isExecuting: false,
   });
+  const [shuffleGlobalSyncChoice, setShuffleGlobalSyncChoice] = useState({ open: false });
   
   const syncableMegalists = useMemo(
     () => megamixCache.filter(p => p.isSyncable),
@@ -56,11 +74,18 @@ export default function SyncAllButton() {
   };
   
   const handleConfirmGlobalSync = async () => {
+    // Cierra el diálogo de previsualización y abre el de reordenado
+    setSyncAlert(prev => ({ ...prev, open: false, isExecuting: false }));
+    setShuffleGlobalSyncChoice({ open: true });
+  };
+  
+  const handleExecuteGlobalSync = async (shouldShuffle: boolean) => {    
+    setShuffleGlobalSyncChoice({ open: false });
     setSyncAlert(prev => ({ ...prev, isExecuting: true }));
     const toastId = toast.loading(`Sincronizando ${syncableMegalists.length} Megalista(s)...`);
     
     const syncableIds = syncableMegalists.map(p => p.id);
-    const syncPromises = syncableIds.map(id => executeMegalistSync(id));
+    const syncPromises = syncableIds.map(id => executeMegalistSync(id, shouldShuffle));
     const results = await Promise.allSettled(syncPromises);
     
     let successCount = 0;
@@ -130,6 +155,26 @@ export default function SyncAllButton() {
     </AlertDialogFooter>
     </AlertDialogContent>
     </AlertDialog>
+    
+    {/* Diálogo global */}
+    <Dialog open={shuffleGlobalSyncChoice.open} onOpenChange={(isOpen) => !isOpen && setShuffleGlobalSyncChoice({ open: false })}>
+    <DialogContent>
+    <DialogHeader>
+    <DialogTitle>¿Reordenar las playlists tras sincronizar?</DialogTitle>
+    <DialogDescription>
+    Solo se reordenarán aquellas playlists que tengan cambios. ¿Quieres reordenar su contenido de forma aleatoria después de actualizarlas?
+    </DialogDescription>
+    </DialogHeader>
+    <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
+    <Button variant="outline" className="flex-1" onClick={() => handleExecuteGlobalSync(false)}>
+    No, Mantener Orden
+    </Button>
+    <Button className="flex-1" onClick={() => handleExecuteGlobalSync(true)}>
+    Sí, Reordenar
+    </Button>
+    </DialogFooter>
+    </DialogContent>
+    </Dialog>
     </TooltipProvider>
   );
 }

@@ -73,6 +73,17 @@ export default function FloatingActionBar() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [batchShuffleAlertOpen, setBatchShuffleAlertOpen] = useState(false);
   const [isShuffling, setIsShuffling] = useState(false);
+  const [shuffleChoice, setShuffleChoice] = useState<{
+    open: boolean;
+    targetPlaylistId: string;
+    sourcePlaylistIds: string[];
+    playlistName?: string;
+  }>({
+    open: false,
+    targetPlaylistId: '',
+    sourcePlaylistIds: [],
+  });
+  const [shuffleBatchSyncChoice, setShuffleBatchSyncChoice] = useState({ open: false });
   
   const isProcessing = step === 'fetching' || step === 'processing' || isSyncingAll || isShuffling;
   
@@ -240,37 +251,13 @@ export default function FloatingActionBar() {
     const { playlistId, playlistName } = overwriteDialog;
     setOverwriteDialog({ ...overwriteDialog, open: false });
     setStep('processing');
-    const toastId = toast.loading(`Actualizando "${playlistName}"...`);
     
-    try {
-      // Llamamos a la nueva acción incremental
-      const { finalCount, addedCount } = await addTracksToMegalistAction(
-        playlistId,
-        selectedPlaylistIds
-      );
-      
-      updatePlaylistInCache(playlistId, { trackCount: finalCount });
-      
-      if (addedCount > 0) {
-        toast.success(`¡Playlist actualizada!`, {
-          id: toastId,
-          description: `Se añadieron ${addedCount} canciones. Ahora tiene ${finalCount} en total.`,
-        });
-      } else {
-        toast.info(`La playlist ya contenía todas las canciones.`, {
-          id: toastId,
-          description: 'No se añadieron canciones nuevas.'
-        });
-      }
-      
-      clearSelection();
-    } catch (error: unknown) {
-      console.error('[UI_ERROR:handleConfirmUpdate]', error);
-      const message = error instanceof Error ? error.message : 'Error al actualizar la playlist.';
-      toast.error(message, { id: toastId });
-    } finally {
-      setStep('idle');
-    }
+    setShuffleChoice({
+      open: true,
+      targetPlaylistId: playlistId,
+      sourcePlaylistIds: selectedPlaylistIds,
+      playlistName: playlistName,
+    });
   };
   
   // Función para reanudar una mezcla fallida.
@@ -349,55 +336,58 @@ export default function FloatingActionBar() {
     setAddToDialog({ open: true });
   };
   
-  // Ejecuta la acción de añadir las canciones a la Megalista seleccionada.
-  const handleConfirmAddToExisting = async () => {
-    if (!selectedTargetId) {
-      toast.error('Por favor, selecciona una Megalista de destino.');
-      return;
-    }
-    // No necesitamos una validación de número de playlists, la lógica ya lo maneja
-    const sourcePlaylistIds = selectedPlaylistIds;
-    const targetPlaylistId = selectedTargetId;
-    
-    setAddToDialog({ open: false });
-    setStep('processing'); // Mostramos el diálogo de progreso
-    
-    const toastId = toast.loading('Actualizando Megalista de destino...');
+  const handleExecuteUpdateOrAdd = async (shouldShuffle: boolean) => {
+    const { targetPlaylistId, sourcePlaylistIds, playlistName } = shuffleChoice;
+    setShuffleChoice({ ...shuffleChoice, open: false });
+    setStep('processing');
+    const toastId = toast.loading(`Actualizando "${playlistName || 'la Megalista'}"...`);
     
     try {
-      // La llamada a la acción ahora es más simple desde el cliente.
-      // Le pasamos los IDs y la acción se encarga de todo.
       const { finalCount, addedCount } = await addTracksToMegalistAction(
         targetPlaylistId,
-        sourcePlaylistIds
+        sourcePlaylistIds,
+        shouldShuffle // Pasamos la decisión del usuario a la acción
       );
-      
-      // Actualizamos la caché con toda la nueva información.
       updatePlaylistInCache(targetPlaylistId, { trackCount: finalCount });
       
       if (addedCount > 0) {
         toast.success(`¡Megalista actualizada!`, {
           id: toastId,
-          description: `Se añadieron ${addedCount} canciones. Ahora tiene ${finalCount} en total.`,
+          description: `Se añadieron ${addedCount} canciones. ${
+            shouldShuffle ? 'La playlist ha sido reordenada.' : 'Se mantuvo el orden original.'
+          }`,
         });
       } else {
-        toast.info(`No se añadieron canciones nuevas.`, {
+        toast.info(`La playlist ya contenía todas las canciones.`, {
           id: toastId,
-          description: `La Megalista ya contenía todas las canciones de tu selección.`,
+          description: 'No se añadieron canciones nuevas.',
         });
       }
-      
       clearSelection();
-      
     } catch (error: unknown) {
-      console.error('[UI_ERROR:handleConfirmAddToExisting]', error);
-      const message = error instanceof Error ? error.message : 'Error al actualizar la Megalista.';
+      console.error('[UI_ERROR:handleExecuteUpdateOrAdd]', error);
+      const message = error instanceof Error ? error.message : 'Error al actualizar la playlist.';
       toast.error(message, { id: toastId });
     } finally {
       setStep('idle');
-      // Limpiamos el estado de progreso para la próxima operación
-      setProgress({ added: 0, total: 0 }); 
     }
+  };
+  
+  const handleConfirmAddToExisting = async () => {
+    if (!selectedTargetId) {
+      toast.error('Por favor, selecciona una Megalista de destino.');
+      return;
+    }
+    const targetPlaylist = megamixCache.find(p => p.id === selectedTargetId);
+    setAddToDialog({ open: false });
+    
+    // Preparamos la información para el diálogo de reordenado
+    setShuffleChoice({
+      open: true,
+      targetPlaylistId: selectedTargetId,
+      sourcePlaylistIds: selectedPlaylistIds,
+      playlistName: targetPlaylist?.name,
+    });
   };
   
   // Sincronizar todas las megalistas
@@ -432,12 +422,19 @@ export default function FloatingActionBar() {
   };
   
   const handleConfirmBatchSync = async () => {
+    // Cierra el diálogo de previsualización y abre el de reordenado
+    setBatchSyncAlert({ ...batchSyncAlert, open: false });
+    setShuffleBatchSyncChoice({ open: true });
+  };
+  
+  const handleExecuteBatchSync = async (shouldShuffle: boolean) => {
+    setShuffleBatchSyncChoice({ open: false });
     const syncableIds = syncableMegalistsInSelection.map(p => p.id);
     setIsSyncingAll(true);
     setBatchSyncAlert({ ...batchSyncAlert, open: false }); // Cierra el diálogo
     const toastId = toast.loading(`Sincronizando ${syncableIds.length} Megalista(s)...`);
     
-    const syncPromises = syncableIds.map(id => executeMegalistSync(id));
+    const syncPromises = syncableIds.map(id => executeMegalistSync(id, shouldShuffle));
     const results = await Promise.allSettled(syncPromises);
     
     let successCount = 0;
@@ -798,6 +795,26 @@ export default function FloatingActionBar() {
     </DialogContent>
     </Dialog>
     
+    {/* Diálogo para la decisión de reordenado */}
+    <Dialog open={shuffleChoice.open} onOpenChange={(isOpen) => !isOpen && setShuffleChoice({ ...shuffleChoice, open: false })}>
+    <DialogContent>
+    <DialogHeader>
+    <DialogTitle>¿Cómo quieres ordenar las canciones?</DialogTitle>
+    <DialogDescription>
+    Se añadirán canciones a "{shuffleChoice.playlistName}". Puedes mantenerlas al final o reordenar la lista completa de forma aleatoria.
+    </DialogDescription>
+    </DialogHeader>
+    <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
+    <Button variant="outline" className="flex-1" onClick={() => handleExecuteUpdateOrAdd(false)}>
+    Mantener Orden
+    </Button>
+    <Button className="flex-1" onClick={() => handleExecuteUpdateOrAdd(true)}>
+    Reordenar Canciones
+    </Button>
+    </DialogFooter>
+    </DialogContent>
+    </Dialog>
+    
     {/* Diálogo de confirmación de eliminación en lote */}
     <AlertDialog open={deleteBatchAlertOpen} onOpenChange={setDeleteBatchAlertOpen}>
     <AlertDialogContent>
@@ -850,6 +867,26 @@ export default function FloatingActionBar() {
     </AlertDialogFooter>
     </AlertDialogContent>
     </AlertDialog>
+    
+    {/* Diálogo para reordenar en lote */}
+    <Dialog open={shuffleBatchSyncChoice.open} onOpenChange={(isOpen) => !isOpen && setShuffleBatchSyncChoice({ open: false })}>
+    <DialogContent>
+    <DialogHeader>
+    <DialogTitle>¿Reordenar las playlists tras sincronizar?</DialogTitle>
+    <DialogDescription>
+    Solo se reordenarán aquellas playlists que tengan cambios. ¿Quieres reordenar su contenido de forma aleatoria después de actualizarlas?
+    </DialogDescription>
+    </DialogHeader>
+    <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
+    <Button variant="outline" className="flex-1" onClick={() => handleExecuteBatchSync(false)}>
+    No, Mantener Orden
+    </Button>
+    <Button className="flex-1" onClick={() => handleExecuteBatchSync(true)}>
+    Sí, Reordenar
+    </Button>
+    </DialogFooter>
+    </DialogContent>
+    </Dialog>
     
     {/* Diálogo para reordenación en lote */}
     <AlertDialog open={batchShuffleAlertOpen} onOpenChange={setBatchShuffleAlertOpen}>
