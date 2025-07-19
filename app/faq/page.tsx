@@ -29,7 +29,7 @@ export default function FaqPage() {
     {/* Concepto básico */}
     <SectionCard icon={<Plus className="h-6 w-6 text-green-400" />} title="1. ¿Qué es una Megalista?">
     <p>
-    Spotify no permite mezclar varias playlists en una sola... ¡hasta ahora! Megamixer te permite combinar las canciones de varias de tus playlists en una única "Megalista", eliminando duplicados automáticamente.
+    Spotify no permite mezclar varias playlists en una sola... ¡hasta ahora! Megamixer te permite combinar las canciones de varias de tus playlists en una única &quot;Megalista&quot;, eliminando duplicados automáticamente.
     </p>
     <p>
     Además, la aplicación está optimizada para el rendimiento: usa <strong className="text-green-400">scroll infinito y virtualización</strong>, lo que garantiza una navegación fluida incluso si tienes miles de playlists.
@@ -51,11 +51,11 @@ export default function FaqPage() {
     <div className="space-y-4">
     <div>
     <h3 className="font-semibold text-purple-300">Crear una Nueva Megalista</h3>
-    <p>Selecciona 2 o más playlists → pulsa el botón verde <strong>"Crear"</strong>. Esto une todas las canciones y quita los duplicados. La mezcla inicial no se baraja para preservar el orden.</p>
+    <p>Selecciona 2 o más playlists → pulsa el botón verde <strong>&quot;Crear&quot;</strong>. Esto une todas las canciones y quita los duplicados. La mezcla inicial no se baraja para preservar el orden.</p>
     </div>
     <div>
     <h3 className="font-semibold text-purple-300">Añadir a una Megalista Existente</h3>
-    <p>Selecciona playlists → pulsa el botón <strong>"Añadir"</strong> → elige la Megalista de destino en el diálogo. Se añadirán solo las canciones que no estuvieran ya.</p>
+    <p>Selecciona playlists → pulsa el botón <strong>&quot;Añadir&quot;</strong> → elige la Megalista de destino en el diálogo. Se añadirán solo las canciones que no estuvieran ya.</p>
     </div>
     <div>
     <h3 className="font-semibold text-purple-300 flex items-center gap-2">
@@ -72,9 +72,9 @@ export default function FaqPage() {
     Para darte más control, el barajado ahora es una acción explícita. ¡Así no pierdes el orden de tus canciones si no quieres!
     </p>
     <ul className="list-disc list-inside space-y-2 text-slate-300">
-    <li><strong>Barajado Individual:</strong> En el menú <code className="bg-slate-700 px-1 rounded">⋯</code> de una Megalista, pulsa <strong>"Barajar"</strong>.</li>
+    <li><strong>Barajado Individual:</strong> En el menú <code className="bg-slate-700 px-1 rounded">⋯</code> de una Megalista, pulsa <strong>&quot;Reordenar&quot;</strong>.</li>
     <li><strong>Barajado en Lote:</strong> Selecciona varias Megalistas → botón <Shuffle className="inline h-4 w-4" /> en la barra inferior.</li>
-    <li><strong>Barajado Global:</strong> Pulsa el botón <Shuffle className="inline h-4 w-4" /> en la cabecera para barajar todas tus Megalistas a la vez.</li>
+    <li><strong>Barajado Global:</strong> Pulsa el botón <Shuffle className="inline h-4 w-4" /> en la cabecera para reordenar todas tus Megalistas a la vez.</li>
     </ul>
     </SectionCard>
     
@@ -94,8 +94,8 @@ export default function FaqPage() {
     {/* Gestión avanzada */}
     <SectionCard icon={<Edit3 className="h-6 w-6 text-rose-400" />} title="6. Gestión Avanzada de Playlists">
     <ul className="list-disc list-inside space-y-3 text-slate-300">
-    <li><strong>Ver Canciones:</strong> ¿No recuerdas qué hay en una playlist? Usa la opción <Eye className="inline h-4 w-4" /> <strong>"Ver Canciones"</strong> en su menú para ver la lista completa en un panel lateral.</li>
-    <li><strong>Editar Nombre/Descripción:</strong> Desde el menú <code className="bg-slate-700 px-1 rounded">⋯</code> → <strong>"Editar detalles"</strong>. Funciona para CUALQUIER playlist, no solo Megalistas.</li>
+    <li><strong>Ver Canciones:</strong> ¿No recuerdas qué hay en una playlist? Usa la opción <Eye className="inline h-4 w-4" /> <strong>&quot;Ver Canciones&quot;</strong> en su menú para ver la lista completa en un panel lateral.</li>
+    <li><strong>Editar Nombre/Descripción:</strong> Desde el menú <code className="bg-slate-700 px-1 rounded">⋯</code> → <strong>&quot;Editar detalles&quot;</strong>. Funciona para CUALQUIER playlist, no solo Megalistas.</li>
     <li><strong>Eliminar Playlists:</strong> Individualmente desde el menú <code className="bg-slate-700 px-1 rounded">⋯</code> o en lote seleccionando varias y usando el botón <Trash2 className="inline h-4 w-4 text-rose-500" /> de la barra inferior.</li>
     <li><strong>Reanudar Mezclas:</strong> Si una creación de playlist muy grande falla (por ej. por un corte de red), aparecerá un botón para <strong>reanudarla</strong> justo donde se quedó.</li>
     </ul>
