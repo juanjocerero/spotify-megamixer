@@ -18,8 +18,13 @@ interface PlaylistStore {
   setPlaylistCache: (playlists: SpotifyPlaylist[]) => void;
   addMoreToCache: (playlists: SpotifyPlaylist[]) => void;
   addPlaylistToCache: (playlist: SpotifyPlaylist) => void;
-  updatePlaylistInCache: (playlistId: string, updates: { name?: string; description?: string; trackCount?: number; isSyncable?: boolean }) => void;
-  removePlaylistFromCache: (playlistId: string) => void;
+  updatePlaylistInCache: (playlistId: string, updates: { 
+    name?: string; 
+    description?: string; 
+    trackCount?: number; 
+    isSyncable?: boolean;
+    playlistType?: 'MEGALIST' | 'SURPRISE';
+  }) => void;  removePlaylistFromCache: (playlistId: string) => void;
   removeMultipleFromCache: (playlistIds: string[]) => void;
 }
 
@@ -118,6 +123,7 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
           total: updates.trackCount ?? p.tracks.total, 
         },
         isSyncable: updates.isSyncable ?? p.isSyncable,
+        playlistType: updates.playlistType ?? p.playlistType,
       };
     };
     

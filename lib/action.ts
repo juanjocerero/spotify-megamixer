@@ -85,6 +85,7 @@ export async function findOrCreatePlaylist(
             spotifyUserId: user.id,
             sourcePlaylistIds: idsToStore,
             trackCount: initialTrackCount, // Una megalista nueva siempre empieza con 0 canciones
+            type: 'MEGALIST',
           },
         });
         console.log(`[DB] Creado el registro para la nueva Megalista ${newPlaylist.id}`);
@@ -101,6 +102,7 @@ export async function findOrCreatePlaylist(
           ...newPlaylist.tracks,
           total: initialTrackCount, // Sobrescribimos el `total: 0` con nuestro recuento real
         },
+        playlistType: 'MEGALIST',
       };
       
       if (!enrichedPlaylist.owner) {
@@ -179,14 +181,19 @@ export async function addTracksToMegalistAction(
     }
     
     // Actualiza el registro en la base de datos
-    await db.megalist.upsert({
+    await db.megalist.upsert({ // Usamos upsert para cubrir todos los casos
       where: { id: targetPlaylistId },
-      update: { sourcePlaylistIds: allSourceIds, trackCount: finalCount },
-      create: {
+      update: { // Si existe, actualizamos su tipo a MEGALIST
+        sourcePlaylistIds: allSourceIds,
+        trackCount: finalCount,
+        type: 'MEGALIST', 
+      },
+      create: { // Si no existe, la creamos como MEGALIST
         id: targetPlaylistId,
         spotifyUserId: session.user.id,
         sourcePlaylistIds: allSourceIds,
         trackCount: finalCount,
+        type: 'MEGALIST',
       },
     });
     
@@ -487,6 +494,7 @@ export async function executeMegalistSync(playlistId: string, shouldShuffle: boo
       data: {
         sourcePlaylistIds: validSourceIds,
         trackCount: uniqueFinalTracks.length,
+        type: 'MEGALIST',
       },
     });
     
@@ -683,6 +691,7 @@ export async function createSurpriseMegalist(
         spotifyUserId: user.id,
         sourcePlaylistIds: sourcePlaylistIds,
         trackCount: finalShuffledTracksUris.length,
+        type: 'SURPRISE',
       },
     });
     console.log(`[DB] Creado el registro para la nueva Megalista Sorpresa ${newPlaylist.id}`);
@@ -692,6 +701,7 @@ export async function createSurpriseMegalist(
       ...newPlaylist,
       isMegalist: true,
       isSyncable: true, // Por definición, una nueva megalista es sincronizable
+      playlistType: 'SURPRISE',
       tracks: {
         ...newPlaylist.tracks,
         total: finalShuffledTracksUris.length,
@@ -779,6 +789,7 @@ export async function overwriteSurpriseMegalist(
         sourcePlaylistIds: sourcePlaylistIds,
         trackCount: finalShuffledTracksUris.length,
         updatedAt: new Date(),
+        type: 'SURPRISE',
       },
     });
     console.log(`[DB] Actualizado el registro para la Megalista Sorpresa ${playlistId}`);
@@ -791,6 +802,7 @@ export async function overwriteSurpriseMegalist(
       ...updatedPlaylistFromSpotify,
       isMegalist: true,
       isSyncable: true,
+      playlistType: 'SURPRISE',
       tracks: {
         ...updatedPlaylistFromSpotify.tracks,
         total: finalShuffledTracksUris.length,
@@ -859,5 +871,75 @@ export async function sendContactEmailAction(formData: {
   } catch (error) {
     console.error("[ACTION_ERROR:sendContactEmail]", error);
     return { success: false, error: "No se pudo enviar el mensaje." };
+  }
+}
+
+export async function getUniqueTrackCountFromPlaylistsAction(playlistIds: string[]): Promise<number> {
+  try {
+    const session = await auth();
+    if (!session?.accessToken) {
+      throw new Error('No autenticado o token no disponible.');
+    }
+    const { accessToken } = session;
+    const trackPromises = playlistIds.map((id) =>
+      getAllPlaylistTracks(accessToken, id).then(tracks => tracks.map(t => t.uri))
+  );
+  const tracksPerPlaylist = await Promise.all(trackPromises);
+  const uniqueTrackUris = [...new Set(tracksPerPlaylist.flat())];
+  return uniqueTrackUris.length;
+} catch (error) {
+  console.error('[ACTION_ERROR:getUniqueTrackCountFromPlaylistsAction]', error);
+  throw error;
+}
+}
+
+export async function createTargetedSurpriseMixAction(
+  sourcePlaylistIds: string[],
+  targetTrackCount: number,
+  newPlaylistName: string
+): Promise<SpotifyPlaylist> {
+  const session = await auth();
+  if (!session?.accessToken || !session.user?.id) {
+    throw new Error('No autenticado, token o ID de usuario no disponible.');
+  }
+  const { accessToken, user } = session;
+  
+  try {
+    const existingPlaylist = await findUserPlaylistByName(accessToken, newPlaylistName);
+    if (existingPlaylist) {
+      throw new Error(`PLAYLIST_EXISTS::${existingPlaylist.id}`);
+    }
+    
+    const allUniqueTracksUris = await getTrackUris(sourcePlaylistIds);
+    if (allUniqueTracksUris.length < targetTrackCount) {
+      throw new Error('El número de canciones solicitado excede las canciones únicas disponibles.');
+    }
+    
+    const finalShuffledTracksUris = shuffleArray(allUniqueTracksUris).slice(0, targetTrackCount);
+    
+    const newPlaylist = await createNewPlaylist(accessToken, user.id, newPlaylistName);
+    await replacePlaylistTracks(accessToken, newPlaylist.id, finalShuffledTracksUris);
+    
+    await db.megalist.create({
+      data: {
+        id: newPlaylist.id,
+        spotifyUserId: user.id,
+        sourcePlaylistIds: sourcePlaylistIds,
+        trackCount: finalShuffledTracksUris.length,
+        type: 'SURPRISE',
+      },
+    });
+    
+    const enrichedPlaylist: SpotifyPlaylist = {
+      ...newPlaylist,
+      isMegalist: true,
+      isSyncable: false, // Las listas sorpresa no son sincronizables por definición
+      playlistType: 'SURPRISE',
+      tracks: { ...newPlaylist.tracks, total: finalShuffledTracksUris.length },
+    };
+    return enrichedPlaylist;
+  } catch (error) {
+    console.error('[ACTION_ERROR:createTargetedSurpriseMixAction]', error);
+    throw error;
   }
 }

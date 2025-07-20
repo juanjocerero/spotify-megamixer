@@ -40,16 +40,23 @@ export default async function DashboardPage() {
     where: { spotifyUserId: session.user.id },
   });
   
-  const megalistIds = new Set(userMegalists.map((m: Megalist) => m.id));
+  // Creamos un mapa para un enriquecimiento más eficiente
+  const megalistDataMap = new Map(
+    userMegalists.map((m) => [m.id, { isMegalist: true, isSyncable: true, type: m.type }])
+  );
   
   const initialData = await getUserPlaylists(session.accessToken);
   const initialPlaylists = initialData.items;
   
   const finalPlaylists = initialPlaylists.map(p => {
-    const isMegalist = megalistIds.has(p.id);
-    if (isMegalist) {
-      // Marcarla como Megalista y sincronizable si se encuentra en la db
-      return { ...p, isMegalist: true, isSyncable: true };
+    const megalistData = megalistDataMap.get(p.id);
+    if (megalistData) {
+      return {
+        ...p,
+        isMegalist: megalistData.isMegalist,
+        isSyncable: megalistData.isSyncable,
+        playlistType: megalistData.type, // Pasamos el tipo al cliente
+      };
     }
     return p;
   });
@@ -80,7 +87,7 @@ export default async function DashboardPage() {
     />
     
     <FloatingActionBar />
-
+    
     <Footer />
     </div>
     </div>

@@ -18,6 +18,8 @@ import {
   shufflePlaylistsAction
 } from '@/lib/action';
 
+import SurpriseMixDialog from './SurpriseMixDialog';
+
 // Componentes UI de Shadcn
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -36,7 +38,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectItem, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, Shuffle, XCircle, PlusSquare, ListPlus, RefreshCw, Trash2 } from 'lucide-react';
+import { Loader2, Shuffle, XCircle, PlusSquare, ListPlus, RefreshCw, Trash2, Wand2 } from 'lucide-react';
 
 export default function FloatingActionBar() {
   
@@ -84,6 +86,7 @@ export default function FloatingActionBar() {
     sourcePlaylistIds: [],
   });
   const [shuffleBatchSyncChoice, setShuffleBatchSyncChoice] = useState({ open: false });
+  const [surpriseDialog, setSurpriseDialog] = useState({ open: false });
   
   const isProcessing = step === 'fetching' || step === 'processing' || isSyncingAll || isShuffling;
   
@@ -567,7 +570,7 @@ export default function FloatingActionBar() {
       <TooltipContent><p>Limpiar Selección</p></TooltipContent>
       </Tooltip>
       
-      {/* 2. Eliminar */}
+      {/* Eliminar */}
       <Tooltip>
       <TooltipTrigger asChild>
       <Button
@@ -623,6 +626,19 @@ export default function FloatingActionBar() {
         <TooltipContent><p>Sincronizar {syncableMegalists.length} Megalista(s)</p></TooltipContent>
         </Tooltip>
       )}
+      
+      {/* Crear lista sorpresa*/}
+      <Tooltip>
+      <TooltipTrigger asChild>
+      <Button variant="ghost" size="lg" onClick={() => setSurpriseDialog({ open: true })} disabled={isProcessing} className="h-14 w-14 text-blue-500 hover:bg-blue-500/10 hover:text-blue-500 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2">
+      <Wand2 className="h-6 w-6 sm:h-5 sm:w-5" />
+      <span className="hidden sm:inline-block text-sm">Sorpresa</span>
+      </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+      <p>Crear Lista Sorpresa</p>
+      </TooltipContent>
+      </Tooltip>
       
       {/* Añadir */}
       <Tooltip>
@@ -913,6 +929,13 @@ export default function FloatingActionBar() {
     </AlertDialogFooter>
     </AlertDialogContent>
     </AlertDialog>
+    
+    {/* Diálogo de creación de lista sorpresa */}
+    <SurpriseMixDialog
+    isOpen={surpriseDialog.open}
+    onClose={() => setSurpriseDialog({ open: false })}
+    sourceIds={selectedPlaylistIds}
+    />
     
     </>
   );

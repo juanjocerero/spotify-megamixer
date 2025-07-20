@@ -48,9 +48,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw, Pencil, Eye, Shuffle } from 'lucide-react';
+import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw, Pencil, Eye, Shuffle, Wand2 } from 'lucide-react';
 
 import TrackDetailView from './TrackDetailView';
+import SurpriseMixDialog from './SurpriseMixDialog';
 
 type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
 
@@ -138,6 +139,10 @@ export default function PlaylistDisplay({
     open: boolean;
     playlist: SpotifyPlaylist | null;
   }>({ open: false, playlist: null });
+  const [surpriseMixDialog, setSurpriseMixDialog] = useState<{
+    open: boolean;
+    sourceIds: string[];
+  }>({ open: false, sourceIds: [] });
   
   // Referencia para el contenedor de scroll ---
   const parentRef = useRef<HTMLTableSectionElement>(null);
@@ -505,19 +510,19 @@ export default function PlaylistDisplay({
         {playlist.owner.display_name}
         </span>
         </div>
-        {isMegalista && (
-          <Badge
-          variant="outline"
-          className={cn(
-            'whitespace-nowrap shrink-0 mt-1 sm:mt-0',
-            isSyncable
-            ? 'border-green-500 text-green-500'
-            : 'border-yellow-500 text-yellow-500'
-          )}
-          >
+        
+        {/* Lógica de la insignia*/}
+        {playlist.playlistType === 'MEGALIST' && (
+          <Badge variant="outline" className="whitespace-nowrap shrink-0 mt-1 sm:mt-0 border-green-500 text-green-500">
           Megalista
           </Badge>
         )}
+        {playlist.playlistType === 'SURPRISE' && (
+          <Badge variant="outline" className="whitespace-nowrap shrink-0 mt-1 sm:mt-0 border-blue-500 text-blue-500">
+          Sorpresa
+          </Badge>
+        )}
+        
         </div>
         </div>
         
@@ -596,6 +601,11 @@ export default function PlaylistDisplay({
         >
         <Shuffle className="mr-2 h-4 w-4" />
         <span>Reordenar</span>
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSurpriseMixDialog({ open: true, sourceIds: [playlist.id] }); }}>
+        <Wand2 className="mr-2 h-4 w-4" />
+        <span>Crear lista sorpresa</span>
         </DropdownMenuItem>
         
         {/* Eliminar */}
@@ -782,6 +792,13 @@ export default function PlaylistDisplay({
     </AlertDialogFooter>
     </AlertDialogContent>
     </AlertDialog>
+    
+    {/* Diálogo de creación de lista sorpresa */}
+    <SurpriseMixDialog
+    isOpen={surpriseMixDialog.open}
+    onClose={() => setSurpriseMixDialog({ open: false, sourceIds: [] })}
+    sourceIds={surpriseMixDialog.sourceIds}
+    />
     
     {/* Sheet para la vista de canciones */}
     <Sheet open={trackSheetState.open} onOpenChange={(isOpen) => setTrackSheetState({ open: isOpen, playlistId: null, playlistName: null })}>

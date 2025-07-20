@@ -1,4 +1,4 @@
-// prisma/schema.prisma
+// FILE: /prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -10,18 +10,17 @@ datasource db {
   directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
-model Megalist {
-  // El ID de la playlist de Spotify es nuestra clave primaria. Es un String.
-  id                String   @id
-  
-  // El ID del usuario de Spotify. También es un String.
-  spotifyUserId     String
-  
-  // Un array con los IDs de las playlists de origen.
-  sourcePlaylistIds String[]
-  
-  trackCount        Int
+enum PlaylistType {
+  MEGALIST
+  SURPRISE
+}
 
+model Megalist {
+  id                String   @id
+  spotifyUserId     String
+  sourcePlaylistIds String[]
+  trackCount        Int
+  type              PlaylistType @default(MEGALIST)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

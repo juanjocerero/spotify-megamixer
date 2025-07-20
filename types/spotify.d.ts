@@ -21,7 +21,7 @@ export interface SpotifyPlaylist {
   };
   description?: string;
   isMegalist?: boolean;
-  // Podemos añadir más campos de la API de Spotify aquí si los necesitamos
+  playlistType?: 'MEGALIST' | 'SURPRISE';
 }
 
 // Representa un único track de una playlist
