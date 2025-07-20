@@ -63,7 +63,6 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     // Estado local para los inputs dentro de los diálogos
     const [inputValue, setInputValue] = useState('');
     const [sliderValue, setSliderValue] = useState([50]);
-    const { megamixCache, playlistCache } = usePlaylistStore();
     
     // Resetea los valores de los inputs cuando se cierra un diálogo
     if (dialogState.variant === 'none' && (inputValue !== '' || sliderValue[0] !== 50)) {

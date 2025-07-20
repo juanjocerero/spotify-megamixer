@@ -68,22 +68,6 @@ type DialogState =
   };
 };
 
-// Define todos los posibles diálogos o pasos en un flujo
-type DialogVariant =
-| 'none'
-| 'delete'
-| 'shuffle'
-| 'syncPreview'
-| 'syncShuffleChoice'
-| 'createName'
-| 'createShuffleChoice'
-| 'createOverwrite'
-| 'addToSelect'
-| 'addToShuffleChoice'
-| 'surpriseGlobal' 
-| 'surpriseTargeted' 
-| 'surpriseName';
-
 type OpenActionPayload = Exclude<DialogState, { variant: 'none' }>;
 // Acciones que pueden modificar el estado del diálogo
 type ReducerAction =
