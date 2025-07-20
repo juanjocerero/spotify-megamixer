@@ -173,7 +173,6 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     {/* Añadimos un padding para separar la cabecera del contenido */}
     <div className="pt-6">
     <PlaylistDisplay
-    initialPlaylists={initialPlaylists}
     initialNextUrl={initialNextUrl}
     searchTerm={searchTerm}
     showOnlySelected={showOnlySelected} 

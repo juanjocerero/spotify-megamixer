@@ -15,6 +15,7 @@ import HelpButton from '@/components/custom/buttons/HelpButton';
 import SyncAllButton from '@/components/custom/buttons/SyncAllButton';
 import ShuffleAllButton from '@/components/custom/buttons/ShuffleAllButton';
 import Footer from '@/components/custom/Footer';
+import StoreInitializer from '@/components/custom/StoreInitializer';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -67,6 +68,7 @@ export default async function DashboardPage() {
   
   return (
     <ActionProvider>
+    <StoreInitializer playlists={finalPlaylists} />
     <TooltipProvider delayDuration={100}>
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
     <div className="max-w-3xl mx-auto">

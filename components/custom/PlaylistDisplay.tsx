@@ -16,7 +16,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
 
 interface PlaylistDisplayProps {
-  initialPlaylists: SpotifyPlaylist[];
   initialNextUrl: string | null;
   searchTerm: string;
   showOnlySelected: boolean;
@@ -26,7 +25,6 @@ interface PlaylistDisplayProps {
 }
 
 export default function PlaylistDisplay({ 
-  initialPlaylists, 
   initialNextUrl, 
   searchTerm,           
   showOnlySelected,
@@ -40,21 +38,16 @@ export default function PlaylistDisplay({
     isSelected, 
     selectedPlaylistIds, 
     playlistCache,
-    setPlaylistCache, 
     addMoreToCache,
   } = usePlaylistStore();
   
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoading, setIsLoading] = useState(false);
   
-const [trackSheetState, setTrackSheetState] = useState<{ open: boolean; playlist: SpotifyPlaylist | null }>({ open: false, playlist: null });
+  const [trackSheetState, setTrackSheetState] = useState<{ open: boolean; playlist: SpotifyPlaylist | null }>({ open: false, playlist: null });
   
   // Referencia para el contenedor de scroll
   const parentRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    setPlaylistCache(initialPlaylists);
-  }, [initialPlaylists, setPlaylistCache]);
   
   const loadMorePlaylists = useCallback(async () => {
     if (isLoading || !nextUrl || showOnlySelected) return;
