@@ -18,6 +18,7 @@ import {
   shufflePlaylistsAction
 } from '@/lib/action';
 
+import ConfirmationDialog from './ConfirmationDialog';
 import ShuffleChoiceDialog from './ShuffleChoiceDialog';
 import SurpriseMixDialog from './SurpriseMixDialog';
 
@@ -67,11 +68,7 @@ export default function FloatingActionBar() {
   const [addToDialog, setAddToDialog] = useState({ open: false });
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
-  const [batchSyncAlert, setBatchSyncAlert] = useState<{
-    open: boolean;
-    added: number;
-    removed: number;
-  }>({ open: false, added: 0, removed: 0 });
+  const [batchSyncAlert, setBatchSyncAlert] = useState<{ open: boolean; added: number; removed: number; }>({ open: false, added: 0, removed: 0 });
   const [deleteBatchAlertOpen, setDeleteBatchAlertOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [batchShuffleAlertOpen, setBatchShuffleAlertOpen] = useState(false);
@@ -702,27 +699,13 @@ export default function FloatingActionBar() {
     </Dialog>
     
     {/* Diálogo para reordenar o no los elementos de la playlist */}
-    <Dialog open={step === 'askingOrder'} onOpenChange={(isOpen) => !isOpen && setStep('idle')}>
-    <DialogContent>
-    <DialogHeader>
-    <DialogTitle>¿Cómo quieres ordenar las canciones?</DialogTitle>
-    <DialogDescription>
-    Puedes mantener el orden original de las canciones tal y como aparecen en tus playlists, o reordenarlas para crear una mezcla aleatoria.
-    </DialogDescription>
-    </DialogHeader>
-    <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
-    {/* El botón de la izquierda llama a la ejecución sin reordenar */}
-    <Button variant="outline" className="flex-1" onClick={() => handleExecuteMix(false)}>
-    Mantener Orden
-    </Button>
-    {/* El botón de la derecha llama a la ejecución CON reordenado */}
-    <Button className="flex-1" onClick={() => handleExecuteMix(true)}>
-    Reordenar Canciones
-    </Button>
-    </DialogFooter>
-    </DialogContent>
-    </Dialog>
-    
+    <ShuffleChoiceDialog
+    isOpen={step === 'askingOrder'}
+    onClose={() => setStep('idle')}
+    onConfirm={handleExecuteMix}
+    title="¿Cómo quieres ordenar las canciones?"
+    description="Puedes mantener el orden original de las canciones tal y como aparecen en tus playlists, o reordenarlas para crear una mezcla aleatoria."
+    />
     
     {/* Diálogo de progreso */}
     <Dialog open={step === 'processing'}>
@@ -829,103 +812,76 @@ export default function FloatingActionBar() {
     />
     
     {/* Diálogo de confirmación de eliminación en lote */}
-    <AlertDialog open={deleteBatchAlertOpen} onOpenChange={setDeleteBatchAlertOpen}>
-    <AlertDialogContent>
-    <AlertDialogHeader>
-    <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
-    <AlertDialogDescription>
-    Vas a eliminar permanentemente {selectedPlaylistIds.length} playlist(s) de tu librería de Spotify.
-    Esta acción es irreversible.
-    </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-    <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-    <AlertDialogAction
-    disabled={isDeleting}
-    className="text-white bg-red-600 hover:bg-red-700"
-    onClick={handleConfirmDeleteBatch} // Conectamos la función
-    >
-    {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-    {isDeleting ? 'Eliminando...' : 'Sí, eliminar'}
-    </AlertDialogAction>
-    </AlertDialogFooter>
-    </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmationDialog
+    isOpen={deleteBatchAlertOpen}
+    onClose={() => setDeleteBatchAlertOpen(false)}
+    onConfirm={handleConfirmDeleteBatch}
+    isLoading={isDeleting}
+    title="¿Estás absolutamente seguro?"
+    description={
+      <span>
+      Vas a eliminar permanentemente{' '}
+      <strong className="text-white">{selectedPlaylistIds.length} playlist(s)</strong>{' '}
+      de tu librería de Spotify. Esta acción es irreversible.
+      </span>
+    }
+    confirmButtonText="Sí, eliminar"
+    confirmButtonVariant="destructive"
+    />
     
     {/* Diálogo para sincronización en lote */}
-    <AlertDialog open={batchSyncAlert.open} onOpenChange={(isOpen) => setBatchSyncAlert({ ...batchSyncAlert, open: isOpen })}>
-    <AlertDialogContent>
-    <AlertDialogHeader>
-    <AlertDialogTitle>Confirmar Sincronización en Lote</AlertDialogTitle>
-    <AlertDialogDescription asChild>
-    <div>
-    Vas a sincronizar <strong className="text-white">{syncableMegalistsInSelection.length}</strong> Megalista(s).
-    <ul className="list-disc pl-5 mt-3 space-y-1">
-    <li className="text-green-400">
-    Se añadirán un total de <strong className="text-green-300">{batchSyncAlert.added}</strong> canciones.
-    </li>
-    <li className="text-red-400">
-    Se eliminarán un total de <strong className="text-red-300">{batchSyncAlert.removed}</strong> canciones.
-    </li>
-    </ul>
-    <p className="mt-3">
-    Los cambios se aplicarán a cada playlist correspondiente. ¿Deseas continuar?
-    </p>
-    </div>
-    </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-    <AlertDialogAction onClick={handleConfirmBatchSync}>Sí, continuar</AlertDialogAction>
-    </AlertDialogFooter>
-    </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmationDialog
+    isOpen={batchSyncAlert.open}
+    onClose={() => setBatchSyncAlert({ ...batchSyncAlert, open: false })}
+    onConfirm={handleConfirmBatchSync}
+    title="Confirmar Sincronización en Lote"
+    description={
+      <div className="text-sm text-slate-400">
+      Vas a sincronizar{' '}
+      <strong className="text-white">{syncableMegalistsInSelection.length}</strong> Megalista(s).
+      <ul className="list-disc pl-5 mt-3 space-y-1">
+      <li className="text-green-400">
+      Se añadirán un total de{' '}
+      <strong className="text-green-300">{batchSyncAlert.added}</strong> canciones.
+      </li>
+      <li className="text-red-400">
+      Se eliminarán un total de{' '}
+      <strong className="text-red-300">{batchSyncAlert.removed}</strong> canciones.
+      </li>
+      </ul>
+      <p className="mt-3">
+      Los cambios se aplicarán a cada playlist correspondiente. ¿Deseas continuar?
+      </p>
+      </div>
+    }
+    confirmButtonText="Sí, continuar"
+    />
     
-    {/* Diálogo para reordenar en lote */}
-    <Dialog open={shuffleBatchSyncChoice.open} onOpenChange={(isOpen) => !isOpen && setShuffleBatchSyncChoice({ open: false })}>
-    <DialogContent>
-    <DialogHeader>
-    <DialogTitle>¿Reordenar las playlists tras sincronizar?</DialogTitle>
-    <DialogDescription>
-    Solo se reordenarán aquellas playlists que tengan cambios. ¿Quieres reordenar su contenido de forma aleatoria después de actualizarlas?
-    </DialogDescription>
-    </DialogHeader>
-    <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
-    <Button variant="outline" className="flex-1" onClick={() => handleExecuteBatchSync(false)}>
-    No, Mantener Orden
-    </Button>
-    <Button className="flex-1" onClick={() => handleExecuteBatchSync(true)}>
-    Sí, Reordenar
-    </Button>
-    </DialogFooter>
-    </DialogContent>
-    </Dialog>
+    {/* Diálogo para reordenar tras sincronización en lote */}
+    <ShuffleChoiceDialog
+    isOpen={shuffleBatchSyncChoice.open}
+    onClose={() => setShuffleBatchSyncChoice({ open: false })}
+    onConfirm={handleExecuteBatchSync}
+    title="¿Reordenar las playlists tras sincronizar?"
+    description="Solo se reordenarán aquellas playlists que tengan cambios. ¿Quieres reordenar su contenido de forma aleatoria después de actualizarlas?"
+    />
     
-    {/* Diálogo para reordenación en lote */}
-    <AlertDialog open={batchShuffleAlertOpen} onOpenChange={setBatchShuffleAlertOpen}>
-    <AlertDialogContent>
-    <AlertDialogHeader>
-    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-    <AlertDialogDescription>
-    Vas a reordenar las canciones de{' '}
-    <strong className="text-white">{megalistsInSelection.length}</strong> Megalista(s)
-    seleccionada(s). Esta acción reordenará completamente cada lista y no se puede deshacer.
-    Este proceso puede ser lento.
-    </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-    <AlertDialogCancel disabled={isShuffling}>Cancelar</AlertDialogCancel>
-    <AlertDialogAction
-    disabled={isShuffling}
-    className="text-white bg-orange-600 hover:bg-orange-700"
-    onClick={handleConfirmBatchShuffle}
-    >
-    {isShuffling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-    {isShuffling ? 'Reordenando...' : 'Sí, reordenar'}
-    </AlertDialogAction>
-    </AlertDialogFooter>
-    </AlertDialogContent>
-    </AlertDialog>
+    {/* Diálogo para confirmar reordenación en lote */}
+    <ConfirmationDialog
+    isOpen={batchShuffleAlertOpen}
+    onClose={() => setBatchShuffleAlertOpen(false)}
+    onConfirm={handleConfirmBatchShuffle}
+    isLoading={isShuffling}
+    title="¿Estás seguro?"
+    description={
+      <span>
+      Vas a reordenar las canciones de{' '}
+      <strong className="text-white">{megalistsInSelection.length}</strong> Megalista(s) seleccionada(s). Esta acción reordenará completamente cada lista y no se puede deshacer.
+      </span>
+    }
+    confirmButtonText="Sí, reordenar"
+    confirmButtonVariant="destructive" // Usamos destructive para acciones "peligrosas" o irreversibles
+    />
     
     {/* Diálogo de creación de lista sorpresa */}
     <SurpriseMixDialog

@@ -18,6 +18,7 @@ import { usePlaylistStore } from '@/lib/store';
 
 import TrackDetailView from './TrackDetailView';
 import ConfirmationDialog from './ConfirmationDialog';
+import ShuffleChoiceDialog from './ShuffleChoiceDialog';
 import SurpriseMixDialog from './SurpriseMixDialog';
 
 import { toast } from 'sonner';
@@ -694,100 +695,58 @@ export default function PlaylistDisplay({
     </Dialog>
     
     {/* Confirmación de sincronización */}
-    <AlertDialog
-    open={syncPreviewAlert.open}
-    onOpenChange={(isOpen) => {
-      if (!syncPreviewAlert.isExecutingSync) { // Evita cerrar el diálogo mientras se ejecuta la acción
-        setSyncPreviewAlert(prev => ({ ...prev, open: isOpen, playlist: isOpen ? prev.playlist : null }));
-      }
-    }}
-    >
-    <AlertDialogContent>
-    <AlertDialogHeader>
-    <AlertDialogTitle>Confirmar Sincronización</AlertDialogTitle>
-    <AlertDialogDescription asChild>
-    <div>
-    Vas a sincronizar la playlist{' '}
-    <strong className="text-white">{syncPreviewAlert.playlist?.name}</strong>.
-    <ul className="list-disc pl-5 mt-3 space-y-1">
-    <li className="text-green-400">
-    Se añadirán <strong className="text-green-300">{syncPreviewAlert.added}</strong> canciones nuevas.
-    </li>
-    <li className="text-red-400">
-    Se eliminarán <strong className="text-red-300">{syncPreviewAlert.removed}</strong> canciones obsoletas.
-    </li>
-    </ul>
-    <p className="mt-3">
-    La playlist tendrá un total de{' '}
-    <strong className="text-white">{syncPreviewAlert.finalCount}</strong> canciones. ¿Deseas continuar?
-    </p>
-    </div>
-    </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-    <AlertDialogCancel disabled={syncPreviewAlert.isExecutingSync}>Cancelar</AlertDialogCancel>
-    <AlertDialogAction
-    onClick={handleConfirmSync}
-    disabled={syncPreviewAlert.isExecutingSync}
-    className="bg-blue-600 hover:bg-blue-700 text-white"
-    >
-    {syncPreviewAlert.isExecutingSync ? (
-      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-    ) : null}
-    {syncPreviewAlert.isExecutingSync ? 'Sincronizando...' : 'Sí, continuar'}
-    </AlertDialogAction>
-    </AlertDialogFooter>
-    </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmationDialog
+    isOpen={syncPreviewAlert.open}
+    onClose={() => setSyncPreviewAlert(prev => ({ ...prev, open: false }))}
+    onConfirm={handleConfirmSync}
+    isLoading={syncPreviewAlert.isExecutingSync}
+    title="Confirmar Sincronización"
+    description={
+      <div>
+      Vas a sincronizar la playlist{' '}
+      <strong className="text-white">{syncPreviewAlert.playlist?.name}</strong>.
+      <ul className="list-disc pl-5 mt-3 space-y-1">
+      <li className="text-green-400">Se añadirán <strong className="text-green-300">{syncPreviewAlert.added}</strong> canciones nuevas.</li>
+      <li className="text-red-400">Se eliminarán <strong className="text-red-300">{syncPreviewAlert.removed}</strong> canciones obsoletas.</li>
+      </ul>
+      <p className="mt-3">
+      La playlist tendrá un total de{' '}
+      <strong className="text-white">{syncPreviewAlert.finalCount}</strong> canciones. ¿Deseas continuar?
+      </p>
+      </div>
+    }
+    confirmButtonText="Sí, continuar"
+    />
     
     {/* Diálogo para la decisión de reordenado */}
-    <Dialog open={shuffleSyncChoice.open} onOpenChange={(isOpen) => !isOpen && setShuffleSyncChoice({ open: false, playlist: null })}>
-    <DialogContent>
-    <DialogHeader>
-    <DialogTitle>¿Reordenar la playlist tras sincronizar?</DialogTitle>
-    <DialogDescription>
-    La playlist &quot;{shuffleSyncChoice.playlist?.name}&quot; será actualizada. ¿Quieres reordenar su contenido de forma aleatoria después?
-    </DialogDescription>
-    </DialogHeader>
-    <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
-    <Button variant="outline" className="flex-1" onClick={() => handleExecuteSync(false)}>
-    No, Mantener Orden
-    </Button>
-    <Button className="flex-1" onClick={() => handleExecuteSync(true)}>
-    Sí, Reordenar
-    </Button>
-    </DialogFooter>
-    </DialogContent>
-    </Dialog>
+    <ShuffleChoiceDialog
+    isOpen={shuffleSyncChoice.open}
+    onClose={() => setShuffleSyncChoice({ open: false, playlist: null })}
+    onConfirm={handleExecuteSync}
+    title="¿Reordenar la playlist tras sincronizar?"
+    description={
+      <span>
+      La playlist <strong className="text-white">"{shuffleSyncChoice.playlist?.name}"</strong> será actualizada. ¿Quieres reordenar su contenido de forma aleatoria después?
+      </span>
+    }
+    />
     
     {/* Confirmación de reordenado de lista */}
-    <AlertDialog
-    open={shuffleAlert.open}
-    onOpenChange={(open) => !shuffleAlert.isShuffling && setShuffleAlert({ ...shuffleAlert, open })}
-    >
-    <AlertDialogContent>
-    <AlertDialogHeader>
-    <AlertDialogTitle>Confirmar Reordenado</AlertDialogTitle>
-    <AlertDialogDescription>
-    Vas a reordenar todas las canciones de la playlist{' '}
-    <strong className="text-white">{shuffleAlert.playlist?.name}</strong>. Esta acción
-    reordenará completamente la lista y no se puede deshacer. Este proceso puede ser lento.
-    ¿Deseas continuar?
-    </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-    <AlertDialogCancel disabled={shuffleAlert.isShuffling}>Cancelar</AlertDialogCancel>
-    <AlertDialogAction
-    onClick={handleConfirmShuffle}
-    disabled={shuffleAlert.isShuffling}
-    className="bg-orange-600 hover:bg-orange-700 text-white"
-    >
-    {shuffleAlert.isShuffling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-    {shuffleAlert.isShuffling ? 'Reordenando...' : 'Sí, reordenar'}
-    </AlertDialogAction>
-    </AlertDialogFooter>
-    </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmationDialog
+    isOpen={shuffleAlert.open}
+    onClose={() => setShuffleAlert({ ...shuffleAlert, open: false })}
+    onConfirm={handleConfirmShuffle}
+    isLoading={shuffleAlert.isShuffling}
+    title="Confirmar Reordenado"
+    description={
+      <span>
+      Vas a reordenar todas las canciones de la playlist{' '}
+      <strong className="text-white">{shuffleAlert.playlist?.name}</strong>. Esta acción no se puede deshacer.
+      </span>
+    }
+    confirmButtonText="Sí, reordenar"
+    confirmButtonVariant="destructive"
+    />
     
     {/* Diálogo de creación de lista sorpresa */}
     <SurpriseMixDialog

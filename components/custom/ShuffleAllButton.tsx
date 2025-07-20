@@ -3,24 +3,12 @@
 import { useState, useMemo } from 'react';
 import { usePlaylistStore } from '@/lib/store';
 import { shufflePlaylistsAction } from '@/lib/action';
+
+import ConfirmationDialog from './ConfirmationDialog';
+
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogTitle,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Shuffle, Loader2 } from 'lucide-react';
 
 export default function ShuffleAllButton() {
@@ -72,35 +60,21 @@ export default function ShuffleAllButton() {
     <p>Reordenar {allMegalists.length} Megalista(s)</p>
     </TooltipContent>
     </Tooltip>
-    <AlertDialog
-    open={shuffleAlertOpen}
-    onOpenChange={(isOpen) => !isLoading && setShuffleAlertOpen(isOpen)}
-    >
-    <AlertDialogContent>
-    <AlertDialogHeader>
-    <AlertDialogTitle>Confirmar Reordenado Global</AlertDialogTitle>
-    <AlertDialogDescription asChild>
-    <div>
-    Vas a reordenar todas tus{' '}
-    <strong className="text-white">{allMegalists.length}</strong> Megalistas. Esta
-    acción reordenará completamente cada lista y no se puede deshacer. Este proceso
-    puede ser lento. ¿Deseas continuar?
-    </div>
-    </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-    <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
-    <AlertDialogAction
-    onClick={handleConfirmGlobalShuffle}
-    disabled={isLoading}
-    className="bg-orange-600 hover:bg-orange-700 text-white"
-    >
-    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-    {isLoading ? 'Reordenando...' : 'Sí, continuar'}
-    </AlertDialogAction>
-    </AlertDialogFooter>
-    </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmationDialog
+    isOpen={shuffleAlertOpen}
+    onClose={() => setShuffleAlertOpen(false)}
+    onConfirm={handleConfirmGlobalShuffle}
+    isLoading={isLoading}
+    title="Confirmar Reordenado Global"
+    description={
+      <div>
+      Vas a reordenar todas tus{' '}
+      <strong className="text-white">{allMegalists.length}</strong> Megalistas. Esta acción reordenará completamente cada lista y no se puede deshacer.
+      </div>
+    }
+    confirmButtonText="Sí, continuar"
+    confirmButtonVariant="destructive"
+    />
     </TooltipProvider>
   );
 }

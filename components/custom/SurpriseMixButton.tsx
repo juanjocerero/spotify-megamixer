@@ -7,6 +7,8 @@ import { SpotifyPlaylist } from '@/types/spotify';
 import { shuffleArray } from '@/lib/utils';
 import { createSurpriseMegalist, overwriteSurpriseMegalist } from '@/lib/action';
 
+import ConfirmationDialog from './ConfirmationDialog';
+
 // UI Components
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -262,20 +264,19 @@ export default function SurpriseMixButton() {
     </Dialog>
     
     {/* --- Confirmar sobrescritura --- */}
-    <AlertDialog open={overwriteAlert.open} onOpenChange={(isOpen) => !isOpen && setOverwriteAlert({ open: false, playlistId: null })}>
-    <AlertDialogContent>
-    <AlertDialogHeader>
-    <AlertDialogTitle>La playlist ya existe</AlertDialogTitle>
-    <AlertDialogDescription>
-    Ya tienes una playlist llamada &quot;{playlistName}&quot;. ¿Quieres reemplazar su contenido con este nuevo Megamix? Esta acción no se puede deshacer.
-    </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-    <AlertDialogCancel onClick={() => setOverwriteAlert({ open: false, playlistId: null })}>Cancelar</AlertDialogCancel>
-    <AlertDialogAction onClick={handleConfirmOverwrite}>Sí, sobrescribir</AlertDialogAction>
-    </AlertDialogFooter>
-    </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmationDialog
+    isOpen={overwriteAlert.open}
+    onClose={() => setOverwriteAlert({ open: false, playlistId: null })}
+    onConfirm={handleConfirmOverwrite}
+    title="La playlist ya existe"
+    description={
+      <span>
+      Ya tienes una playlist llamada <strong className="text-white">"{playlistName}"</strong>. ¿Quieres reemplazar su contenido con esta nueva lista? Esta acción no se puede deshacer.
+      </span>
+    }
+    confirmButtonText="Sí, sobrescribir"
+    confirmButtonVariant="destructive"
+    />
     
     </TooltipProvider>
   );

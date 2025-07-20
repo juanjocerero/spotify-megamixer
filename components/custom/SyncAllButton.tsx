@@ -4,6 +4,10 @@
 import { useState, useMemo } from 'react';
 import { usePlaylistStore } from '@/lib/store';
 import { previewBatchSync, executeMegalistSync } from '@/lib/action';
+
+import ConfirmationDialog from './ConfirmationDialog';
+import ShuffleChoiceDialog from './ShuffleChoiceDialog';
+
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -118,63 +122,42 @@ export default function SyncAllButton() {
     </TooltipContent>
     </Tooltip>
     
-    <AlertDialog
-    open={syncAlert.open}
-    onOpenChange={(isOpen) => !syncAlert.isExecuting && setSyncAlert(prev => ({ ...prev, open: isOpen }))}
-    >
-    <AlertDialogContent>
-    <AlertDialogHeader>
-    <AlertDialogTitle>Confirmar Sincronización Global</AlertDialogTitle>
-    <AlertDialogDescription asChild>
-    <div>
-    Vas a sincronizar todas tus <strong className="text-white">{syncableMegalists.length}</strong> Megalistas.
-    <ul className="list-disc pl-5 mt-3 space-y-1">
-    <li className="text-green-400">
-    Se añadirán un total de <strong className="text-green-300">{syncAlert.added}</strong> canciones.
-    </li>
-    <li className="text-red-400">
-    Se eliminarán un total de <strong className="text-red-300">{syncAlert.removed}</strong> canciones.
-    </li>
-    </ul>
-    <p className="mt-3">
-    Los cambios se aplicarán a cada playlist correspondiente. ¿Deseas continuar?
-    </p>
-    </div>
-    </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-    <AlertDialogCancel disabled={syncAlert.isExecuting}>Cancelar</AlertDialogCancel>
-    <AlertDialogAction
-    onClick={handleConfirmGlobalSync}
-    disabled={syncAlert.isExecuting}
-    className="bg-blue-600 hover:bg-blue-700 text-white"
-    >
-    {syncAlert.isExecuting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-    {syncAlert.isExecuting ? 'Sincronizando...' : 'Sí, continuar'}
-    </AlertDialogAction>
-    </AlertDialogFooter>
-    </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmationDialog
+    isOpen={syncAlert.open}
+    onClose={() => setSyncAlert(prev => ({ ...prev, open: false }))}
+    onConfirm={handleConfirmGlobalSync}
+    isLoading={isLoading}
+    title="Confirmar Sincronización Global"
+    description={
+      <div className="text-sm text-slate-400"> {/* Puedes usar un div o un fragmento <> */}
+      Vas a sincronizar todas tus{' '}
+      <strong className="text-white">{syncableMegalists.length}</strong> Megalistas.
+      <ul className="list-disc pl-5 mt-3 space-y-1">
+      <li className="text-green-400">
+      Se añadirán un total de{' '}
+      <strong className="text-green-300">{syncAlert.added}</strong> canciones.
+      </li>
+      <li className="text-red-400">
+      Se eliminarán un total de{' '}
+      <strong className="text-red-300">{syncAlert.removed}</strong> canciones.
+      </li>
+      </ul>
+      <p className="mt-3">
+      Los cambios se aplicarán a cada playlist correspondiente. ¿Deseas continuar?
+      </p>
+      </div>
+    }
+    confirmButtonText="Sí, continuar"
+    />
     
     {/* Diálogo global */}
-    <Dialog open={shuffleGlobalSyncChoice.open} onOpenChange={(isOpen) => !isOpen && setShuffleGlobalSyncChoice({ open: false })}>
-    <DialogContent>
-    <DialogHeader>
-    <DialogTitle>¿Reordenar las playlists tras sincronizar?</DialogTitle>
-    <DialogDescription>
-    Solo se reordenarán aquellas playlists que tengan cambios. ¿Quieres reordenar su contenido de forma aleatoria después de actualizarlas?
-    </DialogDescription>
-    </DialogHeader>
-    <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
-    <Button variant="outline" className="flex-1" onClick={() => handleExecuteGlobalSync(false)}>
-    No, Mantener Orden
-    </Button>
-    <Button className="flex-1" onClick={() => handleExecuteGlobalSync(true)}>
-    Sí, Reordenar
-    </Button>
-    </DialogFooter>
-    </DialogContent>
-    </Dialog>
+    <ShuffleChoiceDialog
+    isOpen={shuffleGlobalSyncChoice.open}
+    onClose={() => setShuffleGlobalSyncChoice({ open: false })}
+    onConfirm={handleExecuteGlobalSync}
+    title="¿Reordenar las playlists tras sincronizar?"
+    description="Solo se reordenarán aquellas playlists que tengan cambios. ¿Quieres reordenar su contenido de forma aleatoria después de actualizarlas?"
+    />
     </TooltipProvider>
   );
 }
