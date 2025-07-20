@@ -21,14 +21,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,} from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { MoreHorizontal, Trash2, Loader2, Music, Pencil, Eye, Shuffle, Wand2 } from 'lucide-react';
@@ -65,68 +57,30 @@ export default function PlaylistDisplay({
     updatePlaylistInCache,
   } = usePlaylistStore();
   
-  const { isProcessing, openSyncDialog, openShuffleDialog, openDeleteDialog, openSurpriseMixDialog } = useActions();
+  const { 
+    isProcessing, 
+    openEditDialog, 
+    openSyncDialog, 
+    openShuffleDialog, 
+    openDeleteDialog, 
+    openSurpriseMixDialog 
+  } = useActions();
   
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
-  const [editState, setEditState] = useState<{
-    open: boolean;
-    playlist: SpotifyPlaylist | null;
-    newName: string;
-    newDescription: string;
-  }>({
-    open: false,
-    playlist: null,
-    newName: '',
-    newDescription: '',
-  });
-  const [isSaving, setIsSaving] = useState(false);
+  
   const [trackSheetState, setTrackSheetState] = useState<{ open: boolean; playlistId: string | null; playlistName: string | null 
   }>({ 
     open: false, playlistId: null, playlistName: null }
   );
-
+  
   // Referencia para el contenedor de scroll ---
   const parentRef = useRef<HTMLTableSectionElement>(null);
   
   useEffect(() => {
     setPlaylistCache(initialPlaylists);
   }, [initialPlaylists, setPlaylistCache]);
-  
-  // Maneja el guardado de cambios en la edición de información de playlists
-  const handleSaveChanges = async () => {
-    if (!editState.playlist || !editState.newName.trim()) {
-      toast.error('El nombre de la playlist no puede estar vacío.');
-      return;
-    }
-    
-    setIsSaving(true);
-    const toastId = toast.loading('Guardando cambios...');
-    
-    try {
-      await updatePlaylistDetailsAction(
-        editState.playlist.id,
-        editState.newName,
-        editState.newDescription
-      );
-      
-      // Actualizamos la caché local para que el cambio sea instantáneo
-      updatePlaylistInCache(editState.playlist.id, {
-        name: editState.newName,
-        description: editState.newDescription,
-      });
-      
-      toast.success('¡Playlist actualizada con éxito!', { id: toastId });
-      setEditState({ open: false, playlist: null, newName: '', newDescription: '' });
-      
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo guardar.';
-      toast.error(message, { id: toastId });
-    } finally {
-      setIsSaving(false);
-    }
-  };
   
   const loadMorePlaylists = useCallback(async () => {
     if (isLoading || !nextUrl || showOnlySelected) return;
@@ -402,12 +356,7 @@ export default function PlaylistDisplay({
         <DropdownMenuItem
         onClick={(e) => {
           e.stopPropagation();
-          setEditState({
-            open: true,
-            playlist: playlist,
-            newName: playlist.name,
-            newDescription: playlist.description || '',
-          });
+          openEditDialog(playlist);
         }}
         >
         <Pencil className="mr-2 h-4 w-4" />
@@ -450,7 +399,7 @@ export default function PlaylistDisplay({
         onClick={(e) => { 
           e.stopPropagation(); 
           openDeleteDialog([{ id: playlist.id, name: playlist.name 
-
+            
           }]); }}>
           <Trash2 className="mr-2 h-4 w-4" />
           Eliminar
@@ -464,50 +413,6 @@ export default function PlaylistDisplay({
       </div>
       </div>
       </div>
-      
-      {/* Diálogo de edición */}
-      <Dialog open={editState.open} onOpenChange={(isOpen) => setEditState({ ...editState, open: isOpen })}>
-      <DialogContent>
-      <DialogHeader>
-      <DialogTitle>Editar: {editState.playlist?.name}</DialogTitle>
-      <DialogDescription>
-      Modifica el nombre y la descripción de tu playlist. Los cambios se reflejarán en Spotify.
-      </DialogDescription>
-      </DialogHeader>
-      <div className="grid gap-4 py-4">
-      <div className="grid gap-2">
-      <Label htmlFor="playlist-name">Nombre</Label>
-      <Input
-      id="playlist-name"
-      value={editState.newName}
-      onChange={(e) => setEditState({ ...editState, newName: e.target.value })}
-      />
-      </div>
-      <div className="grid gap-2">
-      <Label htmlFor="playlist-description">Descripción</Label>
-      <Textarea
-      id="playlist-description"
-      value={editState.newDescription}
-      onChange={(e) => setEditState({ ...editState, newDescription: e.target.value })}
-      placeholder="Añade una descripción (opcional)"
-      />
-      </div>
-      </div>
-      <DialogFooter>
-      <Button
-      variant="outline"
-      onClick={() => setEditState({ ...editState, open: false })}
-      disabled={isSaving}
-      >
-      Cancelar
-      </Button>
-      <Button onClick={handleSaveChanges} disabled={isSaving}>
-      {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-      </Button>
-      </DialogFooter>
-      </DialogContent>
-      </Dialog>
       
       {/* Sheet para la vista de canciones */}
       <Sheet open={trackSheetState.open} onOpenChange={(isOpen) => setTrackSheetState({ open: isOpen, playlistId: null, playlistName: null })}>

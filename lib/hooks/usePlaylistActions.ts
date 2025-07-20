@@ -2,7 +2,7 @@
 
 'use client';
 
-import { ActionResult } from '@/types/spotify';
+import { ActionResult, SpotifyPlaylist } from '@/types/spotify';
 import { useReducer, useState, useCallback } from 'react';
 import { usePlaylistStore } from '@/lib/store';
 import {
@@ -16,6 +16,7 @@ import {
   addTracksToMegalistAction,
   createOrUpdateSurpriseMixAction,
   getUniqueTrackCountFromPlaylistsAction,
+  updatePlaylistDetailsAction
 } from '@/lib/action';
 import { shuffleArray } from '@/lib/utils';
 
@@ -26,6 +27,7 @@ export type ActionPlaylist = { id: string; name: string };
 
 type DialogState =
 | { variant: 'none' }
+| { variant: 'edit'; props: { playlist: SpotifyPlaylist } }
 | { variant: 'delete'; props: { playlists: ActionPlaylist[] } }
 | { variant: 'shuffle'; props: { playlists: ActionPlaylist[] } }
 | {
@@ -68,6 +70,7 @@ type DialogState =
     overwriteId?: string;
   };
 };
+
 
 type OpenActionPayload = Exclude<DialogState, { variant: 'none' }>;
 // Acciones que pueden modificar el estado del diálogo
@@ -166,7 +169,25 @@ export function usePlaylistActions() {
     }
   }, [clearSelection]);
   
-  // Lógica de negocio (qué hacer al confirmar)
+  const handleConfirmEdit = async (newName: string, newDescription: string) => {
+    if (dialogState.variant !== 'edit') return;
+    const { playlist } = dialogState.props;
+    dispatch({ type: 'CLOSE' });
+    
+    await executeAction(
+      updatePlaylistDetailsAction,
+      [playlist.id, newName, newDescription],
+      {
+        loading: 'Guardando cambios en la playlist...',
+        success: '¡Playlist actualizada con éxito!',
+        error: 'No se pudieron guardar los cambios.',
+        onSuccess: () => {
+          updatePlaylistInCache(playlist.id, { name: newName, description: newDescription });
+        },
+      }
+    );
+  };
+  
   const handleConfirmDelete = async () => {
     if (dialogState.variant !== 'delete') return;
     
@@ -219,12 +240,8 @@ export function usePlaylistActions() {
         onSuccess: (results, items) => {
           let successCount = 0;
           results.forEach((result, index) => {
-            // ANTES: if (result.status === 'fulfilled' && result.value.success) {
-            // AHORA: Verificamos el estado de la promesa Y el de nuestra acción.
             if (result.status === 'fulfilled' && result.value.success === true) {
               successCount++;
-              // ANTES: const { finalCount } = result.value;
-              // AHORA: el payload está en la propiedad `data`.
               const { id, finalCount } = result.value.data;
               updatePlaylistInCache(id, { trackCount: finalCount });
             } else {
@@ -250,7 +267,7 @@ export function usePlaylistActions() {
     shouldShuffle: boolean,
     mode: 'create' | 'update' | 'replace'
   ) => {
-    // La guarda de tipo inicial sigue siendo una buena práctica.
+    // La guarda de tipo inicial
     if (
       !(
         (mode === 'create' && dialogState.variant === 'createShuffleChoice') ||
@@ -402,6 +419,10 @@ export function usePlaylistActions() {
   };
   
   // Acciones públicas (para abrir los diálogos)
+  const openEditDialog = (playlist: SpotifyPlaylist) => {
+    dispatch({ type: 'OPEN', payload: { variant: 'edit', props: { playlist } } });
+  };
+  
   const openDeleteDialog = (playlists: ActionPlaylist[]) => {
     if (playlists.length === 0) return;
     dispatch({ type: 'OPEN', payload: { variant: 'delete', props: { playlists } } });
@@ -444,7 +465,7 @@ export function usePlaylistActions() {
   
   const openAddToMegalistDialog = (sourceIds: string[]) => {
     if (sourceIds.length === 0) return;
-
+    
     const existingMegalists = playlistCache.filter(p => p.playlistType === 'MEGALIST');
     if (existingMegalists.length === 0) {
       toast.info('No tienes ninguna Megalista creada por la app a la que añadir canciones.');
@@ -475,6 +496,7 @@ export function usePlaylistActions() {
   
   // Callbacks para los componentes de diálogos
   const dialogCallbacks = {
+    onConfirmEdit: handleConfirmEdit,
     onClose: () => dispatch({ type: 'CLOSE' }),
     
     // Callbacks genéricos para diálogos de confirmación
@@ -540,6 +562,7 @@ export function usePlaylistActions() {
     isProcessing,
     dialogState,
     dialogCallbacks,
+    openEditDialog,
     openDeleteDialog,
     openShuffleDialog,
     openSyncDialog,

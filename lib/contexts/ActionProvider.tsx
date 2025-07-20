@@ -3,9 +3,11 @@
 'use client';
 
 import React, { createContext, useContext, useMemo, useState } from 'react';
+import { SpotifyPlaylist } from '@/types/spotify';
 import { usePlaylistActions, ActionPlaylist } from '@/lib/hooks/usePlaylistActions';
 
 import CreateMegalistNameDialog from '@/components/custom/dialogs/CreateMegalistNameDialog';
+import EditPlaylistDialog from '@/components/custom/dialogs/EditPlaylistDialog';
 import AddToMegalistDialog from '@/components/custom/dialogs/AddToMegalistDialog';
 import ShufflePlaylistDialog from '@/components/custom/dialogs/ShufflePlaylistDialog';
 import SyncPreviewDialog from '@/components/custom/dialogs/SyncPreviewDialog';
@@ -21,6 +23,7 @@ import ShuffleChoiceDialog from '@/components/custom/ShuffleChoiceDialog';
 // Definición del tipo para el contexto
 interface ActionContextType {
   isProcessing: boolean;
+  openEditDialog: (playlist: SpotifyPlaylist) => void;
   openDeleteDialog: (playlists: ActionPlaylist[]) => void;
   openShuffleDialog: (playlists: ActionPlaylist[]) => void;
   openSyncDialog: (playlists: ActionPlaylist[]) => Promise<void>;
@@ -38,6 +41,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     isProcessing,
     dialogState,
     dialogCallbacks,
+    openEditDialog,
     openDeleteDialog,
     openShuffleDialog,
     openSyncDialog,
@@ -49,13 +53,23 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
   // El valor del contexto solo expone lo que los componentes hijos necesitan llamar
   const contextValue = useMemo(() => ({
     isProcessing,
+    openEditDialog,
     openDeleteDialog,
     openShuffleDialog,
     openSyncDialog,
     openCreateMegalistDialog,
     openAddToMegalistDialog,
     openSurpriseMixDialog,
-  }), [isProcessing, openDeleteDialog, openShuffleDialog, openSyncDialog, openCreateMegalistDialog, openAddToMegalistDialog, openSurpriseMixDialog]);
+  }), [
+    isProcessing, 
+    openDeleteDialog, 
+    openShuffleDialog, 
+    openSyncDialog, 
+    openCreateMegalistDialog, 
+    openAddToMegalistDialog, 
+    openSurpriseMixDialog, 
+    openEditDialog
+  ]);
   
   // --- Componente interno para renderizar los diálogos ---
   const DialogRenderer = () => {
@@ -70,6 +84,17 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     }
     
     switch (dialogState.variant) {
+      case 'edit': {
+        return (
+          <EditPlaylistDialog
+          isOpen={true}
+          playlist={dialogState.props.playlist}
+          onClose={dialogCallbacks.onClose}
+          onConfirm={dialogCallbacks.onConfirmEdit}
+          />
+        );
+      }
+
       case 'delete': {
         return (
           <DeletePlaylistDialog
