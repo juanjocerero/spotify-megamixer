@@ -52,17 +52,17 @@ export default function FaqPage() {
           <div className="space-y-4">
             <div>
               <h3 className="font-semibold text-purple-300">Crear una Megalista</h3>
-              <p>Selecciona 2 o más playlists → pulsa el botón verde <strong>"Crear"</strong>. Tras confirmar el nombre, la app te preguntará si quieres <strong className="text-orange-400">reordenar</strong> la mezcla inicial o mantener el orden original.</p>
+              <p>Selecciona 2 o más playlists → pulsa el botón verde <strong>&quot;Crear&quot;</strong>. Tras confirmar el nombre, la app te preguntará si quieres <strong className="text-orange-400">reordenar</strong> la mezcla inicial o mantener el orden original.</p>
             </div>
             <div>
               <h3 className="font-semibold text-purple-300">Añadir a una Playlist Existente</h3>
-              <p>Selecciona playlists → pulsa el botón <strong>"Añadir"</strong> → elige la playlist de destino. Tras añadir las canciones nuevas, se te preguntará si quieres <strong className="text-orange-400">reordenar</strong> el resultado. <strong className="text-amber-300">Importante:</strong> si añades canciones a una "Lista Sorpresa", esta se convertirá automáticamente en una "Megalista".</p>
+              <p>Selecciona playlists → pulsa el botón <strong>&quot;Añadir&quot;</strong> → elige la playlist de destino. Tras añadir las canciones nuevas, se te preguntará si quieres <strong className="text-orange-400">reordenar</strong> el resultado. <strong className="text-amber-300">Importante:</strong> si añades canciones a una &quot;Lista Sorpresa&quot;, esta se convertirá automáticamente en una &quot;Megalista&quot;.</p>
             </div>
             <div>
               <h3 className="font-semibold text-purple-300 flex items-center gap-2">Crear una Lista Sorpresa ✨</h3>
               <p>Genera una playlist con un número de canciones aleatorias. Tienes tres formas de hacerlo:</p>
               <ul className="list-decimal list-inside space-y-2 pl-4 pt-2">
-                <li><strong>Desde 1 playlist:</strong> Pulsa el menú <code className="bg-slate-700 px-1 rounded">⋯</code> de cualquier playlist y elige "Crear lista sorpresa".</li>
+                <li><strong>Desde una playlist:</strong> Pulsa el menú <code className="bg-slate-700 px-1 rounded">⋯</code> de cualquier playlist y elige &quot;Crear lista sorpresa&quot;.</li>
                 <li><strong>Desde varias playlists:</strong> Selecciona varias playlists y pulsa el botón <Wand2 className="inline h-4 w-4 text-blue-400"/> de la barra inferior.</li>
                 <li><strong>Totalmente aleatoria:</strong> Pulsa el botón <Wand2 className="inline h-4 w-4"/> en la cabecera de la aplicación para usar hasta 50 playlists al azar de toda tu librería.</li>
               </ul>
@@ -97,8 +97,8 @@ export default function FaqPage() {
         {/* Gestión avanzada */}
         <SectionCard icon={<Edit3 className="h-6 w-6 text-rose-400" />} title="6. Gestión Avanzada de Playlists">
           <ul className="list-disc list-inside space-y-3 text-slate-300">
-            <li><strong>Ver Canciones:</strong> Usa la opción <Eye className="inline h-4 w-4" /> <strong>"Ver Canciones"</strong> en su menú para ver la lista completa en un panel lateral.</li>
-            <li><strong>Editar Nombre/Descripción:</strong> Desde el menú <code className="bg-slate-700 px-1 rounded">⋯</code> → <strong>"Editar detalles"</strong>. Funciona para CUALQUIER playlist.</li>
+            <li><strong>Ver Canciones:</strong> Usa la opción <Eye className="inline h-4 w-4" /> <strong>&quot;Ver Canciones&quot;</strong> en su menú para ver la lista completa en un panel lateral.</li>
+            <li><strong>Editar Nombre/Descripción:</strong> Desde el menú <code className="bg-slate-700 px-1 rounded">⋯</code> → <strong>&quot;Editar detalles&quot;</strong>. Funciona para CUALQUIER playlist.</li>
             <li><strong>Eliminar Playlists:</strong> Individualmente desde el menú <code className="bg-slate-700 px-1 rounded">⋯</code> o en lote con el botón <Trash2 className="inline h-4 w-4 text-rose-500" />.</li>
             <li><strong>Reanudar Mezclas:</strong> Si una creación de playlist muy grande falla, aparecerá un botón para <strong>reanudarla</strong> justo donde se quedó.</li>
           </ul>
