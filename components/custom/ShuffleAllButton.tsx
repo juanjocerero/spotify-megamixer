@@ -1,27 +1,37 @@
+// components/custom/ShuffleAllButton.tsx
+
 'use client';
 
 import { useMemo } from 'react';
-
+import { toast } from 'sonner';
+import { Shuffle } from 'lucide-react';
 import { usePlaylistStore } from '@/lib/store';
 import { useActions } from '@/lib/contexts/ActionProvider';
-
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Shuffle } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export default function ShuffleAllButton() {
   const { megamixCache } = usePlaylistStore();
-  const { actions, isProcessing } = useActions();
+  // Pedimos openShuffleDialog directamente en lugar de 'actions'
+  const { openShuffleDialog, isProcessing } = useActions();
   
-  const allMegalists = useMemo(() => megamixCache.filter(p => p.isMegalist), [megamixCache]);
+  const allMegalists = useMemo(
+    () => megamixCache.filter((p) => p.isMegalist),
+    [megamixCache]
+  );
   
   const handleShuffleAll = () => {
     if (allMegalists.length === 0) {
-      toast.info("No se encontraron Megalistas para reordenar.");
+      toast.info('No se encontraron Megalistas para reordenar.');
       return;
     }
-    actions.shufflePlaylists(allMegalists.map(p => ({ id: p.id, name: p.name })));
+    // Llamamos a la nueva función del hook
+    openShuffleDialog(allMegalists.map((p) => ({ id: p.id, name: p.name })));
   };
   
   return (
@@ -34,13 +44,17 @@ export default function ShuffleAllButton() {
     onClick={handleShuffleAll}
     disabled={isProcessing || allMegalists.length === 0}
     >
-    {isProcessing ? <Shuffle className="h-5 w-5 text-gray-500" /> : <Shuffle className="h-5 w-5" />}
+    <Shuffle className="h-5 w-5" />
     </Button>
     </TooltipTrigger>
     <TooltipContent>
-    <p>Reordenar {allMegalists.length} Megalista(s)</p>
-    </TooltipContent>
-    </Tooltip>
-    </TooltipProvider>
-  );
-}
+    <p>
+    {allMegalists.length > 0
+      ? `Reordenar ${allMegalists.length} Megalista(s)`
+      : 'No hay Megalistas para reordenar'}
+      </p>
+      </TooltipContent>
+      </Tooltip>
+      </TooltipProvider>
+    );
+  }

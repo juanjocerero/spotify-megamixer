@@ -347,6 +347,7 @@ export function usePlaylistActions() {
       }
       toast.dismiss(toastId);
     } catch (err) {
+      console.error('Error obteniendo la información de las playlists', err);
       toast.error('No se pudo obtener la información de las playlists.', { id: toastId });
     } finally {
       setIsProcessing(false);
