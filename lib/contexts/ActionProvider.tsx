@@ -6,15 +6,18 @@ import React, { createContext, useContext, useMemo, useState } from 'react';
 import { usePlaylistActions, ActionPlaylist } from '@/lib/hooks/usePlaylistActions';
 import { usePlaylistStore } from '@/lib/store';
 
+import CreateMegalistNameDialog from '@/components/custom/dialogs/CreateMegalistNameDialog';
+import AddToMegalistDialog from '@/components/custom/dialogs/AddToMegalistDialog';
+import ShufflePlaylistDialog from '@/components/custom/dialogs/ShufflePlaylistDialog';
+import SyncPreviewDialog from '@/components/custom/dialogs/SyncPreviewDialog';
+import SurpriseNameDialog from '@/components/custom/dialogs/SurpriseNameDialog';
+import SurpriseGlobalDialog from '@/components/custom/dialogs/SurpriseGlobalDialog';
+import SurpriseTargetedDialog from '@/components/custom/dialogs/SurpriseTargetedDialog';
+import CreateOverwriteDialog from '@/components/custom/dialogs/CreateOverwriteDialog';
+import DeletePlaylistDialog from '@/components/custom/dialogs/DeletePlaylistDialog';
+
 // Componentes de Diálogo y UI
-import ConfirmationDialog from '@/components/custom/ConfirmationDialog';
 import ShuffleChoiceDialog from '@/components/custom/ShuffleChoiceDialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 
 // Definición del tipo para el contexto
 interface ActionContextType {
@@ -70,212 +73,124 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     
     switch (dialogState.variant) {
       case 'delete': {
-        const playlists = dialogState.props.playlists || [];
-        const description = playlists.length === 1
-        ? `Esta acción es irreversible. Vas a eliminar la playlist "${playlists[0].name}".`
-        : `Vas a eliminar permanentemente ${playlists.length} playlist(s). Esta acción es irreversible.`;
         return (
-          <ConfirmationDialog
+          <DeletePlaylistDialog
           isOpen={true}
+          playlists={dialogState.props.playlists}
           onClose={dialogCallbacks.onClose}
           onConfirm={dialogCallbacks.onConfirmDelete}
-          isLoading={isProcessing}
-          title="¿Estás absolutamente seguro?"
-          description={description}
-          confirmButtonText="Sí, eliminar"
-          confirmButtonVariant="destructive"
           />
         );
       }
       
       case 'shuffle': {
-        const playlists = dialogState.props.playlists || [];
-        const description = playlists.length === 1
-        ? `Vas a reordenar todas las canciones de la playlist "${playlists[0].name}". Esta acción no se puede deshacer.`
-        : `Vas a reordenar las canciones de ${playlists.length} playlist(s) seleccionada(s). Esta acción no se puede deshacer.`;
         return (
-          <ConfirmationDialog
+          <ShufflePlaylistDialog
           isOpen={true}
+          playlists={dialogState.props.playlists}
           onClose={dialogCallbacks.onClose}
           onConfirm={dialogCallbacks.onConfirmShuffle}
-          isLoading={isProcessing}
-          title="Confirmar Reordenado"
-          description={description}
-          confirmButtonText="Sí, reordenar"
-          confirmButtonVariant="destructive"
           />
         );
       }
       
       case 'syncPreview': {
-        const { playlists = [], syncStats } = dialogState.props;
-        const title = playlists.length === 1 ? `"${playlists[0].name}"` : `${playlists.length} Megalista(s)`;
-        const description = (
-          <div className="text-sm text-slate-400">
-          Vas a sincronizar <strong className="text-white">{title}</strong>.
-          <ul className="list-disc pl-5 mt-3 space-y-1">
-          <li className="text-green-400"> Se añadirán <strong className="text-green-300">{syncStats?.added ?? 0}</strong> canciones. </li>
-          <li className="text-red-400"> Se eliminarán <strong className="text-red-300">{syncStats?.removed ?? 0}</strong> canciones. </li>
-          </ul>
-          <p className="mt-3">¿Deseas continuar?</p>
-          </div>
-        );
         return (
-          <ConfirmationDialog
+          <SyncPreviewDialog
           isOpen={true}
+          playlists={dialogState.props.playlists}
+          syncStats={dialogState.props.syncStats}
           onClose={dialogCallbacks.onClose}
           onConfirm={dialogCallbacks.onConfirmSyncPreview}
-          isLoading={isProcessing}
-          title="Resumen de Sincronización"
-          description={description}
-          confirmButtonText="Sí, continuar"
           />
         );
       }
       
-      case 'syncShuffleChoice':
-      case 'createShuffleChoice':
-      case 'addToShuffleChoice': {
-        const onConfirm = dialogState.variant === 'syncShuffleChoice' ? dialogCallbacks.onConfirmSyncShuffleChoice :
-        dialogState.variant === 'createShuffleChoice' ? dialogCallbacks.onConfirmCreateShuffleChoice :
-        dialogCallbacks.onConfirmAddToShuffleChoice;
+      case 'syncShuffleChoice': {
         return (
           <ShuffleChoiceDialog
           isOpen={true}
           onClose={dialogCallbacks.onClose}
-          onConfirm={onConfirm}
+          onConfirm={dialogCallbacks.onConfirmSyncShuffleChoice}
+          />
+        );
+      }
+      case 'createShuffleChoice': {
+        return (
+          <ShuffleChoiceDialog
+          isOpen={true}
+          onClose={dialogCallbacks.onClose}
+          onConfirm={dialogCallbacks.onConfirmCreateShuffleChoice}
+          />
+        );
+      }
+      case 'addToShuffleChoice': {
+        return (
+          <ShuffleChoiceDialog
+          isOpen={true}
+          onClose={dialogCallbacks.onClose}
+          onConfirm={dialogCallbacks.onConfirmAddToShuffleChoice}
           />
         );
       }
       
       case 'createName':
       return (
-        <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
-        <DialogContent>
-        <DialogHeader><DialogTitle>Paso 1: Ponle un nombre</DialogTitle></DialogHeader>
-        <Input placeholder="Ej: Mi Megalista Épica" value={inputValue} onChange={(e) => setInputValue(e.target.value)} />
-        <DialogFooter>
-        <Button variant="outline" onClick={dialogCallbacks.onClose}>Cancelar</Button>
-        <Button onClick={() => dialogCallbacks.onConfirmCreateName(inputValue)}>Siguiente</Button>
-        </DialogFooter>
-        </DialogContent>
-        </Dialog>
+        <CreateMegalistNameDialog
+        isOpen={true}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmCreateName}
+        />
       );
       
       case 'createOverwrite':
       return (
-        <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
-        <DialogContent>
-        <DialogHeader>
-        <DialogTitle>Playlist Existente</DialogTitle>
-        <DialogDescription>
-        La playlist &quot;<strong className="text-white">{dialogState.props.playlistName}</strong>&quot; ya existe. ¿Qué quieres hacer?
-        </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
-        <Button variant="outline" className="flex-1" onClick={() => dialogCallbacks.onConfirmOverwrite('update')}>
-        Añadir Canciones
-        </Button>
-        <Button variant="destructive" className="flex-1" onClick={() => dialogCallbacks.onConfirmOverwrite('replace')}>
-        Reemplazarla por Completo
-        </Button>
-        </DialogFooter>
-        </DialogContent>
-        </Dialog>
+        <CreateOverwriteDialog
+        isOpen={true}
+        playlistName={dialogState.props.playlistName}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmOverwrite}
+        />
       );
       
       case 'addToSelect':
       return (
-        <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
-        <DialogContent>
-        <DialogHeader>
-        <DialogTitle>Añadir a una Megalista</DialogTitle>
-        <DialogDescription>Elige la Megalista a la que quieres añadir las canciones seleccionadas.</DialogDescription>
-        </DialogHeader>
-        <Select onValueChange={(value) => setInputValue(value)}>
-        <SelectTrigger><SelectValue placeholder="Selecciona una Megalista..." /></SelectTrigger>
-        <SelectContent>
-        {megamixCache.filter(p => p.playlistType === 'MEGALIST').map(p => (
-          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-        ))}
-        </SelectContent>
-        </Select>
-        <DialogFooter>
-        <Button variant="outline" onClick={dialogCallbacks.onClose}>Cancelar</Button>
-        <Button onClick={() => dialogCallbacks.onConfirmAddToSelect(inputValue)}>Siguiente</Button>
-        </DialogFooter>
-        </DialogContent>
-        </Dialog>
+        <AddToMegalistDialog
+        isOpen={true}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmAddToSelect}
+        />
       );
       
       case 'surpriseGlobal':
       return (
-        <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
-        <DialogContent>
-        <DialogHeader><DialogTitle>Megalista Sorpresa Global</DialogTitle></DialogHeader>
-        <Label>¿De cuántas de tus playlists (elegidas al azar) quieres tomar las canciones?</Label>
-        <Input type="number" value={inputValue} onChange={e => setInputValue(e.target.value)} placeholder="Por defecto: 50" />
-        <DialogFooter>
-        <Button variant="outline" onClick={dialogCallbacks.onClose}>Cancelar</Button>
-        <Button onClick={() => dialogCallbacks.onConfirmSurpriseGlobal(parseInt(inputValue, 10) || 50)}>Crear</Button>
-        </DialogFooter>
-        </DialogContent>
-        </Dialog>
+        <SurpriseGlobalDialog
+        isOpen={true}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmSurpriseGlobal}
+        />
       );
       
       case 'surpriseTargeted': {
-        const maxTracks = dialogState.props.uniqueTrackCount ?? 0;
         return (
-          <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
-          <DialogContent>
-          <DialogHeader><DialogTitle>Crear Lista Sorpresa</DialogTitle></DialogHeader>
-          <Label>¿Cuántas canciones aleatorias quieres en tu nueva lista?</Label>
-          <div className='text-center font-bold text-lg'>{sliderValue[0]}</div>
-          <Slider 
-          defaultValue={[50]} 
-          value={sliderValue}
-          max={maxTracks} 
-          min={1}
-          step={1} 
-          onValueChange={setSliderValue}
+          <SurpriseTargetedDialog
+          isOpen={true}
+          uniqueTrackCount={dialogState.props.uniqueTrackCount}
+          onClose={dialogCallbacks.onClose}
+          onConfirm={dialogCallbacks.onConfirmSurpriseTargeted}
           />
-          <div className='text-xs text-muted-foreground text-center'>Total de canciones únicas disponibles: {maxTracks}</div>
-          <DialogFooter>
-          <Button variant="outline" onClick={dialogCallbacks.onClose}>Cancelar</Button>
-          <Button onClick={() => dialogCallbacks.onConfirmSurpriseTargeted(sliderValue[0])}>Siguiente</Button>
-          </DialogFooter>
-          </DialogContent>
-          </Dialog>
         );
       }
       
       case 'surpriseName': {
-        const { isOverwrite, overwriteId } = dialogState.props;
-        const title = isOverwrite ? "Actualizar Lista Sorpresa" : "Paso Final: Nombra tu Lista Sorpresa";
-        
-        let defaultPlaylistName = '';
-        if (isOverwrite && overwriteId) {
-          const existingPlaylist = playlistCache.find(p => p.id === overwriteId);
-          defaultPlaylistName = existingPlaylist?.name || '';
-        }
-        
         return (
-          <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
-          <DialogContent>
-          <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
-          <Input
-          placeholder="Ej: Sorpresa de Viernes"
-          defaultValue={defaultPlaylistName}
-          onChange={(e) => setInputValue(e.target.value)}
+          <SurpriseNameDialog
+          isOpen={true}
+          isOverwrite={!!dialogState.props.isOverwrite}
+          overwriteId={dialogState.props.overwriteId}
+          onClose={dialogCallbacks.onClose}
+          onConfirm={dialogCallbacks.onConfirmSurpriseName}
           />
-          <DialogFooter>
-          <Button variant="outline" onClick={dialogCallbacks.onClose}>Cancelar</Button>
-          <Button onClick={() => dialogCallbacks.onConfirmSurpriseName(inputValue || defaultPlaylistName)}>
-          {isOverwrite ? "Actualizar Lista" : "Crear Lista"}
-          </Button>
-          </DialogFooter>
-          </DialogContent>
-          </Dialog>
         );
       }
       

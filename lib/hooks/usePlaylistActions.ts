@@ -244,37 +244,52 @@ export function usePlaylistActions() {
     );
   };
   
-  const handleCreateOrUpdateMegalist = async (shouldShuffle: boolean) => {
-    if (dialogState.variant !== 'createShuffleChoice' && dialogState.variant !== 'addToShuffleChoice' && dialogState.variant !== 'createOverwrite') return;
-    
-    const { sourceIds } = dialogState.props;
-    let playlistName: string | undefined;
-    let targetId: string | undefined;
-    let overwriteId: string | undefined;
-    let mode: 'create' | 'update' | 'replace';
-    
-    if (dialogState.variant === 'createShuffleChoice' || dialogState.variant === 'createOverwrite') {
-      playlistName = dialogState.props.playlistName;
-    }
-    
-    if (dialogState.variant === 'createOverwrite') {
-      overwriteId = dialogState.props.overwriteId;
-      mode = 'replace';
-    } else if (dialogState.variant === 'addToShuffleChoice') {
-      targetId = dialogState.props.targetId;
-      const targetPlaylist = playlistCache.find(p => p.id === targetId);
-      playlistName = targetPlaylist?.name || "Megalista existente";
-      mode = 'update';
-    } else {
-      mode = 'create';
-    }
-    
-    if (!sourceIds || !playlistName) {
-      toast.error("Faltan datos para la operación.");
+  const handleCreateOrUpdateMegalist = async (
+    shouldShuffle: boolean,
+    mode: 'create' | 'update' | 'replace'
+  ) => {
+    // La guarda de tipo inicial sigue siendo una buena práctica.
+    if (
+      !(
+        (mode === 'create' && dialogState.variant === 'createShuffleChoice') ||
+        (mode === 'update' && dialogState.variant === 'addToShuffleChoice') ||
+        (mode === 'replace' && dialogState.variant === 'createOverwrite')
+      )
+    ) {
       return;
     }
     
-    const finalTargetId = mode === 'update' ? targetId : overwriteId;
+    // A partir de aquí, TypeScript sabe que `dialogState` es uno de los 3 tipos válidos.
+    // Inicializamos las variables que vamos a necesitar.
+    let playlistName: string;
+    let finalTargetId: string | undefined;
+    const { sourceIds } = dialogState.props; // `sourceIds` es la única prop común que podemos sacar de forma segura.
+    
+    // Usamos un `switch` sobre la `variant` para que TypeScript pueda reducir el tipo en cada bloque.
+    switch (dialogState.variant) {
+      case 'createShuffleChoice':
+      // Dentro de este bloque, TypeScript sabe que `dialogState.props` tiene `playlistName`.
+      playlistName = dialogState.props.playlistName;
+      break;
+      
+      case 'addToShuffleChoice':
+      // Aquí, sabe que `dialogState.props` tiene `targetId`.
+      finalTargetId = dialogState.props.targetId;
+      const targetPlaylist = playlistCache.find(p => p.id === finalTargetId);
+      playlistName = targetPlaylist?.name || "Megalista existente";
+      break;
+      
+      case 'createOverwrite':
+      // Y aquí, sabe que tiene `playlistName` y `overwriteId`.
+      playlistName = dialogState.props.playlistName;
+      finalTargetId = dialogState.props.overwriteId;
+      break;
+    }
+    
+    if (!playlistName) {
+      toast.error("Faltan datos para la operación.");
+      return;
+    }
     
     setIsProcessing(true);
     dispatch({ type: 'CLOSE' });
@@ -448,14 +463,17 @@ export function usePlaylistActions() {
       if (dialogState.variant !== 'createName') return;
       dispatch({ type: 'OPEN', payload: { variant: 'createShuffleChoice', props: { ...dialogState.props, playlistName } } });
     },
-    onConfirmCreateShuffleChoice: () => handleCreateOrUpdateMegalist(true),
+    onConfirmCreateShuffleChoice: (shouldShuffle: boolean) => {
+      if (dialogState.variant !== 'createShuffleChoice') return;
+      handleCreateOrUpdateMegalist(shouldShuffle, 'create');
+    },
     onConfirmOverwrite: (mode: 'update' | 'replace') => {
       if (dialogState.variant !== 'createOverwrite') return;
       if (mode === 'update') {
         dispatch({ type: 'OPEN', payload: { variant: 'addToShuffleChoice', props: { sourceIds: dialogState.props.sourceIds, targetId: dialogState.props.overwriteId } } });
       } else {
-        // Para 'replace', el estado original tiene todo lo necesario
-        handleCreateOrUpdateMegalist(true);
+        // Para 'replace', cambiamos el estado para que handleCreate sepa qué hacer
+        handleCreateOrUpdateMegalist(true, 'replace');
       }
     },
     
@@ -464,7 +482,10 @@ export function usePlaylistActions() {
       if (dialogState.variant !== 'addToSelect') return;
       dispatch({ type: 'OPEN', payload: { variant: 'addToShuffleChoice', props: { ...dialogState.props, targetId } } });
     },
-    onConfirmAddToShuffleChoice: (shouldShuffle: boolean) => handleCreateOrUpdateMegalist(shouldShuffle),
+    onConfirmAddToShuffleChoice: (shouldShuffle: boolean) => {
+      if (dialogState.variant !== 'addToShuffleChoice') return;
+      handleCreateOrUpdateMegalist(shouldShuffle, 'update');
+    },
     
     // Flujo de Lista Sorpresa
     onConfirmSurpriseGlobal: (count: number) => {
