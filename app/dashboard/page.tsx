@@ -16,6 +16,8 @@ import SyncAllButton from '@/components/custom/buttons/SyncAllButton';
 import ShuffleAllButton from '@/components/custom/buttons/ShuffleAllButton';
 import Footer from '@/components/custom/Footer';
 
+import { TooltipProvider } from '@/components/ui/tooltip';
+
 export default async function DashboardPage() {
   const session = await auth();
   
@@ -65,6 +67,7 @@ export default async function DashboardPage() {
   
   return (
     <ActionProvider>
+    <TooltipProvider delayDuration={100}>
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
     <div className="max-w-3xl mx-auto">
     <header className="flex justify-between items-center mb-6">
@@ -94,6 +97,7 @@ export default async function DashboardPage() {
     <Footer />
     </div>
     </div>
+    </TooltipProvider>
     </ActionProvider>
   );
 }

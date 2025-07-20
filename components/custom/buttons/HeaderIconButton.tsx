@@ -1,13 +1,12 @@
-// components/custom/HeaderIconButton.tsx 
+// components/custom/buttons/HeaderIconButton.tsx
 'use client';
-
+import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Button } from '@/components/ui/button';
+import React from 'react';
 
 interface HeaderIconButtonProps extends React.ComponentProps<typeof Button> {
   tooltipText: React.ReactNode;
@@ -19,7 +18,6 @@ export default function HeaderIconButton({
   ...props
 }: HeaderIconButtonProps) {
   return (
-    <TooltipProvider>
     <Tooltip>
     <TooltipTrigger asChild>
     <Button variant="ghost" size="icon" {...props}>
@@ -30,6 +28,5 @@ export default function HeaderIconButton({
     <p>{tooltipText}</p>
     </TooltipContent>
     </Tooltip>
-    </TooltipProvider>
   );
 }

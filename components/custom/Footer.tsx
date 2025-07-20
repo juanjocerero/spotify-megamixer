@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Mail, Code } from 'lucide-react';
 import ContactForm from './ContactForm';
 
@@ -18,7 +18,6 @@ export default function Footer() {
     Hecho con 💚 por Juanjo Cerero en 2025.
     </p>
     <div className="flex items-center gap-2">
-    <TooltipProvider>
     <Tooltip>
     <TooltipTrigger asChild>
     <Button variant="ghost" size="icon" onClick={() => setIsContactOpen(true)}>
@@ -37,7 +36,6 @@ export default function Footer() {
     </TooltipTrigger>
     <TooltipContent><p>Ver en GitHub</p></TooltipContent>
     </Tooltip>
-    </TooltipProvider>
     </div>
     </div>
     </footer>

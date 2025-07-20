@@ -4,7 +4,6 @@
 import { useMemo } from 'react';
 import { usePlaylistStore } from '@/lib/store';
 import { useActions } from '@/lib/contexts/ActionProvider';
-import { TooltipProvider } from '@/components/ui/tooltip';
 import ActionBarButton from '@/components/custom/buttons/ActionBarButton';
 import { Button } from '@/components/ui/button';
 import {
@@ -55,7 +54,6 @@ export default function FloatingActionBar() {
   
   return (
     // Envolvemos toda la barra en un único TooltipProvider
-    <TooltipProvider delayDuration={100}>
     <div className="fixed bottom-0 left-0 right-0 z-20 flex h-20 items-center justify-center border-t border-gray-700 bg-gray-800/95 px-4 shadow-lg backdrop-blur-sm sm:h-24">
     <div className="flex w-full max-w-4xl items-center justify-between">
     <div className="hidden text-sm text-gray-300 sm:block">
@@ -148,6 +146,5 @@ export default function FloatingActionBar() {
     </div>
     </div>
     </div>
-    </TooltipProvider>
   );
 }
