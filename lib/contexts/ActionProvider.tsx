@@ -2,13 +2,16 @@
 
 import { createContext, useContext, useMemo } from 'react';
 import { usePlaylistActions, ActionPlaylist } from '../hooks/usePlaylistActions';
+
 import ConfirmationDialog from '@/components/custom/ConfirmationDialog';
+import ShuffleChoiceDialog from '@/components/custom/ShuffleChoiceDialog';
 
 // Definimos la forma del contexto que los componentes consumirán.
 type ActionContextType = {
   actions: {
-    deletePlaylists: (playlists: ActionPlaylist[]) => void;
+    syncPlaylists: (playlists: ActionPlaylist[]) => Promise<void>;
     shufflePlaylists: (playlists: ActionPlaylist[]) => void;
+    deletePlaylists: (playlists: ActionPlaylist[]) => void;
   };
   isProcessing: boolean;
 };
@@ -21,6 +24,10 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
   const { 
     isProcessing, 
     actions, 
+    syncPreviewDialogState,
+    syncPreviewDialogCallbacks,
+    syncShuffleChoiceDialogState, 
+    syncShuffleChoiceDialogCallbacks,  
     shuffleDialogState, 
     shuffleDialogCallbacks, 
     deletionDialogState, 
@@ -30,6 +37,26 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
   // Memoizamos el valor del contexto para evitar re-renders innecesarios.
   const contextValue = useMemo(() => ({ actions, isProcessing }), [actions, isProcessing]);
   
+  
+  // Añadir descripción para el diálogo de sincronización
+  const syncPreviewDescription = useMemo(() => {
+    const count = syncPreviewDialogState.playlists.length;
+    const title = count === 1 ? `"${syncPreviewDialogState.playlists[0].name}"` : `${count} Megalista(s)`;
+    return (
+      <div className="text-sm text-slate-400">
+      Vas a sincronizar <strong className="text-white">{title}</strong>.
+      <ul className="list-disc pl-5 mt-3 space-y-1">
+      <li className="text-green-400">
+      Se añadirán <strong className="text-green-300">{syncPreviewDialogState.added}</strong> canciones.
+      </li>
+      <li className="text-red-400">
+      Se eliminarán <strong className="text-red-300">{syncPreviewDialogState.removed}</strong> canciones.
+      </li>
+      </ul>
+      <p className="mt-3">¿Deseas continuar?</p>
+      </div>
+    );
+  }, [syncPreviewDialogState]);
   
   // Añadir descripción para el diálogo de reordenado
   const shuffleDescription = useMemo(() => {
@@ -74,6 +101,17 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
   return (
     <ActionContext.Provider value={contextValue}>
     {children}
+    
+    {/* Diálogo de sincronización */}
+    <ConfirmationDialog
+    isOpen={syncPreviewDialogState.isOpen}
+    onClose={syncPreviewDialogCallbacks.onClose}
+    onConfirm={syncPreviewDialogCallbacks.onConfirm}
+    isLoading={isProcessing}
+    title="Confirmar Sincronización"
+    description={syncPreviewDescription}
+    confirmButtonText="Sí, continuar"
+    />
     
     {/* Diálogo de reordenado. */}
     <ConfirmationDialog

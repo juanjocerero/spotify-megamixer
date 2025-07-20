@@ -6,19 +6,13 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 import { SpotifyPlaylist } from '@/types/spotify';
 import { cn } from '@/lib/utils';
-import { 
-  fetchMorePlaylists, 
-  previewMegalistSync, 
-  executeMegalistSync, 
-  updatePlaylistDetailsAction, 
+import { fetchMorePlaylists, updatePlaylistDetailsAction, 
 } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 
 import { useActions } from '@/lib/contexts/ActionProvider'; 
 
 import TrackDetailView from './TrackDetailView';
-import ConfirmationDialog from './ConfirmationDialog';
-import ShuffleChoiceDialog from './ShuffleChoiceDialog';
 import SurpriseMixDialog from './SurpriseMixDialog';
 
 import { toast } from 'sonner';
@@ -61,7 +55,7 @@ export default function PlaylistDisplay({
   onFilteredChange, 
   sortOption 
 }: PlaylistDisplayProps) {
-
+  
   const { 
     togglePlaylist, 
     isSelected, 
@@ -71,8 +65,8 @@ export default function PlaylistDisplay({
     addMoreToCache,
     updatePlaylistInCache,
   } = usePlaylistStore();
-
-   const { actions } = useActions();
+  
+  const { actions, isProcessing } = useActions();
   
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,36 +82,11 @@ export default function PlaylistDisplay({
     newName: '',
     newDescription: '',
   });
-  const [syncingId, setSyncingId] = useState<string | null>(null);
-  const [syncPreviewAlert, setSyncPreviewAlert] = useState<{
-    open: boolean;
-    playlist: SpotifyPlaylist | null;
-    added: number;
-    removed: number;
-    finalCount: number;
-    isExecutingSync: boolean;
-  }>({
-    open: false,
-    playlist: null,
-    added: 0,
-    removed: 0,
-    finalCount: 0,
-    isExecutingSync: false,
-  });
   const [isSaving, setIsSaving] = useState(false);
-  const [trackSheetState, setTrackSheetState] = useState<{ 
-    open: boolean; 
-    playlistId: string | null; 
-    playlistName: string | null 
+  const [trackSheetState, setTrackSheetState] = useState<{ open: boolean; playlistId: string | null; playlistName: string | null 
   }>({ 
-    open: 
-    false, playlistId: null, 
-    playlistName: null }
+    open: false, playlistId: null, playlistName: null }
   );
-  const [shuffleSyncChoice, setShuffleSyncChoice] = useState<{
-    open: boolean;
-    playlist: SpotifyPlaylist | null;
-  }>({ open: false, playlist: null });
   const [surpriseMixDialog, setSurpriseMixDialog] = useState<{
     open: boolean;
     sourceIds: string[];
@@ -312,66 +281,6 @@ export default function PlaylistDisplay({
     };
   }, [handleKeyDown]);
   
-  // --- Lógica para manejar la sincronización desde la UI ---
-  const handleSync = async (playlistToSync: SpotifyPlaylist) => {
-    if (syncingId) return; // Evitar múltiples clics
-    setSyncingId(playlistToSync.id);
-    const toastId = toast.loading(`Calculando cambios para "${playlistToSync.name}"...`);
-    
-    try {
-      const result = await previewMegalistSync(playlistToSync.id);
-      
-      if (result.message === "Ya estaba sincronizada.") {
-        toast.info(`"${playlistToSync.name}" ya está al día.`, { id: toastId });
-      } else {
-        toast.dismiss(toastId); // Cierra el toast de carga
-        // Abre el diálogo de confirmación con los datos de la previsualización
-        setSyncPreviewAlert({
-          open: true,
-          playlist: playlistToSync,
-          added: result.added,
-          removed: result.removed,
-          finalCount: result.finalCount,
-          isExecutingSync: false,
-        });
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo previsualizar la sincronización.';
-      toast.error(message, { id: toastId });
-    } finally {
-      setSyncingId(null); // Resetea el estado de carga del icono en la lista
-    }
-  };
-  
-  const handleConfirmSync = async () => {
-    if (!syncPreviewAlert.playlist) return;
-    
-    // Cierra el diálogo de previsualización
-    setSyncPreviewAlert(prev => ({ ...prev, open: false, isExecutingSync: false }));
-    // Abre el diálogo para preguntar sobre el reordenado
-    setShuffleSyncChoice({ open: true, playlist: syncPreviewAlert.playlist });
-  };
-  
-  const handleExecuteSync = async (shouldShuffle: boolean) => {
-    if (!shuffleSyncChoice.playlist) return;
-    
-    const playlistToSync = shuffleSyncChoice.playlist;
-    setShuffleSyncChoice({ open: false, playlist: null }); // Cierra el diálogo actual
-    
-    const toastId = toast.loading(`Sincronizando "${playlistToSync.name}"...`);
-    try {
-      const result = await executeMegalistSync(playlistToSync.id, shouldShuffle);
-      updatePlaylistInCache(playlistToSync.id, { trackCount: result.finalCount });
-      toast.success(`Sincronización de "${playlistToSync.name}" completada.`, {
-        id: toastId,
-        description: `Añadidas: ${result.added}, Eliminadas: ${result.removed}. ${shouldShuffle ? 'La playlist fue reordenada.' : ''}`,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo completar la sincronización.';
-      toast.error(message, { id: toastId });
-    }
-  };
-  
   return (
     <div>
     <div className="rounded-md border border-gray-700 overflow-hidden">
@@ -406,7 +315,6 @@ export default function PlaylistDisplay({
       if (!playlist) return null;
       
       const isSyncable = playlist.isSyncable ?? false;
-      const isSyncingThis = syncingId === playlist.id;
       const selected = isSelected(playlist.id);
       const focused = virtualRow.index === focusedIndex;
       
@@ -514,18 +422,18 @@ export default function PlaylistDisplay({
         {/* Sincronizar */}
         {isSyncable && (
           <DropdownMenuItem
-          disabled={isSyncingThis}
+          disabled={isProcessing}
           onClick={(e) => {
             e.stopPropagation();
-            handleSync(playlist);
+            actions.syncPlaylists([{ id: playlist.id, name: playlist.name }]);
           }}
           >
-          {isSyncingThis ? (
+          {isProcessing ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <RefreshCw className="mr-2 h-4 w-4" />
           )}
-          <span>{isSyncingThis ? 'Sincronizando...' : 'Sincronizar'}</span>
+          <span>{isProcessing ? 'Procesando...' : 'Sincronizar'}</span>
           </DropdownMenuItem>
         )}
         
@@ -608,43 +516,6 @@ export default function PlaylistDisplay({
     </DialogFooter>
     </DialogContent>
     </Dialog>
-    
-    {/* Confirmación de sincronización */}
-    <ConfirmationDialog
-    isOpen={syncPreviewAlert.open}
-    onClose={() => setSyncPreviewAlert(prev => ({ ...prev, open: false }))}
-    onConfirm={handleConfirmSync}
-    isLoading={syncPreviewAlert.isExecutingSync}
-    title="Confirmar Sincronización"
-    description={
-      <div>
-      Vas a sincronizar la playlist{' '}
-      <strong className="text-white">{syncPreviewAlert.playlist?.name}</strong>.
-      <ul className="list-disc pl-5 mt-3 space-y-1">
-      <li className="text-green-400">Se añadirán <strong className="text-green-300">{syncPreviewAlert.added}</strong> canciones nuevas.</li>
-      <li className="text-red-400">Se eliminarán <strong className="text-red-300">{syncPreviewAlert.removed}</strong> canciones obsoletas.</li>
-      </ul>
-      <p className="mt-3">
-      La playlist tendrá un total de{' '}
-      <strong className="text-white">{syncPreviewAlert.finalCount}</strong> canciones. ¿Deseas continuar?
-      </p>
-      </div>
-    }
-    confirmButtonText="Sí, continuar"
-    />
-    
-    {/* Diálogo para la decisión de reordenado */}
-    <ShuffleChoiceDialog
-    isOpen={shuffleSyncChoice.open}
-    onClose={() => setShuffleSyncChoice({ open: false, playlist: null })}
-    onConfirm={handleExecuteSync}
-    title="¿Reordenar la playlist tras sincronizar?"
-    description={
-      <span>
-      La playlist <strong className="text-white">&quot;{shuffleSyncChoice.playlist?.name}&quot;</strong> será actualizada. ¿Quieres reordenar su contenido de forma aleatoria después?
-      </span>
-    }
-    />
     
     {/* Diálogo de creación de lista sorpresa */}
     <SurpriseMixDialog
