@@ -468,7 +468,6 @@ export default function PlaylistDisplay({
       const playlist = filteredPlaylists[virtualRow.index];
       if (!playlist) return null;
       
-      const isMegalista = playlist.isMegalist ?? false;
       const isSyncable = playlist.isSyncable ?? false;
       const isSyncingThis = syncingId === playlist.id;
       const selected = isSelected(playlist.id);

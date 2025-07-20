@@ -61,6 +61,7 @@ export default function SurpriseMixDialog({ isOpen, onClose, sourceIds }: Surpri
         setTotalTracks(count);
         setStep('askCount');
       } catch (err) {
+        console.error('No se pudo calcular el total de canciones.', error)
         toast.error('No se pudo calcular el total de canciones.');
         resetAndClose();
       } finally {
