@@ -3,7 +3,6 @@
 import { db } from '@/lib/db';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { Megalist } from '@prisma/client';
 import { getUserPlaylists } from '@/lib/spotify';
 import LogoutButton from '@/components/custom/LogoutButton';
 import DashboardClient from '@/components/custom/DashboardClient';

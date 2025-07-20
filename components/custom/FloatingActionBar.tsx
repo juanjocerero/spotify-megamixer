@@ -822,7 +822,7 @@ export default function FloatingActionBar() {
       <span>
       Se añadirán canciones a la playlist{' '}
       <strong className="text-white">
-      "{shuffleChoice.playlistName}"
+      &quot;{shuffleChoice.playlistName}&quot;
       </strong>. Puedes mantener el orden actual de las canciones (añadiendo las nuevas al final) o reordenar toda la playlist de forma aleatoria.
       </span>
     }
