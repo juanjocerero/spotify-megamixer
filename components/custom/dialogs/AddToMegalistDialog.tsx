@@ -32,12 +32,12 @@ export default function AddToMegalistDialog({
   onConfirm,
 }: AddToMegalistDialogProps) {
   // Obtenemos las Megalistas directamente desde el store
-  const { megamixCache } = usePlaylistStore();
+  const { playlistCache } = usePlaylistStore();
   
   // Gestionamos el ID de la playlist seleccionada con nuestro propio estado
   const [selectedId, setSelectedId] = useState<string>('');
   
-  const megalists = megamixCache.filter(p => p.playlistType === 'MEGALIST');
+  const megalists = playlistCache.filter(p => p.playlistType === 'MEGALIST');
   
   const handleConfirm = () => {
     if (selectedId) {

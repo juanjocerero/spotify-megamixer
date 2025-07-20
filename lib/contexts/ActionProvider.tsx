@@ -4,7 +4,6 @@
 
 import React, { createContext, useContext, useMemo, useState } from 'react';
 import { usePlaylistActions, ActionPlaylist } from '@/lib/hooks/usePlaylistActions';
-import { usePlaylistStore } from '@/lib/store';
 
 import CreateMegalistNameDialog from '@/components/custom/dialogs/CreateMegalistNameDialog';
 import AddToMegalistDialog from '@/components/custom/dialogs/AddToMegalistDialog';
