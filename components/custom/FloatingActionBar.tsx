@@ -18,6 +18,7 @@ import {
   shufflePlaylistsAction
 } from '@/lib/action';
 
+import ShuffleChoiceDialog from './ShuffleChoiceDialog';
 import SurpriseMixDialog from './SurpriseMixDialog';
 
 // Componentes UI de Shadcn
@@ -812,24 +813,20 @@ export default function FloatingActionBar() {
     </Dialog>
     
     {/* Diálogo para la decisión de reordenado */}
-    <Dialog open={shuffleChoice.open} onOpenChange={(isOpen) => !isOpen && setShuffleChoice({ ...shuffleChoice, open: false })}>
-    <DialogContent>
-    <DialogHeader>
-    <DialogTitle>¿Cómo quieres ordenar las canciones?</DialogTitle>
-    <DialogDescription>
-    Se añadirán canciones a &quot;{shuffleChoice.playlistName}&quot;. Puedes mantenerlas al final o reordenar la lista completa de forma aleatoria.
-    </DialogDescription>
-    </DialogHeader>
-    <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
-    <Button variant="outline" className="flex-1" onClick={() => handleExecuteUpdateOrAdd(false)}>
-    Mantener Orden
-    </Button>
-    <Button className="flex-1" onClick={() => handleExecuteUpdateOrAdd(true)}>
-    Reordenar Canciones
-    </Button>
-    </DialogFooter>
-    </DialogContent>
-    </Dialog>
+    <ShuffleChoiceDialog
+    isOpen={shuffleChoice.open}
+    onClose={() => setShuffleChoice({ ...shuffleChoice, open: false })}
+    onConfirm={handleExecuteUpdateOrAdd}
+    title="¿Actualizar y reordenar?"
+    description={
+      <span>
+      Se añadirán canciones a la playlist{' '}
+      <strong className="text-white">
+      "{shuffleChoice.playlistName}"
+      </strong>. Puedes mantener el orden actual de las canciones (añadiendo las nuevas al final) o reordenar toda la playlist de forma aleatoria.
+      </span>
+    }
+    />
     
     {/* Diálogo de confirmación de eliminación en lote */}
     <AlertDialog open={deleteBatchAlertOpen} onOpenChange={setDeleteBatchAlertOpen}>
