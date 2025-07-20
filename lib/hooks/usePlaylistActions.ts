@@ -93,7 +93,7 @@ export function usePlaylistActions() {
   } = usePlaylistStore();
   
   // Wrapper para acciones asíncronas que se ejecutan sobre una sola lista
-  const executeAction = useCallback(async <T, P extends any[]>(
+  const executeAction = useCallback(async <T, P extends unknown[]>(
     actionFn: (...args: P) => Promise<T>,
     params: P,
     options: {
@@ -150,7 +150,7 @@ export function usePlaylistActions() {
     } finally {
         setIsProcessing(false);
     }
-  }, [clearSelection, updatePlaylistInCache]);
+  }, [clearSelection]);
   
   // Lógica de negocio (qué hacer al confirmar)
   const handleConfirmDelete = async () => {
