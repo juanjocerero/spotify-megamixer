@@ -53,7 +53,7 @@ type DialogState =
   variant: 'addToShuffleChoice';
   props: { sourceIds: string[]; targetId: string };
 }
-| { variant: 'surpriseGlobal'; props: {} }
+| { variant: 'surpriseGlobal'; }
 | {
   variant: 'surpriseTargeted';
   props: { sourceIds: string[]; uniqueTrackCount: number };
@@ -414,7 +414,7 @@ export function usePlaylistActions() {
     const toastId = toast.loading("Preparando el generador de sorpresas...");
     try {
       if (!sourceIds || sourceIds.length === 0) {
-        dispatch({ type: 'OPEN', payload: { variant: 'surpriseGlobal', props: {} } });
+        dispatch({ type: 'OPEN', payload: { variant: 'surpriseGlobal' } });
       } else {
         const count = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
         dispatch({ type: 'OPEN', payload: { variant: 'surpriseTargeted', props: { sourceIds, uniqueTrackCount: count } } });
