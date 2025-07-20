@@ -1,5 +1,5 @@
 // /app/page.tsx
-import LoginButton from "@/components/custom/LoginButton";
+import LoginButton from "@/components/custom/buttons/LoginButton";
 
 export default function HomePage() {
   return (

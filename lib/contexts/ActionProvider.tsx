@@ -18,7 +18,7 @@ import CreateOverwriteDialog from '@/components/custom/dialogs/CreateOverwriteDi
 import DeletePlaylistDialog from '@/components/custom/dialogs/DeletePlaylistDialog';
 
 // Componentes de Diálogo y UI
-import ShuffleChoiceDialog from '@/components/custom/ShuffleChoiceDialog';
+import ShuffleChoiceDialog from '@/components/custom/dialogs/ShuffleChoiceDialog';
 
 // Definición del tipo para el contexto
 interface ActionContextType {

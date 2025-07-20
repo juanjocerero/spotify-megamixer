@@ -11,7 +11,10 @@ interface PlaylistsApiResponse {
   next: string | null;
 }
 
-export async function getTrackUris(playlistIds: string[]): Promise<string[]> {
+/**
+* Obtiene y prepara las URIs de las canciones.
+*/
+export async function getTrackUris(playlistIds: string[]) {
   try {
     const session = await auth();
     if (!session?.accessToken) {
@@ -20,38 +23,48 @@ export async function getTrackUris(playlistIds: string[]): Promise<string[]> {
     const { accessToken } = session;
     
     const trackPromises = playlistIds.map((id) =>
-      getAllPlaylistTracks(accessToken, id).then(tracks => tracks.map(t => t.uri))
-  );
-  
-  const tracksPerPlaylist = await Promise.all(trackPromises);
-  const uniqueTrackUris = [...new Set(tracksPerPlaylist.flat())];
-  return uniqueTrackUris;
-} catch (error) {
-  console.error('[ACTION_ERROR:getTrackUris] Fallo al obtener las URIs.', error);
-  throw error;
-}
+      getAllPlaylistTracks(accessToken, id).then(tracks => tracks.map(t => t.uri)));
+    const tracksPerPlaylist = await Promise.all(trackPromises);
+    
+    const uniqueTrackUris = [...new Set(tracksPerPlaylist.flat())];
+    // Se elimina la llamada a shuffleArray. La función ahora es neutral.
+    return uniqueTrackUris; 
+  } catch (error) {
+    console.error('[ACTION_ERROR:getTrackUris] Fallo al obtener las URIs.', error);
+    throw error;
+  }
 }
 
-export async function fetchMorePlaylists(url: string): Promise<PlaylistsApiResponse> {
+export async function fetchMorePlaylists(
+  url: string
+): Promise<PlaylistsApiResponse> {
   try {
     const session = await auth();
     if (!session?.accessToken) {
       throw new Error('Not authenticated');
     }
     
+    // --- Modificamos la URL para asegurarnos de que incluye los campos ---
+    // Esto es crucial porque la URL 'next' de Spotify no hereda los parámetros 'fields'.
     const urlObject = new URL(url);
     const fields = "items(id,name,description,images,owner,tracks(total)),next";
+    
+    // Usamos .set() para añadir o sobreescribir el parámetro de campos.
     urlObject.searchParams.set('fields', fields);
     
     const response = await fetch(urlObject.toString(), {
-      headers: { Authorization: `Bearer ${session.accessToken}` },
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+      },
     });
     
     if (!response.ok) {
+      // Este error ya era explícito, lo mantenemos
       const errorData = await response.json();
       console.error('Failed to fetch more playlists:', errorData);
       throw new Error(`Failed to fetch more playlists. Status: ${response.status}`);
     }
+    
     const data = await response.json();
     return {
       items: data.items,

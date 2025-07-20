@@ -2,7 +2,7 @@
 'use client';
 import { signOut } from 'next-auth/react';
 import { LogOut } from 'lucide-react';
-import HeaderIconButton from './HeaderIconButton';
+import HeaderIconButton from './buttons/HeaderIconButton';
 
 export default function LogoutButton() {
   return (

@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { usePlaylistStore } from '@/lib/store';
 import { useActions } from '@/lib/contexts/ActionProvider';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import ActionBarButton from '@/components/custom/ActionBarButton';
+import ActionBarButton from '@/components/custom/buttons/ActionBarButton';
 import { Button } from '@/components/ui/button';
 import {
   XCircle,

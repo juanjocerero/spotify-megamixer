@@ -1,12 +1,11 @@
 // components/custom/SyncAllButton.tsx
 
 'use client';
-import { useMemo } from 'react';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePlaylistStore } from '@/lib/store';
 import { useActions } from '@/lib/contexts/ActionProvider';
-import HeaderIconButton from './HeaderIconButton';
+import HeaderIconButton from './buttons/HeaderIconButton';
 
 export default function SyncAllButton() {
   const syncableMegalists = usePlaylistStore((state) =>

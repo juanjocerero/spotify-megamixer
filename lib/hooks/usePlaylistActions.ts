@@ -8,16 +8,17 @@ import { usePlaylistStore } from '@/lib/store';
 import {
   unfollowPlaylistsBatch,
   shufflePlaylistsAction,
-  previewBatchSync,
-  executeMegalistSync,
-  getTrackUris,
   findOrCreatePlaylist,
   addTracksBatch,
   addTracksToMegalistAction,
-  createOrUpdateSurpriseMixAction,
   getUniqueTrackCountFromPlaylistsAction,
   updatePlaylistDetailsAction
-} from '@/lib/action';
+} from '@/lib/actions/playlist.actions';
+
+import { getTrackUris } from '@/lib/actions/spotify.actions';
+import { previewBatchSync, executeMegalistSync } from '@/lib/actions/sync.action';
+import { createOrUpdateSurpriseMixAction } from '@/lib/actions/surprise.actions';
+
 import { shuffleArray } from '@/lib/utils';
 
 import { toast } from 'sonner';

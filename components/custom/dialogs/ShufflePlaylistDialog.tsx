@@ -3,7 +3,7 @@
 
 import { useActions } from '@/lib/contexts/ActionProvider';
 import { type ActionPlaylist } from '@/lib/hooks/usePlaylistActions';
-import ConfirmationDialog from '@/components/custom/ConfirmationDialog';
+import ConfirmationDialog from '@/components/custom/dialogs/ConfirmationDialog';
 
 interface ShufflePlaylistDialogProps {
   isOpen: boolean;
