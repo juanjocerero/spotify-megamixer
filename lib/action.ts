@@ -604,216 +604,45 @@ export async function unfollowPlaylistsBatch(playlistIds: string[]): Promise<voi
 }
 
 /**
-* Crea una Megalista "Sorpresa" con un número específico de canciones
-* seleccionadas aleatoriamente de un conjunto de playlists de origen.
-*
-* @param sourcePlaylistIds - Los IDs de las playlists de las que se cogerán las canciones.
-* @param targetTrackCount - El número deseado de canciones en la playlist final.
-* @param newPlaylistName - El nombre para la nueva playlist.
-* @returns El objeto de la playlist enriquecida y recién creada.
+* @deprecated Esta función ha sido reemplazada por createOrUpdateSurpriseMixAction.
+* Crea una Megalista Sorpresa a partir de fuentes aleatorias si no se especifican.
 */
 export async function createSurpriseMegalist(
   sourcePlaylistIds: string[],
   targetTrackCount: number,
   newPlaylistName: string
 ): Promise<SpotifyPlaylist> {
-  console.log(`[ACTION:createSurpriseMegalist] Iniciando. 
-    Fuentes: ${sourcePlaylistIds.length},
-     Objetivo: ${targetTrackCount} canciones.`
-  );
-  
-  const session = await auth();
-  if (!session?.accessToken || !session.user?.id) {
-    throw new Error('No autenticado, token o ID de usuario no disponible.');
-  }
-  const { accessToken, user } = session;
-  
-  try {
-    // Comprar si existe una playlist con este nombre. Si ya existe,
-    // lanzar un error con el id existente para confirmar sobrescritura.
-    const existingPlaylist = await findUserPlaylistByName(accessToken, newPlaylistName);
-    if (existingPlaylist) {
-      throw new Error(`PLAYLIST_EXISTS::${existingPlaylist.id}`);
-    }
-    
-    // Aquí, getAllPlaylistTracks devuelve { uri, name, artists }
-    const tracksPerPlaylistPromises = sourcePlaylistIds.map(id =>
-      getAllPlaylistTracks(accessToken, id).catch(err => {
-        console.warn(`[SURPRISE_MIX] No se pudo obtener la playlist ${id}, se omitirá.`, err);
-        return []; // Devolver array vacío en caso de error
-      })
-    );
-    // Extraemos solo las URIs de los resultados
-    const tracksPerPlaylistUris = (await Promise.all(tracksPerPlaylistPromises)).map(tracks => tracks.map(t => t.uri));
-    
-    // Algoritmo de selección de canciones
-    let selectedTracksUris: string[];
-    const allUniqueTracksUris = [...new Set(tracksPerPlaylistUris.flat())];
-    
-    if (allUniqueTracksUris.length <= targetTrackCount) {
-      console.log(`[SURPRISE_MIX] Menos canciones (${allUniqueTracksUris.length}) que el objetivo. Se usarán todas.`);
-      selectedTracksUris = allUniqueTracksUris;
-    } else {
-      const selectedTracksUrisSet = new Set<string>();
-      const remainingTracksPoolUris: string[] = [];
-      const quota = Math.floor(targetTrackCount / sourcePlaylistIds.length);
-      
-      tracksPerPlaylistUris.forEach(playlistTracksUris => {
-        const shuffled = shuffleArray([...playlistTracksUris]);
-        const toAdd = shuffled.slice(0, quota);
-        const remaining = shuffled.slice(quota);
-        toAdd.forEach(trackUri => selectedTracksUrisSet.add(trackUri));
-        remainingTracksPoolUris.push(...remaining);
-      });
-      
-      const remainingNeeded = targetTrackCount - selectedTracksUrisSet.size;
-      if (remainingNeeded > 0) {
-        const shuffledPool = shuffleArray(remainingTracksPoolUris);
-        for (const trackUri of shuffledPool) {
-          if (selectedTracksUrisSet.size >= targetTrackCount) break;
-          selectedTracksUrisSet.add(trackUri);
-        }
-      }
-      selectedTracksUris = Array.from(selectedTracksUrisSet);
-    }
-    
-    // Asegurar el recuento final y reordenar
-    const finalShuffledTracksUris = shuffleArray(selectedTracksUris).slice(0, targetTrackCount);
-    
-    // Crear la playlist en Spotify y añadir las canciones
-    const newPlaylist = await createNewPlaylist(accessToken, user.id, newPlaylistName);
-    await replacePlaylistTracks(accessToken, newPlaylist.id, finalShuffledTracksUris);
-    
-    // Persistir la nueva Megalista en nuestra base de datos
-    await db.megalist.create({
-      data: {
-        id: newPlaylist.id,
-        spotifyUserId: user.id,
-        sourcePlaylistIds: sourcePlaylistIds,
-        trackCount: finalShuffledTracksUris.length,
-        type: 'SURPRISE',
-      },
-    });
-    console.log(`[DB] Creado el registro para la nueva Megalista Sorpresa ${newPlaylist.id}`);
-    
-    // Devolver el objeto enriquecido para la UI
-    const enrichedPlaylist: SpotifyPlaylist = {
-      ...newPlaylist,
-      isMegalist: true,
-      isSyncable: true, // Por definición, una nueva megalista es sincronizable
-      playlistType: 'SURPRISE',
-      tracks: {
-        ...newPlaylist.tracks,
-        total: finalShuffledTracksUris.length,
-      },
-    };
-    return enrichedPlaylist;
-    
-  } catch (error) {
-    console.error('[ACTION_ERROR:createSurpriseMegalist] Fallo al crear la Megalista Sorpresa.', error);
-    throw error;
-  }
+  console.log('[DEPRECATED] createSurpriseMegalist -> createOrUpdateSurpriseMixAction');
+  // Llama a la nueva función en modo "crear". La lógica de selección de fuentes aleatorias
+  // ya está en el componente `SurpriseMixButton`, por lo que esta acción siempre recibe los IDs.
+  return createOrUpdateSurpriseMixAction(sourcePlaylistIds, targetTrackCount, newPlaylistName);
 }
 
 /**
-* Sobrescribe una Megalista "Sorpresa" existente con un nuevo conjunto de canciones.
-*
-* @param playlistId - El ID de la playlist a sobrescribir.
-* @param sourcePlaylistIds - Los IDs de las nuevas playlists de origen.
-* @param targetTrackCount - El número deseado de canciones.
-* @returns El objeto de la playlist enriquecida y actualizada.
-*/
-/**
-* Sobrescribe una Megalista "Sorpresa" existente con un nuevo conjunto de canciones.
+* @deprecated Esta función ha sido reemplazada por createOrUpdateSurpriseMixAction.
+* Sobrescribe una Megalista Sorpresa existente.
 */
 export async function overwriteSurpriseMegalist(
   playlistId: string,
   sourcePlaylistIds: string[],
   targetTrackCount: number
 ): Promise<SpotifyPlaylist> {
-  console.log(`[ACTION:overwriteSurpriseMegalist] Iniciando sobrescritura para ${playlistId}.`);
+  console.log(
+    '[DEPRECATED] overwriteSurpriseMegalist -> createOrUpdateSurpriseMixAction'
+  );
+  // El nombre de la playlist no es crucial aquí ya que estamos sobrescribiendo.
+  // La nueva función obtendrá los detalles actualizados de Spotify de todos modos.
+  const playlistName = 'Playlist Sorpresa Sobrescrita'; 
   
-  const session = await auth();
-  if (!session?.accessToken || !session.user?.id) {
-    throw new Error('No autenticado, token o ID de usuario no disponible.');
-  }
-  const { accessToken } = session;
-  
-  try {
-    // Obtener y seleccionar las canciones
-    // Aquí, getAllPlaylistTracks devuelve { uri, name, artists }
-    const tracksPerPlaylistPromises = sourcePlaylistIds.map(id =>
-      getAllPlaylistTracks(accessToken, id).catch(() => [])
-    );
-    // Extraemos solo las URIs de los resultados
-    const tracksPerPlaylistUris = (await Promise.all(tracksPerPlaylistPromises)).map(tracks => tracks.map(t => t.uri));
-    
-    let selectedTracksUris: string[];
-    const allUniqueTracksUris = [...new Set(tracksPerPlaylistUris.flat())];
-    
-    if (allUniqueTracksUris.length <= targetTrackCount) {
-      selectedTracksUris = allUniqueTracksUris;
-    } else {
-      const selectedTracksUrisSet = new Set<string>();
-      const remainingTracksPoolUris: string[] = [];
-      const quota = Math.floor(targetTrackCount / sourcePlaylistIds.length);
-      
-      tracksPerPlaylistUris.forEach(playlistTracksUris => {
-        const shuffled = shuffleArray([...playlistTracksUris]);
-        const toAdd = shuffled.slice(0, quota);
-        const remaining = shuffled.slice(quota);
-        toAdd.forEach(trackUri => selectedTracksUrisSet.add(trackUri));
-        remainingTracksPoolUris.push(...remaining);
-      });
-      
-      const remainingNeeded = targetTrackCount - selectedTracksUrisSet.size;
-      if (remainingNeeded > 0) {
-        const shuffledPool = shuffleArray(remainingTracksPoolUris);
-        for (const trackUri of shuffledPool) {
-          if (selectedTracksUrisSet.size >= targetTrackCount) break;
-          selectedTracksUrisSet.add(trackUri);
-        }
-      }
-      selectedTracksUris = Array.from(selectedTracksUrisSet);
-    }
-    
-    const finalShuffledTracksUris = shuffleArray(selectedTracksUris).slice(0, targetTrackCount);
-    
-    // Reemplazar el contenido de la playlist existente
-    await replacePlaylistTracks(accessToken, playlistId, finalShuffledTracksUris);
-    
-    // Actualizar el registro en nuestra base de datos
-    await db.megalist.update({
-      where: { id: playlistId },
-      data: {
-        sourcePlaylistIds: sourcePlaylistIds,
-        trackCount: finalShuffledTracksUris.length,
-        updatedAt: new Date(),
-        type: 'SURPRISE',
-      },
-    });
-    console.log(`[DB] Actualizado el registro para la Megalista Sorpresa ${playlistId}`);
-    
-    // Obtener los detalles actualizados de la playlist de Spotify
-    const updatedPlaylistFromSpotify = await getPlaylistDetails(accessToken, playlistId);
-    
-    // Devolver el objeto enriquecido
-    return {
-      ...updatedPlaylistFromSpotify,
-      isMegalist: true,
-      isSyncable: true,
-      playlistType: 'SURPRISE',
-      tracks: {
-        ...updatedPlaylistFromSpotify.tracks,
-        total: finalShuffledTracksUris.length,
-      },
-    };
-    
-  } catch (error) {
-    console.error(`[ACTION_ERROR:overwriteSurpriseMegalist] Fallo al sobrescribir ${playlistId}.`, error);
-    throw error;
-  }
+  // Llama a la nueva función en modo "sobrescribir" (pasando el ID como último argumento).
+  return createOrUpdateSurpriseMixAction(
+    sourcePlaylistIds,
+    targetTrackCount,
+    playlistName,
+    playlistId
+  );
 }
+
 
 /**
 * Server Action para obtener los nombres de las canciones y los artistas de una playlist.
@@ -893,11 +722,47 @@ export async function getUniqueTrackCountFromPlaylistsAction(playlistIds: string
 }
 }
 
+/**
+* @deprecated Esta función ha sido reemplazada por createOrUpdateSurpriseMixAction.
+* Crea una Megalista Sorpresa a partir de una selección de playlists.
+*/
 export async function createTargetedSurpriseMixAction(
   sourcePlaylistIds: string[],
   targetTrackCount: number,
   newPlaylistName: string
 ): Promise<SpotifyPlaylist> {
+  console.log(
+    '[DEPRECATED] createTargetedSurpriseMixAction -> createOrUpdateSurpriseMixAction'
+  );
+  // Llama a la nueva función en modo "crear" (sin el último argumento).
+  return createOrUpdateSurpriseMixAction(
+    sourcePlaylistIds,
+    targetTrackCount,
+    newPlaylistName
+  );
+}
+
+/**
+* Crea o sobrescribe una playlist "Sorpresa".
+* - Si no se provee `playlistIdToOverwrite`, crea una nueva playlist.
+* - Si se provee, sobrescribe la playlist existente con ese ID.
+* @param sourcePlaylistIds - IDs de las playlists de las que obtener canciones.
+* @param targetTrackCount - Número de canciones que tendrá la playlist final.
+* @param newPlaylistName - Nombre para la nueva playlist (o para renombrar la existente, aunque la API de Spotify no lo soporte en una sola llamada).
+* @param playlistIdToOverwrite - (Opcional) El ID de la playlist a sobrescribir.
+*/
+export async function createOrUpdateSurpriseMixAction(
+  sourcePlaylistIds: string[],
+  targetTrackCount: number,
+  newPlaylistName: string,
+  playlistIdToOverwrite?: string
+): Promise<SpotifyPlaylist> {
+  console.log(
+    `[ACTION:createOrUpdateSurpriseMixAction] Iniciando. Modo: ${
+      playlistIdToOverwrite ? 'Sobrescribir' : 'Crear'
+    }`
+  );
+  
   const session = await auth();
   if (!session?.accessToken || !session.user?.id) {
     throw new Error('No autenticado, token o ID de usuario no disponible.');
@@ -905,24 +770,79 @@ export async function createTargetedSurpriseMixAction(
   const { accessToken, user } = session;
   
   try {
-    const existingPlaylist = await findUserPlaylistByName(accessToken, newPlaylistName);
-    if (existingPlaylist) {
-      throw new Error(`PLAYLIST_EXISTS::${existingPlaylist.id}`);
+    // Validar si la playlist ya existe (solo en modo creación)
+    if (!playlistIdToOverwrite) {
+      const existingPlaylist = await findUserPlaylistByName(
+        accessToken,
+        newPlaylistName
+      );
+      if (existingPlaylist) {
+        // Lanzamos un error específico que la UI puede interceptar para pedir confirmación.
+        throw new Error(`PLAYLIST_EXISTS::${existingPlaylist.id}`);
+      }
     }
     
+    // Obtener y seleccionar canciones
     const allUniqueTracksUris = await getTrackUris(sourcePlaylistIds);
     if (allUniqueTracksUris.length < targetTrackCount) {
-      throw new Error('El número de canciones solicitado excede las canciones únicas disponibles.');
+      // Lanzamos un error si no hay suficientes canciones disponibles.
+      throw new Error(
+        `El número de canciones solicitado (${targetTrackCount}) excede las canciones únicas disponibles (${allUniqueTracksUris.length}).`
+      );
+    }
+    const finalShuffledTracksUris = shuffleArray(allUniqueTracksUris).slice(
+      0,
+      targetTrackCount
+    );
+    
+    let finalPlaylistId = playlistIdToOverwrite;
+    let playlistObject: SpotifyPlaylist;
+    
+    // Actuar en Spotify (Crear o Sobrescribir)
+    if (finalPlaylistId) {
+      // Modo Sobrescribir
+      console.log(`[Spotify] Sobrescribiendo playlist ${finalPlaylistId}...`);
+      await replacePlaylistTracks(
+        accessToken,
+        finalPlaylistId,
+        finalShuffledTracksUris
+      );
+      // Obtenemos los detalles actualizados
+      playlistObject = await getPlaylistDetails(accessToken, finalPlaylistId);
+      
+    } else {
+      // Modo Crear
+      console.log(`[Spotify] Creando nueva playlist llamada "${newPlaylistName}"...`);
+      const newPlaylist = await createNewPlaylist(
+        accessToken,
+        user.id,
+        newPlaylistName
+      );
+      await replacePlaylistTracks(
+        accessToken,
+        newPlaylist.id,
+        finalShuffledTracksUris
+      );
+      finalPlaylistId = newPlaylist.id;
+      playlistObject = newPlaylist;
     }
     
-    const finalShuffledTracksUris = shuffleArray(allUniqueTracksUris).slice(0, targetTrackCount);
+    if (!finalPlaylistId) {
+      throw new Error("No se pudo obtener un ID de playlist final.");
+    }
     
-    const newPlaylist = await createNewPlaylist(accessToken, user.id, newPlaylistName);
-    await replacePlaylistTracks(accessToken, newPlaylist.id, finalShuffledTracksUris);
-    
-    await db.megalist.create({
-      data: {
-        id: newPlaylist.id,
+    // Actuar en la base de datos (crear o actualizar) usando upsert
+    console.log(`[DB] Realizando upsert para la playlist ${finalPlaylistId}...`);
+    await db.megalist.upsert({
+      where: { id: finalPlaylistId },
+      update: {
+        sourcePlaylistIds: sourcePlaylistIds,
+        trackCount: finalShuffledTracksUris.length,
+        type: 'SURPRISE',
+        updatedAt: new Date(),
+      },
+      create: {
+        id: finalPlaylistId,
         spotifyUserId: user.id,
         sourcePlaylistIds: sourcePlaylistIds,
         trackCount: finalShuffledTracksUris.length,
@@ -930,16 +850,22 @@ export async function createTargetedSurpriseMixAction(
       },
     });
     
+    // Devolver el objeto enriquecido para la caché del cliente
     const enrichedPlaylist: SpotifyPlaylist = {
-      ...newPlaylist,
-      isMegalist: true,
-      isSyncable: false, // Las listas sorpresa no son sincronizables por definición
+      ...playlistObject,
+      isMegalist: true, // Una "Sorpresa" es un tipo de Megalista gestionada por la app.
+      isSyncable: false, // Las listas sorpresa no son sincronizables.
       playlistType: 'SURPRISE',
-      tracks: { ...newPlaylist.tracks, total: finalShuffledTracksUris.length },
+      tracks: {
+        ...playlistObject.tracks,
+        total: finalShuffledTracksUris.length,
+      },
     };
+    
     return enrichedPlaylist;
   } catch (error) {
-    console.error('[ACTION_ERROR:createTargetedSurpriseMixAction]', error);
+    // Re-lanzar el error para que el cliente lo pueda gestionar (especialmente el PLAYLIST_EXISTS).
+    console.error('[ACTION_ERROR:createOrUpdateSurpriseMixAction]', error);
     throw error;
   }
 }
