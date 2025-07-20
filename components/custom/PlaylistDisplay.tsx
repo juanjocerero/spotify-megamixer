@@ -4,24 +4,14 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import Fuse, { type IFuseOptions } from 'fuse.js';
-import { SpotifyPlaylist } from '@/types/spotify';
 
-import { cn } from '@/lib/utils';
-import { fetchMorePlaylists, updatePlaylistDetailsAction, } from '@/lib/action';
+import { SpotifyPlaylist } from '@/types/spotify';
+import { fetchMorePlaylists, } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 import { usePlaylistKeyboardNavigation } from '@/lib/hooks/usePlaylistKeyboardNavigation';
-
-import { useActions } from '@/lib/contexts/ActionProvider'; 
-
 import TrackDetailView from './TrackDetailView';
 import PlaylistItem from './PlaylistItem';
-
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,} from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { MoreHorizontal, Trash2, Loader2, Music, Pencil, Eye, Shuffle, Wand2 } from 'lucide-react';
 
 type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
 
