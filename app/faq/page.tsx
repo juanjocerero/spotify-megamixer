@@ -110,7 +110,7 @@ export default function FaqPage() {
               </h3>
               <p>
                 Selecciona 2 o más playlists → pulsa el botón verde{' '}
-                <strong>"Crear"</strong>. Tras confirmar el nombre, la
+                <strong>&quot;Crear&quot;</strong>. Tras confirmar el nombre, la
                 app te preguntará si quieres{' '}
                 <strong className="text-orange-400">reordenar</strong> la mezcla
                 inicial o mantener el orden original.
@@ -122,13 +122,13 @@ export default function FaqPage() {
               </h3>
               <p>
                 Selecciona playlists → pulsa el botón{' '}
-                <strong>"Añadir"</strong> → elige la playlist de
+                <strong>&quot;Añadir&quot;</strong> → elige la playlist de
                 destino. Tras añadir las canciones nuevas, se te preguntará si
                 quieres <strong className="text-orange-400">reordenar</strong> el
                 resultado.{' '}
                 <strong className="text-amber-300">Importante:</strong> si
-                añades canciones a una "Lista Sorpresa", esta se
-                convertirá automáticamente en una "Megalista".
+                añades canciones a una &quot;Lista Sorpresa&quot;, esta se
+                convertirá automáticamente en una &quot;Megalista&quot;.
               </p>
             </div>
             <div>
@@ -143,7 +143,7 @@ export default function FaqPage() {
                 <li>
                   <strong>Desde una playlist:</strong> Pulsa el menú{' '}
                   <code className="bg-slate-700 px-1 rounded">⋯</code> de
-                  cualquier playlist y elige "Crear lista sorpresa".
+                  cualquier playlist y elige &quot;Crear lista sorpresa&quot;.
                 </li>
                 <li>
                   <strong>Desde varias playlists:</strong> Selecciona varias
@@ -237,13 +237,13 @@ export default function FaqPage() {
             <li>
               <strong>Ver Canciones:</strong> Usa la opción{' '}
               <Eye className="inline h-4 w-4" />{' '}
-              <strong>"Ver Canciones"</strong> en el menú de cualquier
+              <strong>&quot;Ver Canciones&quot;</strong> en el menú de cualquier
               playlist para ver su contenido en un panel lateral.
             </li>
             <li>
               <strong>Editar Nombre/Descripción:</strong> Desde el menú{' '}
               <code className="bg-slate-700 px-1 rounded">⋯</code> →{' '}
-              <strong>"Editar detalles"</strong>. Funciona para
+              <strong>&quot;Editar detalles&quot;</strong>. Funciona para
               CUALQUIER playlist de tu propiedad.
             </li>
             <li>
