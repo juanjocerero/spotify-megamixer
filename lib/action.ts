@@ -4,7 +4,7 @@
 import { Resend } from 'resend';
 import { db } from '@/lib/db';
 import { auth } from '@/auth';
-import { SpotifyPlaylist } from '@/types/spotify';
+import { ActionResult, SpotifyPlaylist } from '@/types/spotify';
 import { 
   getAllPlaylistTracks, 
   findUserPlaylistByName, 
@@ -145,11 +145,11 @@ export async function addTracksToMegalistAction(
   targetPlaylistId: string,
   newSourceIds: string[], 
   shouldShuffle: boolean
-): Promise<{ finalCount: number; addedCount: number; }> {
+): Promise<ActionResult<{ finalCount: number; addedCount: number }>> {
   try {
     const session = await auth();
     if (!session?.accessToken || !session.user?.id) {
-      throw new Error('No autenticado o token no disponible.');
+      return { success: false, error: 'No autenticado o token no disponible.' };
     }
     const { accessToken } = session;
     
@@ -197,10 +197,11 @@ export async function addTracksToMegalistAction(
       },
     });
     
-    return { finalCount, addedCount: tracksToAdd.length };
+    return { success: true, data: { finalCount, addedCount: tracksToAdd.length } };
   } catch (error) {
     console.error(`[ACTION_ERROR:addTracksToMegalistAction] Fallo al añadir canciones a ${targetPlaylistId}.`, error);
-    throw error;
+    const errorMessage = error instanceof Error ? error.message : `Fallo al añadir canciones a ${targetPlaylistId}.`;
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -444,12 +445,17 @@ export async function previewBatchSync(playlistIds: string[]) {
 * @param playlistId El ID de la Megalista a sincronizar.
 * @returns Un informe del resultado de la sincronización.
 */
-export async function executeMegalistSync(playlistId: string, shouldShuffle: boolean) {
+export async function executeMegalistSync(
+  playlistId: string,
+  shouldShuffle: boolean
+): Promise<ActionResult<{ id: string; finalCount: number }>> {
+  
   console.log(`[ACTION:executeMegalistSync] Iniciando ejecución de sincronización para ${playlistId}`);
+  
   try {
     const session = await auth();
     if (!session?.accessToken) {
-      throw new Error('No autenticado o token no disponible.');
+      return { success: false, error: 'No autenticado o token no disponible.' };
     }
     const { accessToken } = session;
     
@@ -463,16 +469,17 @@ export async function executeMegalistSync(playlistId: string, shouldShuffle: boo
     } = await _calculateSyncChanges(playlistId, accessToken);
     
     const hasChanges = addedCount > 0 || removedCount > 0;
+    const sourcesChanged = validSourceIds.length !== megalist.sourcePlaylistIds.length;
     
-    if (!hasChanges && validSourceIds.length === megalist.sourcePlaylistIds.length) {
+    if (!hasChanges && !sourcesChanged) {
       console.log(`[ACTION:executeMegalistSync] La playlist ${playlistId} ya estaba sincronizada.`);
-      return { success: true, added: 0, removed: 0, finalCount: uniqueFinalTracks.length, message: "Ya estaba sincronizada." };
+      // Sigue siendo un éxito, pero no necesitamos hacer nada.
+      return { success: true, data: { id: playlistId, finalCount: uniqueFinalTracks.length } };
     }
     
     const initialTracksSet = new Set(initialTrackUris);
-    const finalTracksSet = new Set(uniqueFinalTracks);
     const tracksToAdd = uniqueFinalTracks.filter(uri => !initialTracksSet.has(uri));
-    const tracksToRemove = initialTrackUris.filter(uri => !finalTracksSet.has(uri));
+    const tracksToRemove = initialTrackUris.filter(uri => !initialTracksSet.has(uri));
     
     console.log(`[ACTION:executeMegalistSync] Ejecutando actualización para ${playlistId}. A añadir: ${tracksToAdd.length}, A eliminar: ${tracksToRemove.length}`);
     
@@ -498,10 +505,11 @@ export async function executeMegalistSync(playlistId: string, shouldShuffle: boo
       },
     });
     
-    return { success: true, added: tracksToAdd.length, removed: tracksToRemove.length, finalCount: uniqueFinalTracks.length };
+    return { success: true, data: { id: playlistId, finalCount: uniqueFinalTracks.length } };
   } catch (error) {
     console.error(`[ACTION_ERROR:executeMegalistSync] Fallo al ejecutar la sincronización para ${playlistId}.`, error);
-    throw error;
+    const errorMessage = error instanceof Error ? error.message : `Fallo al sincronizar ${playlistId}.`;
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -604,47 +612,6 @@ export async function unfollowPlaylistsBatch(playlistIds: string[]): Promise<voi
 }
 
 /**
-* @deprecated Esta función ha sido reemplazada por createOrUpdateSurpriseMixAction.
-* Crea una Megalista Sorpresa a partir de fuentes aleatorias si no se especifican.
-*/
-export async function createSurpriseMegalist(
-  sourcePlaylistIds: string[],
-  targetTrackCount: number,
-  newPlaylistName: string
-): Promise<SpotifyPlaylist> {
-  console.log('[DEPRECATED] createSurpriseMegalist -> createOrUpdateSurpriseMixAction');
-  // Llama a la nueva función en modo "crear". La lógica de selección de fuentes aleatorias
-  // ya está en el componente `SurpriseMixButton`, por lo que esta acción siempre recibe los IDs.
-  return createOrUpdateSurpriseMixAction(sourcePlaylistIds, targetTrackCount, newPlaylistName);
-}
-
-/**
-* @deprecated Esta función ha sido reemplazada por createOrUpdateSurpriseMixAction.
-* Sobrescribe una Megalista Sorpresa existente.
-*/
-export async function overwriteSurpriseMegalist(
-  playlistId: string,
-  sourcePlaylistIds: string[],
-  targetTrackCount: number
-): Promise<SpotifyPlaylist> {
-  console.log(
-    '[DEPRECATED] overwriteSurpriseMegalist -> createOrUpdateSurpriseMixAction'
-  );
-  // El nombre de la playlist no es crucial aquí ya que estamos sobrescribiendo.
-  // La nueva función obtendrá los detalles actualizados de Spotify de todos modos.
-  const playlistName = 'Playlist Sorpresa Sobrescrita'; 
-  
-  // Llama a la nueva función en modo "sobrescribir" (pasando el ID como último argumento).
-  return createOrUpdateSurpriseMixAction(
-    sourcePlaylistIds,
-    targetTrackCount,
-    playlistName,
-    playlistId
-  );
-}
-
-
-/**
 * Server Action para obtener los nombres de las canciones y los artistas de una playlist.
 * Utiliza la optimización donde getAllPlaylistTracks ya trae los detalles necesarios.
 * @param playlistId El ID de la playlist de Spotify.
@@ -723,26 +690,6 @@ export async function getUniqueTrackCountFromPlaylistsAction(playlistIds: string
 }
 
 /**
-* @deprecated Esta función ha sido reemplazada por createOrUpdateSurpriseMixAction.
-* Crea una Megalista Sorpresa a partir de una selección de playlists.
-*/
-export async function createTargetedSurpriseMixAction(
-  sourcePlaylistIds: string[],
-  targetTrackCount: number,
-  newPlaylistName: string
-): Promise<SpotifyPlaylist> {
-  console.log(
-    '[DEPRECATED] createTargetedSurpriseMixAction -> createOrUpdateSurpriseMixAction'
-  );
-  // Llama a la nueva función en modo "crear" (sin el último argumento).
-  return createOrUpdateSurpriseMixAction(
-    sourcePlaylistIds,
-    targetTrackCount,
-    newPlaylistName
-  );
-}
-
-/**
 * Crea o sobrescribe una playlist "Sorpresa".
 * - Si no se provee `playlistIdToOverwrite`, crea una nueva playlist.
 * - Si se provee, sobrescribe la playlist existente con ese ID.
@@ -756,7 +703,7 @@ export async function createOrUpdateSurpriseMixAction(
   targetTrackCount: number,
   newPlaylistName: string,
   playlistIdToOverwrite?: string
-): Promise<SpotifyPlaylist> {
+): Promise<ActionResult<SpotifyPlaylist>> {
   console.log(
     `[ACTION:createOrUpdateSurpriseMixAction] Iniciando. Modo: ${
       playlistIdToOverwrite ? 'Sobrescribir' : 'Crear'
@@ -765,7 +712,7 @@ export async function createOrUpdateSurpriseMixAction(
   
   const session = await auth();
   if (!session?.accessToken || !session.user?.id) {
-    throw new Error('No autenticado, token o ID de usuario no disponible.');
+    return { success: false, error: 'No autenticado, token o ID de usuario no disponible.' };
   }
   const { accessToken, user } = session;
   
@@ -778,7 +725,7 @@ export async function createOrUpdateSurpriseMixAction(
       );
       if (existingPlaylist) {
         // Lanzamos un error específico que la UI puede interceptar para pedir confirmación.
-        throw new Error(`PLAYLIST_EXISTS::${existingPlaylist.id}`);
+        return { success: false, error: `PLAYLIST_EXISTS::${existingPlaylist.id}` };
       }
     }
     
@@ -786,9 +733,10 @@ export async function createOrUpdateSurpriseMixAction(
     const allUniqueTracksUris = await getTrackUris(sourcePlaylistIds);
     if (allUniqueTracksUris.length < targetTrackCount) {
       // Lanzamos un error si no hay suficientes canciones disponibles.
-      throw new Error(
-        `El número de canciones solicitado (${targetTrackCount}) excede las canciones únicas disponibles (${allUniqueTracksUris.length}).`
-      );
+      return {
+        success: false,
+        error: `El número de canciones solicitado (${targetTrackCount}) excede las canciones únicas disponibles (${allUniqueTracksUris.length}).`
+      };
     }
     const finalShuffledTracksUris = shuffleArray(allUniqueTracksUris).slice(
       0,
@@ -828,7 +776,7 @@ export async function createOrUpdateSurpriseMixAction(
     }
     
     if (!finalPlaylistId) {
-      throw new Error("No se pudo obtener un ID de playlist final.");
+      return { success: false, error: "No se pudo obtener un ID de playlist final." };
     }
     
     // Actuar en la base de datos (crear o actualizar) usando upsert
@@ -862,10 +810,10 @@ export async function createOrUpdateSurpriseMixAction(
       },
     };
     
-    return enrichedPlaylist;
+    return { success: true, data: enrichedPlaylist };
   } catch (error) {
     // Re-lanzar el error para que el cliente lo pueda gestionar (especialmente el PLAYLIST_EXISTS).
-    console.error('[ACTION_ERROR:createOrUpdateSurpriseMixAction]', error);
-    throw error;
+    const errorMessage = error instanceof Error ? error.message : "Error desconocido al crear la lista sorpresa.";
+    return { success: false, error: errorMessage };
   }
 }

@@ -38,3 +38,11 @@ export interface SpotifyTrack {
     name: string;
   }[];
 }
+
+/**
+* Representa una respuesta estandarizada para las server actions.
+* @template T El tipo de los datos devueltos en caso de éxito.
+*/
+export type ActionResult<T> =
+| { success: true; data: T }
+| { success: false; error: string };

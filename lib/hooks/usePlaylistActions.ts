@@ -2,6 +2,7 @@
 
 'use client';
 
+import { ActionResult } from '@/types/spotify';
 import { useReducer, useState, useCallback } from 'react';
 import { usePlaylistStore } from '@/lib/store';
 import {
@@ -136,10 +137,14 @@ export function usePlaylistActions() {
   // Wrapper para acciones asíncronas que se ejecutan sobre múltiples listas
   const executeBatchAction = useCallback(async <T, P>(
     items: P[],
-    actionFn: (item: P) => Promise<T>,
+    // ANTES: actionFn: (item: P) => Promise<T>,
+    // AHORA: espera que la acción devuelva un ActionResult
+    actionFn: (item: P) => Promise<ActionResult<T>>,
     options: {
       loading: string;
-      onSuccess: (results: PromiseSettledResult<T>[], items: P[]) => string;
+      // ANTES: onSuccess: (results: PromiseSettledResult<T>[], items: P[]) => string;
+      // AHORA: el tipo de los resultados cambia
+      onSuccess: (results: PromiseSettledResult<ActionResult<T>>[], items: P[]) => string;
       error: string;
     }
   ): Promise<void> => {
@@ -206,7 +211,6 @@ export function usePlaylistActions() {
     const { playlists } = dialogState.props;
     
     dispatch({ type: 'CLOSE' });
-    
     await executeBatchAction(
       playlists,
       (p) => executeMegalistSync(p.id, shouldShuffle),
@@ -216,10 +220,25 @@ export function usePlaylistActions() {
         onSuccess: (results, items) => {
           let successCount = 0;
           results.forEach((result, index) => {
-            if (result.status === 'fulfilled' && result.value.success) {
+            // ANTES: if (result.status === 'fulfilled' && result.value.success) {
+            // AHORA: Verificamos el estado de la promesa Y el de nuestra acción.
+            if (result.status === 'fulfilled' && result.value.success === true) {
               successCount++;
-              const { finalCount } = result.value;
-              updatePlaylistInCache(items[index].id, { trackCount: finalCount });
+              // ANTES: const { finalCount } = result.value;
+              // AHORA: el payload está en la propiedad `data`.
+              const { id, finalCount } = result.value.data;
+              updatePlaylistInCache(id, { trackCount: finalCount });
+            } else {
+              let reason = 'Error desconocido';
+              if (result.status === 'rejected') {
+                // Si la promesa fue rechazada (error de red/servidor)
+                reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+              } else if (result.value.success === false) {
+                // Si la promesa se cumplió pero nuestra acción falló
+                // Aquí TypeScript sabe que `result.value` es del tipo `{ success: false, error: string }`
+                reason = result.value.error;
+              }
+              console.error(`Fallo al sincronizar la playlist ${items[index].name}:`, reason);
             }
           });
           return `Sincronización completada. ${successCount} de ${items.length} Megalistas actualizadas.`;
@@ -281,12 +300,19 @@ export function usePlaylistActions() {
     
     try {
       if (mode === 'update' && finalTargetId) {
-        const { finalCount, addedCount } = await addTracksToMegalistAction(finalTargetId, sourceIds, shouldShuffle);
-        updatePlaylistInCache(finalTargetId, { trackCount: finalCount, playlistType: 'MEGALIST' });
-        if (addedCount > 0) {
-          toast.success(`¡Megalista actualizada! Se añadieron ${addedCount} canciones nuevas.`, { id: toastId });
+        const result = await addTracksToMegalistAction(finalTargetId, sourceIds, shouldShuffle);
+        
+        if (result.success) {
+          const { finalCount, addedCount } = result.data;
+          updatePlaylistInCache(finalTargetId, { trackCount: finalCount, playlistType: 'MEGALIST' });
+          if (addedCount > 0) {
+            toast.success(`¡Megalista actualizada! Se añadieron ${addedCount} canciones nuevas.`, { id: toastId });
+          } else {
+            toast.info('La Megalista ya contenía todas las canciones.', { id: toastId });
+          }
         } else {
-          toast.info('La Megalista ya contenía todas las canciones.', { id: toastId });
+          // Si la acción falla, mostramos el error que nos devuelve
+          toast.error(result.error, { id: toastId });
         }
       } else {
         const trackUris = await getTrackUris(sourceIds);
@@ -333,29 +359,47 @@ export function usePlaylistActions() {
     dispatch({ type: 'CLOSE' });
     const toastId = toast.loading(`Creando tu Lista Sorpresa "${playlistName}"...`);
     
-    try {
-      const newPlaylist = await createOrUpdateSurpriseMixAction(sourceIds, targetTrackCount, playlistName, overwriteId);
+    const result = await createOrUpdateSurpriseMixAction(
+      sourceIds,
+      targetTrackCount,
+      playlistName,
+      overwriteId
+    );
+    
+    if (result.success) {
+      // Éxito: usamos result.data para actualizar el estado.
+      const newPlaylist = result.data;
       if (overwriteId) {
-        updatePlaylistInCache(overwriteId, { trackCount: newPlaylist.tracks.total, playlistType: 'SURPRISE' });
+        updatePlaylistInCache(overwriteId, {
+          trackCount: newPlaylist.tracks.total,
+          playlistType: 'SURPRISE',
+        });
         toast.success(`Lista Sorpresa "${newPlaylist.name}" actualizada.`, { id: toastId });
       } else {
         addPlaylistToCache(newPlaylist);
         toast.success(`Lista Sorpresa "${newPlaylist.name}" creada con éxito.`, { id: toastId });
       }
       clearSelection();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ocurrió un error desconocido.';
-      if (message.startsWith('PLAYLIST_EXISTS::')) {
-        const existingId = message.split('::')[1];
+    } else {
+      // Error: usamos result.error para informar al usuario.
+      const errorMessage = result.error;
+      if (errorMessage.startsWith('PLAYLIST_EXISTS::')) {
+        const existingId = errorMessage.split('::')[1];
         toast.dismiss(toastId);
-        setIsProcessing(false);
-        dispatch({ type: 'OPEN', payload: { ...dialogState, props: { ...dialogState.props, isOverwrite: true, overwriteId: existingId } }});
+        // Volvemos a abrir el diálogo en modo de sobrescritura
+        dispatch({
+          type: 'OPEN',
+          payload: {
+            variant: 'surpriseName',
+            props: { ...dialogState.props, isOverwrite: true, overwriteId: existingId },
+          },
+        });
       } else {
-        toast.error(message, { id: toastId });
+        toast.error(errorMessage, { id: toastId });
       }
-    } finally {
-      setIsProcessing(false);
     }
+    
+    setIsProcessing(false);
   };
   
   // Acciones públicas (para abrir los diálogos)
