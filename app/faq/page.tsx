@@ -126,13 +126,13 @@ export default function FaqPage() {
     <p>
     Selecciona una o más playlists → pulsa el botón{' '}
     <ListPlus className="inline h-4 w-4" />{' '}
-    <strong>"Añadir"</strong> → elige la Megalista de
+    <strong>&quot;Añadir&quot;</strong> → elige la Megalista de
     destino. Tras añadir las canciones nuevas, se te preguntará si
     quieres <strong className="text-orange-400">reordenar</strong> el
     resultado.{' '}
     <strong className="text-amber-300">Importante:</strong> si
-    añades canciones a una "Lista Sorpresa", esta se
-    convertirá automáticamente en una "Megalista", ya que su contenido deja de ser aleatorio.
+    añades canciones a una &quot;Lista Sorpresa&quot;, esta se
+    convertirá automáticamente en una &quot;Megalista&quot;, ya que su contenido deja de ser aleatorio.
     </p>
     </div>
     <div>
@@ -153,7 +153,7 @@ export default function FaqPage() {
     <li>
     <strong>Desde una sola playlist:</strong> Pulsa el menú{' '}
     <code className="bg-slate-700 px-1 rounded">⋯</code> de
-    cualquier playlist y elige "Crear lista sorpresa".
+    cualquier playlist y elige &quot;Crear lista sorpresa&quot;.
     </li>
     <li>
     <strong>Totalmente aleatoria:</strong> Pulsa el botón{' '}
@@ -185,7 +185,7 @@ export default function FaqPage() {
     <strong className="text-amber-300">
     Conserva Fecha y Orden:
     </strong>{' '}
-    La sincronización solo añade y quita lo necesario (un "diff sync"), por lo que las
+    La sincronización solo añade y quita lo necesario (un &quot;diff sync&quot;), por lo que las
     canciones que ya estaban conservan su fecha de adición y su orden
     original por defecto.
     </li>
@@ -223,13 +223,13 @@ export default function FaqPage() {
         <li>
         <strong>Ver Canciones:</strong> Usa la opción{' '}
         <Eye className="inline h-4 w-4" />{' '}
-        <strong>"Ver Canciones"</strong> en el menú de cualquier
+        <strong>&quot;Ver Canciones&quot;</strong> en el menú de cualquier
         playlist para ver su contenido en un panel lateral.
         </li>
         <li>
         <strong>Editar Nombre/Descripción:</strong> Desde el menú{' '}
         <code className="bg-slate-700 px-1 rounded">⋯</code> →{' '}
-        <strong>"Editar detalles"</strong>. Funciona para
+        <strong>&quot;Editar detalles&quot;</strong>. Funciona para
         CUALQUIER playlist de tu propiedad.
         </li>
         <li>
