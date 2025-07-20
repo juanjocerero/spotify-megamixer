@@ -271,7 +271,7 @@ export default function SurpriseMixButton() {
     title="La playlist ya existe"
     description={
       <span>
-      Ya tienes una playlist llamada <strong className="text-white">"{playlistName}"</strong>. ¿Quieres reemplazar su contenido con esta nueva lista? Esta acción no se puede deshacer.
+      Ya tienes una playlist llamada <strong className="text-white">&quot;{playlistName}&quot;</strong>. ¿Quieres reemplazar su contenido con esta nueva lista? Esta acción no se puede deshacer.
       </span>
     }
     confirmButtonText="Sí, sobrescribir"

@@ -11,24 +11,6 @@ import ShuffleChoiceDialog from './ShuffleChoiceDialog';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { 
-  AlertDialog, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogTitle, 
-  AlertDialogHeader, 
-  AlertDialogFooter, 
-  AlertDialogCancel, 
-  AlertDialogAction 
-} from '@/components/ui/alert-dialog';
-import {
-  Dialog, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogContent,
-  DialogDescription, 
-  DialogFooter
-} from '@/components/ui/dialog';
 import { RefreshCw, Loader2 } from 'lucide-react';
 
 export default function SyncAllButton() {

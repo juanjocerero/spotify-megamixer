@@ -29,16 +29,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -46,16 +36,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,} from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw, Pencil, Eye, Shuffle, Wand2 } from 'lucide-react';
-
-
 
 type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
 
@@ -726,7 +709,7 @@ export default function PlaylistDisplay({
     title="¿Reordenar la playlist tras sincronizar?"
     description={
       <span>
-      La playlist <strong className="text-white">"{shuffleSyncChoice.playlist?.name}"</strong> será actualizada. ¿Quieres reordenar su contenido de forma aleatoria después?
+      La playlist <strong className="text-white">&quot;{shuffleSyncChoice.playlist?.name}&quot;</strong> será actualizada. ¿Quieres reordenar su contenido de forma aleatoria después?
       </span>
     }
     />
