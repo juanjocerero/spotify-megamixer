@@ -7,13 +7,13 @@ import { getUserPlaylists } from '@/lib/spotify';
 
 import { ActionProvider } from '@/lib/contexts/ActionProvider';
 
-import LogoutButton from '@/components/custom/LogoutButton';
+import LogoutButton from '@/components/custom/buttons/LogoutButton';
 import DashboardClient from '@/components/custom/DashboardClient';
 import FloatingActionBar from '@/components/custom/FloatingActionBar';
-import SurpriseMixButton from '@/components/custom/SurpriseMixButton';
+import SurpriseMixButton from '@/components/custom/buttons/SurpriseMixButton';
 import HelpButton from '@/components/custom/buttons/HelpButton';
-import SyncAllButton from '@/components/custom/SyncAllButton';
-import ShuffleAllButton from '@/components/custom/ShuffleAllButton';
+import SyncAllButton from '@/components/custom/buttons/SyncAllButton';
+import ShuffleAllButton from '@/components/custom/buttons/ShuffleAllButton';
 import Footer from '@/components/custom/Footer';
 
 export default async function DashboardPage() {
