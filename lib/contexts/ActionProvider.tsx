@@ -38,7 +38,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
       return (
         <span>
         Vas a reordenar todas las canciones de la playlist{' '}
-        <strong className="text-white">"{shuffleDialogState.playlists[0].name}"</strong>. Esta acción no se puede deshacer.
+        <strong className="text-white">&quot;{shuffleDialogState.playlists[0].name}&quot;</strong>. Esta acción no se puede deshacer.
         </span>
       );
     }
@@ -57,7 +57,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
         <span>
         Esta acción es irreversible. Vas a eliminar la playlist{' '}
         <strong className="text-white">
-        "{deletionDialogState.playlists[0].name}"
+        &quot;{deletionDialogState.playlists[0].name}&quot;
         </strong>.
         </span>
       );

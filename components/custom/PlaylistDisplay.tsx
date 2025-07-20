@@ -70,7 +70,6 @@ export default function PlaylistDisplay({
     setPlaylistCache, 
     addMoreToCache,
     updatePlaylistInCache,
-    removePlaylistFromCache
   } = usePlaylistStore();
 
    const { actions } = useActions();
