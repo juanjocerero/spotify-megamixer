@@ -4,7 +4,10 @@ import { useState } from 'react';
 import { usePlaylistStore } from '@/lib/store';
 import { toast } from 'sonner';
 import { SpotifyPlaylist } from '@/types/spotify';
-import { unfollowPlaylistsBatch } from '@/lib/action';
+import { 
+  unfollowPlaylistsBatch, 
+  shufflePlaylistsAction  
+} from '@/lib/action';
 
 // Tipo para definir una playlist para una acción, solo necesitamos id y nombre.
 export type ActionPlaylist = {
@@ -17,6 +20,12 @@ type ActionState = {
   isLoading: boolean;
   
   // Podríamos añadir más propiedades aquí en el futuro, como el tipo de acción actual.
+};
+
+// Estado para el diálogo de reordenado
+type ShuffleDialogState = {
+  isOpen: boolean;
+  playlists: ActionPlaylist[];
 };
 
 // Estado para el diálogo de eliminación.
@@ -33,6 +42,10 @@ type DeletionDialogState = {
 export function usePlaylistActions() {
   const [actionState, setActionState] = useState<ActionState>({ isLoading: false });
   const [isLoading, setIsLoading] = useState(false);
+  const [shuffleDialog, setShuffleDialog] = useState<ShuffleDialogState>({
+    isOpen: false,
+    playlists: [],
+  });
   const [deletionDialog, setDeletionDialog] = useState<DeletionDialogState>({
     isOpen: false,
     playlists: [],
@@ -47,6 +60,26 @@ export function usePlaylistActions() {
     removeMultipleFromCache,
     updatePlaylistInCache,
   } = usePlaylistStore();
+  
+  // Función interno que ejecuta la lógica de reordenado
+  const _handleConfirmShuffle = async () => {
+    setIsLoading(true);
+    const toastId = toast.loading(`Reordenando ${shuffleDialog.playlists.length} playlist(s)...`);
+    
+    try {
+      const idsToShuffle = shuffleDialog.playlists.map(p => p.id);
+      await shufflePlaylistsAction(idsToShuffle);
+      
+      toast.success(`${shuffleDialog.playlists.length} playlist(s) reordenadas con éxito.`, { id: toastId });
+      clearSelection();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudieron reordenar las playlists.';
+      toast.error(message, { id: toastId });
+    } finally {
+      setIsLoading(false);
+      setShuffleDialog({ isOpen: false, playlists: [] });
+    }
+  };
   
   // Función interna que realmente ejecuta la lógica de borrado.
   const _handleConfirmDelete = async () => {
@@ -71,7 +104,16 @@ export function usePlaylistActions() {
     }
   };
   
-  // Función PÚBLICA que los componentes llamarán.
+  // Función pública para reordenar
+  const shufflePlaylists = (playlists: ActionPlaylist[]) => {
+    if (playlists.length === 0) return;
+    setShuffleDialog({
+      isOpen: true,
+      playlists,
+    });
+  };
+  
+  // Función pública para eliminar que los componentes llamarán.
   // Su única responsabilidad es abrir el diálogo de confirmación con el contexto correcto.
   const deletePlaylists = (playlists: ActionPlaylist[]) => {
     if (playlists.length === 0) return;
@@ -85,13 +127,18 @@ export function usePlaylistActions() {
   // Aquí definiremos todas las funciones que los componentes de la UI podrán llamar.
   // Por ahora, es un objeto vacío que llenaremos en los siguientes pasos.
   const actions = {
+    shufflePlaylists,
     deletePlaylists, 
   };
   
   return {
     isProcessing: isLoading,
     actions,
-    // Devolvemos el estado y los callbacks para que el Provider pueda controlar el diálogo.
+    shuffleDialogState: shuffleDialog,
+    shuffleDialogCallbacks: {
+      onConfirm: _handleConfirmShuffle,
+      onClose: () => setShuffleDialog({ isOpen: false, playlists: [] }),
+    },
     deletionDialogState: deletionDialog,
     deletionDialogCallbacks: {
       onConfirm: _handleConfirmDelete,

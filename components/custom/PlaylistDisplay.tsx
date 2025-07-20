@@ -8,11 +8,9 @@ import { SpotifyPlaylist } from '@/types/spotify';
 import { cn } from '@/lib/utils';
 import { 
   fetchMorePlaylists, 
-  unfollowPlaylist, 
   previewMegalistSync, 
   executeMegalistSync, 
   updatePlaylistDetailsAction, 
-  shufflePlaylistsAction
 } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 
@@ -117,11 +115,6 @@ export default function PlaylistDisplay({
     false, playlistId: null, 
     playlistName: null }
   );
-  const [shuffleAlert, setShuffleAlert] = useState<{
-    open: boolean;
-    playlist: SpotifyPlaylist | null;
-    isShuffling: boolean;
-  }>({ open: false, playlist: null, isShuffling: false });
   const [shuffleSyncChoice, setShuffleSyncChoice] = useState<{
     open: boolean;
     playlist: SpotifyPlaylist | null;
@@ -169,29 +162,6 @@ export default function PlaylistDisplay({
       toast.error(message, { id: toastId });
     } finally {
       setIsSaving(false);
-    }
-  };
-  
-  // Maneja el reordenado explícito del contenido de una playlist
-  const handleShuffle = (playlist: SpotifyPlaylist) => {
-    setShuffleAlert({ open: true, playlist, isShuffling: false });
-  };
-  
-  // Maneja el flujo de confirmación del reordenado
-  const handleConfirmShuffle = async () => {
-    if (!shuffleAlert.playlist) return;
-    
-    setShuffleAlert(prev => ({ ...prev, isShuffling: true }));
-    const toastId = toast.loading(`Reordenando "${shuffleAlert.playlist.name}"...`);
-    
-    try {
-      await shufflePlaylistsAction([shuffleAlert.playlist.id]);
-      toast.success(`Playlist "${shuffleAlert.playlist.name}" reordenada con éxito.`, { id: toastId });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo reordenar la playlist.';
-      toast.error(message, { id: toastId });
-    } finally {
-      setShuffleAlert({ open: false, playlist: null, isShuffling: false });
     }
   };
   
@@ -563,7 +533,7 @@ export default function PlaylistDisplay({
         <DropdownMenuItem
         onClick={(e) => {
           e.stopPropagation();
-          handleShuffle(playlist);
+          actions.shufflePlaylists([{ id: playlist.id, name: playlist.name }]);
         }}
         >
         <Shuffle className="mr-2 h-4 w-4" />
@@ -675,23 +645,6 @@ export default function PlaylistDisplay({
       La playlist <strong className="text-white">&quot;{shuffleSyncChoice.playlist?.name}&quot;</strong> será actualizada. ¿Quieres reordenar su contenido de forma aleatoria después?
       </span>
     }
-    />
-    
-    {/* Confirmación de reordenado de lista */}
-    <ConfirmationDialog
-    isOpen={shuffleAlert.open}
-    onClose={() => setShuffleAlert({ ...shuffleAlert, open: false })}
-    onConfirm={handleConfirmShuffle}
-    isLoading={shuffleAlert.isShuffling}
-    title="Confirmar Reordenado"
-    description={
-      <span>
-      Vas a reordenar todas las canciones de la playlist{' '}
-      <strong className="text-white">{shuffleAlert.playlist?.name}</strong>. Esta acción no se puede deshacer.
-      </span>
-    }
-    confirmButtonText="Sí, reordenar"
-    confirmButtonVariant="destructive"
     />
     
     {/* Diálogo de creación de lista sorpresa */}

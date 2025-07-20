@@ -15,8 +15,6 @@ import {
   addTracksToMegalistAction,
   executeMegalistSync, 
   previewBatchSync, 
-  unfollowPlaylistsBatch,
-  shufflePlaylistsAction
 } from '@/lib/action';
 
 import ConfirmationDialog from './ConfirmationDialog';
@@ -44,7 +42,7 @@ export default function FloatingActionBar() {
     updatePlaylistInCache,
     playlistCache
   } = usePlaylistStore();
-
+  
   const { actions, isProcessing } = useActions(); 
   
   const [step, setStep] = useState<'idle' | 'fetching' | 'confirming' | 'askingOrder' | 'processing'>('idle');
@@ -62,8 +60,6 @@ export default function FloatingActionBar() {
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [batchSyncAlert, setBatchSyncAlert] = useState<{ open: boolean; added: number; removed: number; }>({ open: false, added: 0, removed: 0 });
-  const [batchShuffleAlertOpen, setBatchShuffleAlertOpen] = useState(false);
-  const [isShuffling, setIsShuffling] = useState(false);
   const [shuffleChoice, setShuffleChoice] = useState<{
     open: boolean;
     targetPlaylistId: string;
@@ -76,7 +72,7 @@ export default function FloatingActionBar() {
   });
   const [shuffleBatchSyncChoice, setShuffleBatchSyncChoice] = useState({ open: false });
   const [surpriseDialog, setSurpriseDialog] = useState({ open: false });
-    
+  
   // Saber si hay algo que sincronizar
   const syncableMegalists = useMemo(
     () => megamixCache.filter(p => p.isSyncable),
@@ -454,30 +450,15 @@ export default function FloatingActionBar() {
     setIsSyncingAll(false);
   };
   
-  const handleConfirmBatchShuffle = async () => {
-    if (megalistsInSelection.length === 0) return;
-    
-    setIsShuffling(true);
-    const toastId = toast.loading(`Reordenando ${megalistsInSelection.length} playlist(s)...`);
-    
-    try {
-      const idsToShuffle = megalistsInSelection.map(p => p.id);
-      await shufflePlaylistsAction(idsToShuffle);
-      toast.success(`${megalistsInSelection.length} playlist(s) reordenadas con éxito.`, { id: toastId });
-      clearSelection();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudieron reordenar las playlists.';
-      toast.error(message, { id: toastId });
-    } finally {
-      setBatchShuffleAlertOpen(false);
-      setIsShuffling(false);
-    }
+  const handleShuffleClick = () => {
+    const playlistsToShuffle = megamixCache.filter(p => selectedPlaylistIds.includes(p.id) && p.isMegalist);
+    actions.shufflePlaylists(playlistsToShuffle.map(p => ({ id: p.id, name: p.name })));
   };
-
+  
   // Obtenemos los nombres de las playlists para el diálogo.
   const handleDeleteClick = () => {
     const playlistsToDelete = playlistCache.filter(p => selectedPlaylistIds.includes(p.id))
-      .map(p => ({ id: p.id, name: p.name }));
+    .map(p => ({ id: p.id, name: p.name }));
     actions.deletePlaylists(playlistsToDelete);
   };
   
@@ -564,7 +545,7 @@ export default function FloatingActionBar() {
         <Button
         variant="ghost"
         size="lg"
-        onClick={() => setBatchShuffleAlertOpen(true)}
+        onClick={() => handleShuffleClick}
         disabled={isProcessing}
         className="h-14 w-14 text-orange-500 hover:bg-orange-500/10 hover:text-orange-500 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2"
         >
@@ -818,23 +799,6 @@ export default function FloatingActionBar() {
     onConfirm={handleExecuteBatchSync}
     title="¿Reordenar las playlists tras sincronizar?"
     description="Solo se reordenarán aquellas playlists que tengan cambios. ¿Quieres reordenar su contenido de forma aleatoria después de actualizarlas?"
-    />
-    
-    {/* Diálogo para confirmar reordenación en lote */}
-    <ConfirmationDialog
-    isOpen={batchShuffleAlertOpen}
-    onClose={() => setBatchShuffleAlertOpen(false)}
-    onConfirm={handleConfirmBatchShuffle}
-    isLoading={isShuffling}
-    title="¿Estás seguro?"
-    description={
-      <span>
-      Vas a reordenar las canciones de{' '}
-      <strong className="text-white">{megalistsInSelection.length}</strong> Megalista(s) seleccionada(s). Esta acción reordenará completamente cada lista y no se puede deshacer.
-      </span>
-    }
-    confirmButtonText="Sí, reordenar"
-    confirmButtonVariant="destructive" // Usamos destructive para acciones "peligrosas" o irreversibles
     />
     
     {/* Diálogo de creación de lista sorpresa */}

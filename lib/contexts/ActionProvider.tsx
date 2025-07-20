@@ -8,6 +8,7 @@ import ConfirmationDialog from '@/components/custom/ConfirmationDialog';
 type ActionContextType = {
   actions: {
     deletePlaylists: (playlists: ActionPlaylist[]) => void;
+    shufflePlaylists: (playlists: ActionPlaylist[]) => void;
   };
   isProcessing: boolean;
 };
@@ -20,12 +21,34 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
   const { 
     isProcessing, 
     actions, 
+    shuffleDialogState, 
+    shuffleDialogCallbacks, 
     deletionDialogState, 
     deletionDialogCallbacks 
   } = usePlaylistActions();
   
   // Memoizamos el valor del contexto para evitar re-renders innecesarios.
   const contextValue = useMemo(() => ({ actions, isProcessing }), [actions, isProcessing]);
+  
+  
+  // Añadir descripción para el diálogo de reordenado
+  const shuffleDescription = useMemo(() => {
+    const count = shuffleDialogState.playlists.length;
+    if (count === 1) {
+      return (
+        <span>
+        Vas a reordenar todas las canciones de la playlist{' '}
+        <strong className="text-white">"{shuffleDialogState.playlists[0].name}"</strong>. Esta acción no se puede deshacer.
+        </span>
+      );
+    }
+    return (
+      <span>
+      Vas a reordenar las canciones de{' '}
+      <strong className="text-white">{count}</strong> playlist(s) seleccionada(s). Esta acción no se puede deshacer.
+      </span>
+    );
+  }, [shuffleDialogState.playlists]);
   
   // Generamos la descripción para el diálogo de eliminación.
   const deletionDescription = useMemo(() => {
@@ -52,8 +75,19 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     <ActionContext.Provider value={contextValue}>
     {children}
     
-    {/* Aquí vivirán TODOS nuestros diálogos de acción globales. */}
-    {/* Por ahora, solo el de eliminación. */}
+    {/* Diálogo de reordenado. */}
+    <ConfirmationDialog
+    isOpen={shuffleDialogState.isOpen}
+    onClose={shuffleDialogCallbacks.onClose}
+    onConfirm={shuffleDialogCallbacks.onConfirm}
+    isLoading={isProcessing}
+    title="Confirmar Reordenado"
+    description={shuffleDescription}
+    confirmButtonText="Sí, reordenar"
+    confirmButtonVariant="destructive"
+    />
+    
+    {/* Diálogo de eliminación. */}
     <ConfirmationDialog
     isOpen={deletionDialogState.isOpen}
     onClose={deletionDialogCallbacks.onClose}

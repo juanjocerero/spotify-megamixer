@@ -4,6 +4,9 @@ import { db } from '@/lib/db';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getUserPlaylists } from '@/lib/spotify';
+
+import { ActionProvider } from '@/lib/contexts/ActionProvider';
+
 import LogoutButton from '@/components/custom/LogoutButton';
 import DashboardClient from '@/components/custom/DashboardClient';
 import FloatingActionBar from '@/components/custom/FloatingActionBar';
@@ -61,6 +64,7 @@ export default async function DashboardPage() {
   });
   
   return (
+    <ActionProvider>
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
     <div className="max-w-3xl mx-auto">
     <header className="flex justify-between items-center mb-6">
@@ -79,7 +83,7 @@ export default async function DashboardPage() {
     
     </header>
     
-    {/* 6. Pasamos los datos ya corregidos y enriquecidos al cliente */}
+    {/* Pasamos los datos ya corregidos y enriquecidos al cliente */}
     <DashboardClient
     initialPlaylists={finalPlaylists}
     initialNextUrl={initialData.next}
@@ -90,5 +94,6 @@ export default async function DashboardPage() {
     <Footer />
     </div>
     </div>
+    </ActionProvider>
   );
 }
