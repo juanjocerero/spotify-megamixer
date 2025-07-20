@@ -3,7 +3,8 @@
 
 import { useState, useMemo } from 'react';
 import { usePlaylistStore } from '@/lib/store';
-import { shuffleArray } from './../../lib/utils';
+import { useActions } from '@/lib/contexts/ActionProvider';
+import { shuffleArray } from '@/lib/utils';
 
 // Lógica de acciones del backend
 import {
@@ -41,8 +42,10 @@ export default function FloatingActionBar() {
     megamixCache,
     addPlaylistToCache,
     updatePlaylistInCache,
-    removeMultipleFromCache,
+    playlistCache
   } = usePlaylistStore();
+
+  const { actions, isProcessing } = useActions(); 
   
   const [step, setStep] = useState<'idle' | 'fetching' | 'confirming' | 'askingOrder' | 'processing'>('idle');
   const [progress, setProgress] = useState({ added: 0, total: 0 });
@@ -59,8 +62,6 @@ export default function FloatingActionBar() {
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [batchSyncAlert, setBatchSyncAlert] = useState<{ open: boolean; added: number; removed: number; }>({ open: false, added: 0, removed: 0 });
-  const [deleteBatchAlertOpen, setDeleteBatchAlertOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [batchShuffleAlertOpen, setBatchShuffleAlertOpen] = useState(false);
   const [isShuffling, setIsShuffling] = useState(false);
   const [shuffleChoice, setShuffleChoice] = useState<{
@@ -75,9 +76,7 @@ export default function FloatingActionBar() {
   });
   const [shuffleBatchSyncChoice, setShuffleBatchSyncChoice] = useState({ open: false });
   const [surpriseDialog, setSurpriseDialog] = useState({ open: false });
-  
-  const isProcessing = step === 'fetching' || step === 'processing' || isSyncingAll || isShuffling;
-  
+    
   // Saber si hay algo que sincronizar
   const syncableMegalists = useMemo(
     () => megamixCache.filter(p => p.isSyncable),
@@ -474,29 +473,12 @@ export default function FloatingActionBar() {
       setIsShuffling(false);
     }
   };
-  
-  // Maneja la eliminación de playlists en lote
-  const handleConfirmDeleteBatch = async () => {
-    if (selectedPlaylistIds.length === 0) return;
-    
-    setIsDeleting(true);
-    const toastId = toast.loading(`Eliminando ${selectedPlaylistIds.length} playlist(s)...`);
-    
-    try {
-      await unfollowPlaylistsBatch(selectedPlaylistIds);
-      
-      removeMultipleFromCache(selectedPlaylistIds);
-      clearSelection(); // Limpiamos la selección tras el éxito
-      
-      toast.success('Playlists eliminadas con éxito.', { id: toastId });
-      setDeleteBatchAlertOpen(false);
-      
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudieron eliminar.';
-      toast.error(message, { id: toastId });
-    } finally {
-      setIsDeleting(false);
-    }
+
+  // Obtenemos los nombres de las playlists para el diálogo.
+  const handleDeleteClick = () => {
+    const playlistsToDelete = playlistCache.filter(p => selectedPlaylistIds.includes(p.id))
+      .map(p => ({ id: p.id, name: p.name }));
+    actions.deletePlaylists(playlistsToDelete);
   };
   
   if (selectedPlaylistIds.length === 0 && !isResumable) {
@@ -564,8 +546,8 @@ export default function FloatingActionBar() {
       <Button
       variant="ghost"
       size="lg"
-      onClick={() => setDeleteBatchAlertOpen(true)}
-      disabled={isProcessing}
+      onClick={() => handleDeleteClick}
+      disabled={isProcessing} 
       className="h-14 w-14 text-red-500 hover:bg-red-500/10 hover:text-red-500 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2"
       >
       <Trash2 className="h-6 w-6 sm:h-5 sm:w-5" />
@@ -799,24 +781,6 @@ export default function FloatingActionBar() {
       </strong>. Puedes mantener el orden actual de las canciones (añadiendo las nuevas al final) o reordenar toda la playlist de forma aleatoria.
       </span>
     }
-    />
-    
-    {/* Diálogo de confirmación de eliminación en lote */}
-    <ConfirmationDialog
-    isOpen={deleteBatchAlertOpen}
-    onClose={() => setDeleteBatchAlertOpen(false)}
-    onConfirm={handleConfirmDeleteBatch}
-    isLoading={isDeleting}
-    title="¿Estás absolutamente seguro?"
-    description={
-      <span>
-      Vas a eliminar permanentemente{' '}
-      <strong className="text-white">{selectedPlaylistIds.length} playlist(s)</strong>{' '}
-      de tu librería de Spotify. Esta acción es irreversible.
-      </span>
-    }
-    confirmButtonText="Sí, eliminar"
-    confirmButtonVariant="destructive"
     />
     
     {/* Diálogo para sincronización en lote */}

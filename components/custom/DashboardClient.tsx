@@ -9,6 +9,9 @@ import { usePlaylistStore } from '@/lib/store';
 import PlaylistDisplay from './PlaylistDisplay';
 import FloatingActionBar from './FloatingActionBar';
 
+// Importamos el Provider
+import { ActionProvider } from '@/lib/contexts/ActionProvider';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -81,7 +84,7 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
   };
   
   return (
-    <>
+    <ActionProvider>
     {/* Cabecera de control fija (Sticky) */}
     <div className="sticky top-0 z-10 bg-gray-900/80 py-4 backdrop-blur-md">
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -184,6 +187,6 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     </div>
     
     <FloatingActionBar />
-    </>
+    </ActionProvider>
   );
 }

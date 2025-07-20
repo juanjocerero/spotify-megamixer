@@ -16,6 +16,8 @@ import {
 } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 
+import { useActions } from '@/lib/contexts/ActionProvider'; 
+
 import TrackDetailView from './TrackDetailView';
 import ConfirmationDialog from './ConfirmationDialog';
 import ShuffleChoiceDialog from './ShuffleChoiceDialog';
@@ -61,6 +63,7 @@ export default function PlaylistDisplay({
   onFilteredChange, 
   sortOption 
 }: PlaylistDisplayProps) {
+
   const { 
     togglePlaylist, 
     isSelected, 
@@ -71,14 +74,12 @@ export default function PlaylistDisplay({
     updatePlaylistInCache,
     removePlaylistFromCache
   } = usePlaylistStore();
+
+   const { actions } = useActions();
   
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
-  const [deleteAlert, setDeleteAlert] = useState<{ open: boolean; playlist: SpotifyPlaylist | null }>({
-    open: false,
-    playlist: null,
-  });
   const [editState, setEditState] = useState<{
     open: boolean;
     playlist: SpotifyPlaylist | null;
@@ -90,7 +91,6 @@ export default function PlaylistDisplay({
     newName: '',
     newDescription: '',
   });
-  const [isDeleting, setIsDeleting] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [syncPreviewAlert, setSyncPreviewAlert] = useState<{
     open: boolean;
@@ -403,25 +403,6 @@ export default function PlaylistDisplay({
     }
   };
   
-  const handleConfirmDelete = async () => {
-    if (!deleteAlert.playlist) return;
-    setIsDeleting(true);
-    
-    const toastId = toast.loading(`Eliminando "${deleteAlert.playlist.name}"...`);
-    
-    try {
-      await unfollowPlaylist(deleteAlert.playlist.id);
-      removePlaylistFromCache(deleteAlert.playlist.id); // Sincroniza la UI
-      toast.success('Playlist eliminada con éxito.', { id: toastId });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo eliminar la playlist.';
-      toast.error(message, { id: toastId });
-    } finally {
-      setIsDeleting(false);
-      setDeleteAlert({ open: false, playlist: null });
-    }
-  };
-  
   return (
     <div>
     <div className="rounded-md border border-gray-700 overflow-hidden">
@@ -599,7 +580,7 @@ export default function PlaylistDisplay({
         className="text-red-500 focus:text-red-500"
         onClick={(e) => {
           e.stopPropagation();
-          setDeleteAlert({ open: true, playlist: playlist });
+          actions.deletePlaylists([{ id: playlist.id, name: playlist.name }]);
         }}
         >
         <Trash2 className="mr-2 h-4 w-4" />
@@ -614,24 +595,6 @@ export default function PlaylistDisplay({
     </div>
     </div>
     </div>
-    
-    {/* Diálogo de confirmación de eliminación */}
-    <ConfirmationDialog
-    isOpen={deleteAlert.open}
-    onClose={() => setDeleteAlert({ ...deleteAlert, open: false })}
-    onConfirm={handleConfirmDelete}
-    title="¿Estás absolutamente seguro?"
-    description={
-      <span>
-      Esta acción es irreversible. Estás a punto de eliminar la playlist{' '}
-      <strong className="text-white">{deleteAlert.playlist?.name}</strong> de
-      tu librería de Spotify.
-      </span>
-    }
-    confirmButtonText="Sí, eliminar"
-    confirmButtonVariant="destructive"
-    isLoading={isDeleting}
-    />
     
     {/* Diálogo de edición */}
     <Dialog open={editState.open} onOpenChange={(isOpen) => setEditState({ ...editState, open: isOpen })}>
