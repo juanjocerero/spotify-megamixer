@@ -169,7 +169,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
         <DialogHeader>
         <DialogTitle>Playlist Existente</DialogTitle>
         <DialogDescription>
-        La playlist "<strong className="text-white">{dialogState.props.playlistName}</strong>" ya existe. ¿Qué quieres hacer?
+        La playlist &quot;<strong className="text-white">{dialogState.props.playlistName}</strong>&quot; ya existe. ¿Qué quieres hacer?
         </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">

@@ -86,11 +86,7 @@ export default function PlaylistDisplay({
   }>({ 
     open: false, playlistId: null, playlistName: null }
   );
-  const [surpriseMixDialog, setSurpriseMixDialog] = useState<{
-    open: boolean;
-    sourceIds: string[];
-  }>({ open: false, sourceIds: [] });
-  
+
   // Referencia para el contenedor de scroll ---
   const parentRef = useRef<HTMLTableSectionElement>(null);
   

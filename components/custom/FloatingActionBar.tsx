@@ -32,19 +32,13 @@ export default function FloatingActionBar() {
   
   const playlistsInSelection = useMemo(() => 
     playlistCache.filter(p => selectedPlaylistIds.includes(p.id)), [selectedPlaylistIds, playlistCache]);
-  
-  const [surpriseDialog, setSurpriseDialog] = useState({ open: false });
-  
+    
   // Saber si hay algo que sincronizar
   const megalistsInSelection = useMemo(
     () => megamixCache.filter(p => selectedPlaylistIds.includes(p.id) && p.isMegalist),
     [selectedPlaylistIds, megamixCache]
   );
-  
-  const syncableMegalists = useMemo(
-    () => megamixCache.filter(p => p.isSyncable),
-    [megamixCache]
-  );
+
   const syncableMegalistsInSelection = useMemo(() =>
     usePlaylistStore.getState().playlistCache.filter(p =>
     selectedPlaylistIds.includes(p.id) && p.isSyncable), 
