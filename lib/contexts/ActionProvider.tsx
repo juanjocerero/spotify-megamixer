@@ -60,7 +60,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     // Estado local para los inputs dentro de los diálogos
     const [inputValue, setInputValue] = useState('');
     const [sliderValue, setSliderValue] = useState([50]);
-    const { megamixCache } = usePlaylistStore();
+    const { megamixCache, playlistCache } = usePlaylistStore();
     
     // Resetea los valores de los inputs cuando se cierra un diálogo
     if (dialogState.variant === 'none' && (inputValue !== '' || sliderValue[0] !== 50)) {
@@ -249,22 +249,35 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
         );
       }
       
-      case 'surpriseName':
-      const title = dialogState.props.isOverwrite ? "Actualizar Lista Sorpresa" : "Paso Final: Nombra tu Lista Sorpresa";
-      return (
-        <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
-        <DialogContent>
-        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
-        <Input placeholder="Ej: Sorpresa de Viernes" defaultValue={dialogState.props.isOverwrite ? dialogState.props.playlistName : ''} onChange={(e) => setInputValue(e.target.value)} />
-        <DialogFooter>
-        <Button variant="outline" onClick={dialogCallbacks.onClose}>Cancelar</Button>
-        <Button onClick={() => dialogCallbacks.onConfirmSurpriseName(inputValue)}>
-        {dialogState.props.isOverwrite ? "Actualizar Lista" : "Crear Lista"}
-        </Button>
-        </DialogFooter>
-        </DialogContent>
-        </Dialog>
-      );
+      case 'surpriseName': {
+        const { isOverwrite, overwriteId } = dialogState.props;
+        const title = isOverwrite ? "Actualizar Lista Sorpresa" : "Paso Final: Nombra tu Lista Sorpresa";
+        
+        let defaultPlaylistName = '';
+        if (isOverwrite && overwriteId) {
+          const existingPlaylist = playlistCache.find(p => p.id === overwriteId);
+          defaultPlaylistName = existingPlaylist?.name || '';
+        }
+        
+        return (
+          <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
+          <DialogContent>
+          <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+          <Input
+          placeholder="Ej: Sorpresa de Viernes"
+          defaultValue={defaultPlaylistName}
+          onChange={(e) => setInputValue(e.target.value)}
+          />
+          <DialogFooter>
+          <Button variant="outline" onClick={dialogCallbacks.onClose}>Cancelar</Button>
+          <Button onClick={() => dialogCallbacks.onConfirmSurpriseName(inputValue || defaultPlaylistName)}>
+          {isOverwrite ? "Actualizar Lista" : "Crear Lista"}
+          </Button>
+          </DialogFooter>
+          </DialogContent>
+          </Dialog>
+        );
+      }
       
       default:
       return null;
