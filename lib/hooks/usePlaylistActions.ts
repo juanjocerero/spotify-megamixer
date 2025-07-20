@@ -2,8 +2,7 @@
 
 'use client';
 
-import { useReducer, useState } from 'react';
-import { toast } from 'sonner';
+import { useReducer, useState, useCallback } from 'react';
 import { usePlaylistStore } from '@/lib/store';
 import {
   unfollowPlaylistsBatch,
@@ -18,6 +17,8 @@ import {
   getUniqueTrackCountFromPlaylistsAction,
 } from '@/lib/action';
 import { shuffleArray } from '@/lib/utils';
+
+import { toast } from 'sonner';
 
 // Tipos de datos que usan las acciones
 export type ActionPlaylist = { id: string; name: string };
@@ -34,9 +35,9 @@ type DialogVariant =
 | 'createOverwrite'
 | 'addToSelect'
 | 'addToShuffleChoice'
-| 'surpriseGlobal' // Para pedir número de playlists fuente
-| 'surpriseTargeted' // Para pedir número de canciones de una selección
-| 'surpriseName'; // Paso final para nombrar la playlist sorpresa
+| 'surpriseGlobal' 
+| 'surpriseTargeted' 
+| 'surpriseName';
 
 // El estado centralizado que controla los diálogos
 interface DialogState {
@@ -68,16 +69,9 @@ const initialDialogState: DialogState = {
 function dialogReducer(state: DialogState, action: ReducerAction): DialogState {
   switch (action.type) {
     case 'OPEN':
-    return {
-      ...state,
-      variant: action.payload.variant,
-      props: action.payload.props || {},
-    };
+    return { ...state, variant: action.payload.variant, props: action.payload.props || {} };
     case 'UPDATE_PROPS':
-    return {
-      ...state,
-      props: { ...state.props, ...action.payload },
-    };
+    return { ...state, props: { ...state.props, ...action.payload } };
     case 'CLOSE':
     return initialDialogState;
     default:
@@ -98,80 +92,137 @@ export function usePlaylistActions() {
     playlistCache,
   } = usePlaylistStore();
   
-  // Lógica de negocio (qué hacer al confirmar)
-  
-  const handleConfirmDelete = async () => {
-    const playlists = dialogState.props.playlists;
-    if (!playlists || playlists.length === 0) return;
-    
+  // Wrapper para acciones asíncronas que se ejecutan sobre una sola lista
+  const executeAction = useCallback(async <T, P extends any[]>(
+    actionFn: (...args: P) => Promise<T>,
+    params: P,
+    options: {
+      loading: string;
+      success: string;
+      error: string;
+      onSuccess?: (result: T) => void;
+    }
+  ): Promise<void> => {
     setIsProcessing(true);
-    dispatch({ type: 'CLOSE' });
-    const idsToDelete = playlists.map((p) => p.id);
-    const toastId = toast.loading(`Eliminando ${idsToDelete.length} playlist(s)...`);
+    const toastId = toast.loading(options.loading);
+    
     try {
-      await unfollowPlaylistsBatch(idsToDelete);
-      removeMultipleFromCache(idsToDelete);
-      toast.success('Playlist(s) eliminadas con éxito.', { id: toastId });
+      const result = await actionFn(...params);
+      
+      if (options.onSuccess) {
+        options.onSuccess(result);
+      }
+      
+      toast.success(options.success, { id: toastId });
       clearSelection();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudieron eliminar.';
+      const message = error instanceof Error ? error.message : options.error;
       toast.error(message, { id: toastId });
     } finally {
       setIsProcessing(false);
     }
+  }, [clearSelection]);
+
+  // Wrapper para acciones asíncronas que se ejecutan sobre múltiples listas
+  const executeBatchAction = useCallback(async <T, P>(
+    items: P[],
+    actionFn: (item: P) => Promise<T>,
+    options: {
+        loading: string;
+        onSuccess: (results: PromiseSettledResult<T>[], items: P[]) => string;
+        error: string;
+    }
+  ): Promise<void> => {
+    setIsProcessing(true);
+    const toastId = toast.loading(options.loading);
+
+    try {
+        const promises = items.map(item => actionFn(item));
+        const results = await Promise.allSettled(promises);
+        
+        const successMessage = options.onSuccess(results, items);
+
+        toast.success(successMessage, { id: toastId });
+        clearSelection();
+    } catch (error) {
+        const message = error instanceof Error ? error.message : options.error;
+        toast.error(message, { id: toastId });
+    } finally {
+        setIsProcessing(false);
+    }
+  }, [clearSelection, updatePlaylistInCache]);
+  
+  // Lógica de negocio (qué hacer al confirmar)
+  const handleConfirmDelete = async () => {
+    const playlists = dialogState.props.playlists;
+    if (!playlists || playlists.length === 0) {
+      return;
+    }
+    
+    dispatch({ type: 'CLOSE' });
+    const idsToDelete = playlists.map((p) => p.id);
+    
+    await executeAction(
+      unfollowPlaylistsBatch,
+      [idsToDelete],
+      {
+        loading: `Eliminando ${idsToDelete.length} playlist(s)...`,
+        success: 'Playlist(s) eliminadas con éxito.',
+        error: 'No se pudo eliminar.',
+        onSuccess: () => removeMultipleFromCache(idsToDelete),
+      }
+    );
   };
   
   const handleConfirmShuffle = async () => {
     const playlists = dialogState.props.playlists;
-    if (!playlists || playlists.length === 0) return;
     
-    setIsProcessing(true);
+    if (!playlists || playlists.length === 0) {
+      return;
+    }
+    
     dispatch({ type: 'CLOSE' });
     const idsToShuffle = playlists.map((p) => p.id);
-    const toastId = toast.loading(`Reordenando ${idsToShuffle.length} playlist(s)...`);
-    try {
-      await shufflePlaylistsAction(idsToShuffle);
-      toast.success(`${idsToShuffle.length} playlist(s) reordenadas.`, { id: toastId });
-      clearSelection();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudieron reordenar.';
-      toast.error(message, { id: toastId });
-    } finally {
-      setIsProcessing(false);
-    }
+    
+    await executeAction(
+      shufflePlaylistsAction,
+      [idsToShuffle],
+      {
+        loading: `Reordenando ${idsToShuffle.length} playlist(s)...`,
+        success: `${idsToShuffle.length} playlist(s) reordenadas.`,
+        error: 'No se pudieron reordenar.',
+      }
+    );
   };
   
   const handleExecuteSync = async (shouldShuffle: boolean) => {
     const playlistsToSync = dialogState.props.playlists;
-    if (!playlistsToSync || playlistsToSync.length === 0) return;
     
-    setIsProcessing(true);
-    dispatch({ type: 'CLOSE' });
-    const toastId = toast.loading(`Sincronizando ${playlistsToSync.length} playlist(s)...`);
-    try {
-      const syncPromises = playlistsToSync.map(p => executeMegalistSync(p.id, shouldShuffle));
-      const results = await Promise.allSettled(syncPromises);
-      
-      let successCount = 0;
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled' && result.value.success) {
-          successCount++;
-          const playlistId = playlistsToSync[index].id;
-          const { finalCount } = result.value;
-          updatePlaylistInCache(playlistId, { trackCount: finalCount });
-        } else {
-          console.error(`Fallo al sincronizar la playlist ${playlistsToSync[index].name}:`, result.status === 'rejected' ? result.reason : 'Error desconocido');
-        }
-      });
-      
-      toast.success(`Sincronización completada. ${successCount} de ${playlistsToSync.length} Megalistas actualizadas.`, { id: toastId });
-      clearSelection();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ocurrió un error inesperado durante la sincronización.';
-      toast.error(message, { id: toastId });
-    } finally {
-      setIsProcessing(false);
+    if (!playlistsToSync || playlistsToSync.length === 0) {
+      return;
     }
+    
+    dispatch({ type: 'CLOSE' });
+    
+    await executeBatchAction(
+      playlistsToSync,
+      (p) => executeMegalistSync(p.id, shouldShuffle),
+      {
+        loading: `Sincronizando ${playlistsToSync.length} playlist(s)...`,
+        error: 'Ocurrió un error inesperado durante la sincronización.',
+        onSuccess: (results, items) => {
+          let successCount = 0;
+          results.forEach((result, index) => {
+            if (result.status === 'fulfilled' && result.value.success) {
+              successCount++;
+              const { finalCount } = result.value;
+              updatePlaylistInCache(items[index].id, { trackCount: finalCount });
+            }
+          });
+          return `Sincronización completada. ${successCount} de ${items.length} Megalistas actualizadas.`;
+        }
+      }
+    );
   };
   
   const handleCreateOrUpdateMegalist = async (shouldShuffle: boolean, mode: 'create' | 'update' | 'replace' = 'create') => {
