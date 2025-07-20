@@ -12,7 +12,8 @@ import {
   findOrCreatePlaylist, 
   addTracksBatch, 
   clearPlaylist, 
-  addTracksToMegalistAction 
+  addTracksToMegalistAction , 
+  createOrUpdateSurpriseMixAction
 } from '@/lib/action';
 
 import { toast } from 'sonner';
@@ -307,6 +308,32 @@ export function usePlaylistActions() {
     });
   };
   
+  // Función pública para crear una lista sorpresa
+  const createSurpriseMix = async (
+    sourceIds: string[],
+    trackCount: number,
+    playlistName: string
+  ): Promise<void> => {
+    setIsLoading(true);
+    const toastId = toast.loading('Creando tu Lista Sorpresa...');
+    
+    try {
+      const newPlaylist = await createOrUpdateSurpriseMixAction(sourceIds, trackCount, playlistName);
+      addPlaylistToCache(newPlaylist);
+      clearSelection();
+      toast.success(`¡"${newPlaylist.name}" creada con éxito!`, { id: toastId });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Ocurrió un error desconocido.';
+      if (message.startsWith('PLAYLIST_EXISTS')) {
+        toast.error('Ya existe una playlist con ese nombre.', { id: toastId });
+      } else {
+        toast.error(message, { id: toastId });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   // Aquí se definen todas las funciones que los componentes de la UI podrán llamar.
   const actions = {
     createMegalist, 
@@ -314,6 +341,7 @@ export function usePlaylistActions() {
     syncPlaylists, 
     shufflePlaylists,
     deletePlaylists, 
+    createSurpriseMix
   };
   
   return {

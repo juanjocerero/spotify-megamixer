@@ -13,7 +13,6 @@ import { usePlaylistStore } from '@/lib/store';
 import { useActions } from '@/lib/contexts/ActionProvider'; 
 
 import TrackDetailView from './TrackDetailView';
-import SurpriseMixDialog from './SurpriseMixDialog';
 
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -66,7 +65,7 @@ export default function PlaylistDisplay({
     updatePlaylistInCache,
   } = usePlaylistStore();
   
-  const { actions, isProcessing } = useActions();
+  const { actions, isProcessing, openSurpriseMixDialog } = useActions();
   
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoading, setIsLoading] = useState(false);
@@ -447,8 +446,10 @@ export default function PlaylistDisplay({
         <span>Reordenar</span>
         </DropdownMenuItem>
         
-        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSurpriseMixDialog({ open: true, sourceIds: [playlist.id] }); }}>
-        <Wand2 className="mr-2 h-4 w-4" />
+        <DropdownMenuItem onClick={(e) => {
+          e.stopPropagation();
+          openSurpriseMixDialog([playlist.id]);
+        }}>        <Wand2 className="mr-2 h-4 w-4" />
         <span>Crear lista sorpresa</span>
         </DropdownMenuItem>
         
@@ -517,13 +518,6 @@ export default function PlaylistDisplay({
     </DialogContent>
     </Dialog>
     
-    {/* Diálogo de creación de lista sorpresa */}
-    <SurpriseMixDialog
-    isOpen={surpriseMixDialog.open}
-    onClose={() => setSurpriseMixDialog({ open: false, sourceIds: [] })}
-    sourceIds={surpriseMixDialog.sourceIds}
-    />
-    
     {/* Sheet para la vista de canciones */}
     <Sheet open={trackSheetState.open} onOpenChange={(isOpen) => setTrackSheetState({ open: isOpen, playlistId: null, playlistName: null })}>
     {/* Usamos w-full para móviles y un ancho fijo para pantallas más grandes */}
@@ -542,6 +536,7 @@ export default function PlaylistDisplay({
     )}
     </SheetContent>
     </Sheet>
+    
     </div>
   );
 }

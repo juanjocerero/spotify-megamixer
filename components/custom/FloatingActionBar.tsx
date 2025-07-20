@@ -4,9 +4,6 @@
 import { useState, useMemo } from 'react';
 import { usePlaylistStore } from '@/lib/store';
 import { useActions } from '@/lib/contexts/ActionProvider';
-import { shuffleArray } from '@/lib/utils';
-
-import SurpriseMixDialog from './SurpriseMixDialog';
 
 // Componentes UI de Shadcn
 import { Button } from '@/components/ui/button';
@@ -20,12 +17,16 @@ export default function FloatingActionBar() {
     selectedPlaylistIds,
     clearSelection,
     megamixCache,
-    addPlaylistToCache,
-    updatePlaylistInCache,
     playlistCache,
   } = usePlaylistStore();
   
-  const { isProcessing, actions, openCreateMegalistDialog, openAddToMegalistDialog } = useActions();
+  const { 
+    isProcessing, 
+    actions, 
+    openCreateMegalistDialog, 
+    openAddToMegalistDialog,
+    openSurpriseMixDialog 
+  } = useActions();
   
   const [surpriseDialog, setSurpriseDialog] = useState({ open: false });
   
@@ -154,14 +155,11 @@ export default function FloatingActionBar() {
     {/* Crear lista sorpresa*/}
     <Tooltip>
     <TooltipTrigger asChild>
-    <Button variant="ghost" size="lg" onClick={() => setSurpriseDialog({ open: true })} disabled={isProcessing} className="h-14 w-14 text-blue-500 hover:bg-blue-500/10 hover:text-blue-500 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2">
-    <Wand2 className="h-6 w-6 sm:h-5 sm:w-5" />
-    <span className="hidden sm:inline-block text-sm">Sorpresa</span>
+    <Button variant="ghost" size="lg" onClick={() => openSurpriseMixDialog(selectedPlaylistIds)} disabled={isProcessing}>
+    <Wand2 />
     </Button>
     </TooltipTrigger>
-    <TooltipContent>
-    <p>Crear Lista Sorpresa</p>
-    </TooltipContent>
+    <TooltipContent><p>Crear Lista Sorpresa desde Selección</p></TooltipContent>
     </Tooltip>
     
     {/* Añadir */}
@@ -190,14 +188,6 @@ export default function FloatingActionBar() {
     </div>
     </div>
     </TooltipProvider>
-    
-    
-    {/* Diálogo de creación de lista sorpresa */}
-    <SurpriseMixDialog
-    isOpen={surpriseDialog.open}
-    onClose={() => setSurpriseDialog({ open: false })}
-    sourceIds={selectedPlaylistIds}
-    />
     
     </>
   );

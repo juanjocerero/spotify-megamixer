@@ -3,6 +3,8 @@
 import { createContext, useContext, useState, useMemo } from 'react';
 import { usePlaylistActions } from '../hooks/usePlaylistActions';
 import { usePlaylistStore } from '../store';
+import { getUniqueTrackCountFromPlaylistsAction } from '@/lib/action';
+import { shuffleArray } from '../utils';
 
 import ConfirmationDialog from '@/components/custom/ConfirmationDialog';
 import ShuffleChoiceDialog from '@/components/custom/ShuffleChoiceDialog';
@@ -13,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 // Definimos la forma del contexto que los componentes consumirán.
 type ActionContextType = {
@@ -21,12 +24,24 @@ type ActionContextType = {
   // Funciones para iniciar los flujos desde la UI
   openCreateMegalistDialog: (sourceIds: string[]) => void;
   openAddToMegalistDialog: (sourceIds: string[]) => void;
+  openSurpriseMixDialog: (sourceIds?: string[]) => void;
 };
 
-// Creamos el contexto.
+// Tipos para el flujo de creación de listas sorpresa
+type SurpriseFlowStep = 'idle' | 'askSourceCount' | 'askTrackCount' | 'askName' | 'loading';
+type SurpriseFlowState = {
+  step: SurpriseFlowStep;
+  sourceIds: string[];
+  sourceCount: number; // Para el mix global
+  totalTracks: number;
+  trackCount: number;
+  playlistName: string;
+};
+
+// Creamos el contexto
 const ActionContext = createContext<ActionContextType | undefined>(undefined);
 
-// Creamos el componente Provider.
+// Creamos el componente Provider
 export function ActionProvider({ children }: { children: React.ReactNode }) {
   const { 
     isProcessing, 
@@ -42,13 +57,18 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     deletionDialogCallbacks 
   } = usePlaylistActions();
   
-  const { megamixCache } = usePlaylistStore();
+  const { megamixCache, playlistCache } = usePlaylistStore();
   
   // Estados para controlar los diálogos del flujo de creación, actualización, reordenado y sobrescritura
   const [createState, setCreateState] = useState({ isOpen: false, sourceIds: [] as string[], playlistName: '' });
   const [shuffleState, setShuffleState] = useState({ isOpen: false, onConfirm: (shouldShuffle: boolean) => {} });
   const [overwriteState, setOverwriteState] = useState({ isOpen: false, playlistName: '', onConfirm: (mode: 'update' | 'replace') => {} });
   const [addToState, setAddToState] = useState({ isOpen: false, sourceIds: [] as string[], targetId: '' });
+  
+  // Estados para el flujo de creación de listas sorpresa
+  const [surpriseFlow, setSurpriseFlow] = useState<SurpriseFlowState>({
+    step: 'idle', sourceIds: [], sourceCount: 10, totalTracks: 0, trackCount: 50, playlistName: 'Lista Sorpresa',
+  });
   
   // Manejador que inicia el flujo de creación de megalistas
   const openCreateMegalistDialog = (sourceIds: string[]) => {
@@ -168,6 +188,48 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     );
   }, [deletionDialogState.playlists]);
   
+  // Lógica del flujo de creación de listas sorpresa
+  const openSurpriseMixDialog = async (sourceIds?: string[]) => {
+    setSurpriseFlow(prev => ({ ...prev, step: 'loading' }));
+    
+    // Si no se proveen IDs, es un mix global. Preguntamos cuántas fuentes usar.
+    if (!sourceIds || sourceIds.length === 0) {
+      setSurpriseFlow(prev => ({ ...prev, step: 'askSourceCount' }));
+      return;
+    }
+    
+    // Si se proveen IDs, calculamos el total de canciones y pasamos a pedir el número de tracks.
+    try {
+      let count = 0;
+      if (sourceIds.length === 1) {
+        const p = playlistCache.find(p => p.id === sourceIds[0]);
+        count = p ? p.tracks.total : await getUniqueTrackCountFromPlaylistsAction(sourceIds);
+      } else {
+        count = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
+      }
+      setSurpriseFlow(prev => ({ ...prev, step: 'askTrackCount', sourceIds, totalTracks: count }));
+    } catch (err) {
+      toast.error('No se pudo calcular el total de canciones.');
+      setSurpriseFlow(prev => ({ ...prev, step: 'idle' }));
+    }
+  };
+  
+  const handleSourceCountSubmit = () => {
+    // Seleccionar N playlists aleatorias y continuar el flujo.
+    const shuffled = shuffleArray([...playlistCache]);
+    const sources = shuffled.slice(0, Math.min(surpriseFlow.sourceCount, 50, playlistCache.length));
+    openSurpriseMixDialog(sources.map(p => p.id));
+  };
+  
+  const handleTrackCountSubmit = () => setSurpriseFlow(prev => ({ ...prev, step: 'askName' }));
+  
+  const handleNameSubmit = async () => {
+    await actions.createSurpriseMix(surpriseFlow.sourceIds, surpriseFlow.trackCount, surpriseFlow.playlistName);
+    setSurpriseFlow(prev => ({...prev, step: 'idle'})); // Resetear al final
+  };
+  
+  const closeSurpriseFlow = () => setSurpriseFlow(prev => ({ ...prev, step: 'idle' }));
+  
   // Memoizamos el valor del contexto para evitar re-renders innecesarios.
   // Esta declaración debe estar al final para resultar sincronizada
   // con todos los procesos declarados anteriormente.
@@ -176,6 +238,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     isProcessing,
     openCreateMegalistDialog,
     openAddToMegalistDialog,
+    openSurpriseMixDialog
   }), [actions, isProcessing]);
   
   return (
@@ -273,6 +336,37 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     confirmButtonText="Sí, eliminar"
     confirmButtonVariant="destructive"
     />
+    
+    {/* Diálogos para el flujo de creación de listas sorpesa */}
+    {/* Pedir número de fuentes para el mix global */}
+    <Dialog open={surpriseFlow.step === 'askSourceCount'} onOpenChange={closeSurpriseFlow}>
+    <DialogContent>
+    <DialogHeader><DialogTitle>Megamix Sorpresa Global</DialogTitle></DialogHeader>
+    <Label>Número de playlists aleatorias a usar (máx 50)</Label>
+    <Input type="number" value={surpriseFlow.sourceCount} onChange={(e) => setSurpriseFlow(p => ({...p, sourceCount: parseInt(e.target.value, 10) || 1}))} />
+    <DialogFooter><Button onClick={handleSourceCountSubmit}>Continuar</Button></DialogFooter>
+    </DialogContent>
+    </Dialog>
+    
+    {/* Pedir número de canciones */}
+    <Dialog open={surpriseFlow.step === 'askTrackCount'} onOpenChange={closeSurpriseFlow}>
+    <DialogContent>
+    <DialogHeader><DialogTitle>Crear Lista Sorpresa</DialogTitle></DialogHeader>
+    <DialogDescription>Se usarán hasta <strong>{surpriseFlow.totalTracks}</strong> canciones únicas. ¿Cuántas quieres?</DialogDescription>
+    <Input type="number" value={surpriseFlow.trackCount} onChange={(e) => setSurpriseFlow(p => ({...p, trackCount: parseInt(e.target.value, 10) || 1}))} />
+    <DialogFooter><Button onClick={handleTrackCountSubmit}>Continuar</Button></DialogFooter>
+    </DialogContent>
+    </Dialog>
+    
+    {/* Pedir nombre final de la lista sorpresa */}
+    <Dialog open={surpriseFlow.step === 'askName'} onOpenChange={closeSurpriseFlow}>
+    <DialogContent>
+    <DialogHeader><DialogTitle>Un último paso...</DialogTitle></DialogHeader>
+    <Input value={surpriseFlow.playlistName} onChange={(e) => setSurpriseFlow(p => ({...p, playlistName: e.target.value}))} />
+    <DialogFooter><Button onClick={handleNameSubmit} disabled={isProcessing}>{isProcessing ? <Loader2/> : "Crear Playlist"}</Button></DialogFooter>
+    </DialogContent>
+    </Dialog>
+    
     </ActionContext.Provider>
   );
 }
