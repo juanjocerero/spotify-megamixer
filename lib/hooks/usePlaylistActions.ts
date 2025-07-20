@@ -23,6 +23,51 @@ import { toast } from 'sonner';
 // Tipos de datos que usan las acciones
 export type ActionPlaylist = { id: string; name: string };
 
+type DialogState =
+| { variant: 'none' }
+| { variant: 'delete'; props: { playlists: ActionPlaylist[] } }
+| { variant: 'shuffle'; props: { playlists: ActionPlaylist[] } }
+| {
+  variant: 'syncPreview';
+  props: {
+    playlists: ActionPlaylist[];
+    syncStats: { added: number; removed: number };
+  };
+}
+| { variant: 'syncShuffleChoice'; props: { playlists: ActionPlaylist[] } }
+| { variant: 'createName'; props: { sourceIds: string[] } }
+| {
+  variant: 'createShuffleChoice';
+  props: { sourceIds: string[]; playlistName: string };
+}
+| {
+  variant: 'createOverwrite';
+  props: {
+    sourceIds: string[];
+    playlistName: string;
+    overwriteId: string;
+  };
+}
+| { variant: 'addToSelect'; props: { sourceIds: string[] } }
+| {
+  variant: 'addToShuffleChoice';
+  props: { sourceIds: string[]; targetId: string };
+}
+| { variant: 'surpriseGlobal'; props: {} }
+| {
+  variant: 'surpriseTargeted';
+  props: { sourceIds: string[]; uniqueTrackCount: number };
+}
+| {
+  variant: 'surpriseName';
+  props: {
+    sourceIds: string[];
+    targetTrackCount: number;
+    isOverwrite?: boolean;
+    overwriteId?: string;
+  };
+};
+
 // Define todos los posibles diálogos o pasos en un flujo
 type DialogVariant =
 | 'none'
@@ -39,41 +84,22 @@ type DialogVariant =
 | 'surpriseTargeted' 
 | 'surpriseName';
 
-// El estado centralizado que controla los diálogos
-interface DialogState {
-  variant: DialogVariant;
-  props: {
-    playlists?: ActionPlaylist[];
-    sourceIds?: string[];
-    targetId?: string;
-    playlistName?: string;
-    overwriteId?: string;
-    syncStats?: { added: number; removed: number };
-    uniqueTrackCount?: number;
-    targetTrackCount?: number;
-    isOverwrite?: boolean;
-  };
-}
-
+type OpenActionPayload = Exclude<DialogState, { variant: 'none' }>;
 // Acciones que pueden modificar el estado del diálogo
 type ReducerAction =
-| { type: 'OPEN'; payload: { variant: DialogVariant; props?: Partial<DialogState['props']> } }
-| { type: 'UPDATE_PROPS'; payload: Partial<DialogState['props']> }
+| { type: 'OPEN'; payload: OpenActionPayload }
 | { type: 'CLOSE' };
 
 const initialDialogState: DialogState = {
   variant: 'none',
-  props: {},
 };
 
 function dialogReducer(state: DialogState, action: ReducerAction): DialogState {
   switch (action.type) {
     case 'OPEN':
-    return { ...state, variant: action.payload.variant, props: action.payload.props || {} };
-    case 'UPDATE_PROPS':
-    return { ...state, props: { ...state.props, ...action.payload } };
+    return action.payload; // El payload es ahora el estado completo
     case 'CLOSE':
-    return initialDialogState;
+    return { variant: 'none' };
     default:
     return state;
   }
@@ -122,42 +148,41 @@ export function usePlaylistActions() {
       setIsProcessing(false);
     }
   }, [clearSelection]);
-
+  
   // Wrapper para acciones asíncronas que se ejecutan sobre múltiples listas
   const executeBatchAction = useCallback(async <T, P>(
     items: P[],
     actionFn: (item: P) => Promise<T>,
     options: {
-        loading: string;
-        onSuccess: (results: PromiseSettledResult<T>[], items: P[]) => string;
-        error: string;
+      loading: string;
+      onSuccess: (results: PromiseSettledResult<T>[], items: P[]) => string;
+      error: string;
     }
   ): Promise<void> => {
     setIsProcessing(true);
     const toastId = toast.loading(options.loading);
-
+    
     try {
-        const promises = items.map(item => actionFn(item));
-        const results = await Promise.allSettled(promises);
-        
-        const successMessage = options.onSuccess(results, items);
-
-        toast.success(successMessage, { id: toastId });
-        clearSelection();
+      const promises = items.map(item => actionFn(item));
+      const results = await Promise.allSettled(promises);
+      
+      const successMessage = options.onSuccess(results, items);
+      
+      toast.success(successMessage, { id: toastId });
+      clearSelection();
     } catch (error) {
-        const message = error instanceof Error ? error.message : options.error;
-        toast.error(message, { id: toastId });
+      const message = error instanceof Error ? error.message : options.error;
+      toast.error(message, { id: toastId });
     } finally {
-        setIsProcessing(false);
+      setIsProcessing(false);
     }
   }, [clearSelection]);
   
   // Lógica de negocio (qué hacer al confirmar)
   const handleConfirmDelete = async () => {
-    const playlists = dialogState.props.playlists;
-    if (!playlists || playlists.length === 0) {
-      return;
-    }
+    if (dialogState.variant !== 'delete') return;
+    
+    const { playlists } = dialogState.props;
     
     dispatch({ type: 'CLOSE' });
     const idsToDelete = playlists.map((p) => p.id);
@@ -168,18 +193,15 @@ export function usePlaylistActions() {
       {
         loading: `Eliminando ${idsToDelete.length} playlist(s)...`,
         success: 'Playlist(s) eliminadas con éxito.',
-        error: 'No se pudo eliminar.',
+        error: 'No se pudieron eliminar.',
         onSuccess: () => removeMultipleFromCache(idsToDelete),
       }
     );
   };
   
   const handleConfirmShuffle = async () => {
-    const playlists = dialogState.props.playlists;
-    
-    if (!playlists || playlists.length === 0) {
-      return;
-    }
+    if (dialogState.variant !== 'shuffle') return;
+    const { playlists } = dialogState.props;
     
     dispatch({ type: 'CLOSE' });
     const idsToShuffle = playlists.map((p) => p.id);
@@ -196,19 +218,16 @@ export function usePlaylistActions() {
   };
   
   const handleExecuteSync = async (shouldShuffle: boolean) => {
-    const playlistsToSync = dialogState.props.playlists;
-    
-    if (!playlistsToSync || playlistsToSync.length === 0) {
-      return;
-    }
+    if (dialogState.variant !== 'syncShuffleChoice') return;
+    const { playlists } = dialogState.props;
     
     dispatch({ type: 'CLOSE' });
     
     await executeBatchAction(
-      playlistsToSync,
+      playlists,
       (p) => executeMegalistSync(p.id, shouldShuffle),
       {
-        loading: `Sincronizando ${playlistsToSync.length} playlist(s)...`,
+        loading: `Sincronizando ${playlists.length} playlist(s)...`,
         error: 'Ocurrió un error inesperado durante la sincronización.',
         onSuccess: (results, items) => {
           let successCount = 0;
@@ -225,8 +244,30 @@ export function usePlaylistActions() {
     );
   };
   
-  const handleCreateOrUpdateMegalist = async (shouldShuffle: boolean, mode: 'create' | 'update' | 'replace' = 'create') => {
-    const { sourceIds, playlistName, targetId, overwriteId } = dialogState.props;
+  const handleCreateOrUpdateMegalist = async (shouldShuffle: boolean) => {
+    if (dialogState.variant !== 'createShuffleChoice' && dialogState.variant !== 'addToShuffleChoice' && dialogState.variant !== 'createOverwrite') return;
+    
+    const { sourceIds } = dialogState.props;
+    let playlistName: string | undefined;
+    let targetId: string | undefined;
+    let overwriteId: string | undefined;
+    let mode: 'create' | 'update' | 'replace';
+    
+    if (dialogState.variant === 'createShuffleChoice' || dialogState.variant === 'createOverwrite') {
+      playlistName = dialogState.props.playlistName;
+    }
+    
+    if (dialogState.variant === 'createOverwrite') {
+      overwriteId = dialogState.props.overwriteId;
+      mode = 'replace';
+    } else if (dialogState.variant === 'addToShuffleChoice') {
+      targetId = dialogState.props.targetId;
+      const targetPlaylist = playlistCache.find(p => p.id === targetId);
+      playlistName = targetPlaylist?.name || "Megalista existente";
+      mode = 'update';
+    } else {
+      mode = 'create';
+    }
     
     if (!sourceIds || !playlistName) {
       toast.error("Faltan datos para la operación.");
@@ -240,7 +281,6 @@ export function usePlaylistActions() {
     const toastId = toast.loading(mode === 'replace' ? 'Reemplazando playlist...' : mode === 'update' ? 'Actualizando playlist...' : 'Creando Megalista...');
     
     try {
-      // Caso 1: Actualizar (Añadir a existente)
       if (mode === 'update' && finalTargetId) {
         const { finalCount, addedCount } = await addTracksToMegalistAction(finalTargetId, sourceIds, shouldShuffle);
         updatePlaylistInCache(finalTargetId, { trackCount: finalCount, playlistType: 'MEGALIST' });
@@ -249,40 +289,34 @@ export function usePlaylistActions() {
         } else {
           toast.info('La Megalista ya contenía todas las canciones.', { id: toastId });
         }
-      } else { // Caso 2: Crear o Reemplazar
+      } else {
         const trackUris = await getTrackUris(sourceIds);
         if (trackUris.length === 0) {
           toast.error('No se encontraron canciones en las playlists seleccionadas.', { id: toastId });
           setIsProcessing(false);
           return;
         }
-        
         const tracksToMix = shouldShuffle ? shuffleArray(trackUris) : trackUris;
         
-        // Si es una creación nueva, primero comprobamos si ya existe.
         if (mode === 'create') {
           const { playlist, exists } = await findOrCreatePlaylist(playlistName, sourceIds, tracksToMix.length);
           if (exists) {
             setIsProcessing(false);
             toast.dismiss(toastId);
             dispatch({ type: 'OPEN', payload: { variant: 'createOverwrite', props: { playlistName, sourceIds, overwriteId: playlist.id } } });
-            return; // Detenemos la ejecución aquí, el usuario decidirá en el nuevo diálogo
+            return;
           }
-          // Si no existe, la hemos creado y procedemos a añadirle canciones.
           addPlaylistToCache(playlist);
           toast.loading(`Añadiendo ${tracksToMix.length} canciones a "${playlistName}"...`, { id: toastId });
           await addTracksBatch(playlist.id, tracksToMix);
           updatePlaylistInCache(playlist.id, { trackCount: tracksToMix.length });
-          
-        } else if (mode === 'replace' && finalTargetId) { // Reemplazar existente
-          await addTracksBatch(finalTargetId, []); // Vaciarla primero
+        } else if (mode === 'replace' && finalTargetId) {
+          await addTracksBatch(finalTargetId, []);
           await addTracksBatch(finalTargetId, tracksToMix);
           updatePlaylistInCache(finalTargetId, { trackCount: tracksToMix.length, playlistType: 'MEGALIST' });
         }
-        
         toast.success(`¡Megalista "${playlistName}" ${mode === 'replace' ? 'reemplazada' : 'creada'} con éxito!`, { id: toastId });
       }
-      
       clearSelection();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Ocurrió un error inesperado.';
@@ -292,12 +326,9 @@ export function usePlaylistActions() {
     }
   };
   
-  const handleCreateSurpriseMix = async () => {
-    const { sourceIds, targetTrackCount, playlistName, overwriteId } = dialogState.props;
-    if (!sourceIds || !targetTrackCount || !playlistName) {
-      toast.error("Faltan datos para crear la Lista Sorpresa.");
-      return;
-    }
+  const handleCreateSurpriseMix = async (playlistName: string) => {
+    if (dialogState.variant !== 'surpriseName') return;
+    const { sourceIds, targetTrackCount, overwriteId } = dialogState.props;
     
     setIsProcessing(true);
     dispatch({ type: 'CLOSE' });
@@ -305,15 +336,13 @@ export function usePlaylistActions() {
     
     try {
       const newPlaylist = await createOrUpdateSurpriseMixAction(sourceIds, targetTrackCount, playlistName, overwriteId);
-      
       if (overwriteId) {
         updatePlaylistInCache(overwriteId, { trackCount: newPlaylist.tracks.total, playlistType: 'SURPRISE' });
-        toast.success(`¡Lista Sorpresa "${newPlaylist.name}" actualizada!`, { id: toastId });
+        toast.success(`Lista Sorpresa "${newPlaylist.name}" actualizada.`, { id: toastId });
       } else {
         addPlaylistToCache(newPlaylist);
-        toast.success(`¡Lista Sorpresa "${newPlaylist.name}" creada con éxito!`, { id: toastId });
+        toast.success(`Lista Sorpresa "${newPlaylist.name}" creada con éxito.`, { id: toastId });
       }
-      
       clearSelection();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Ocurrió un error desconocido.';
@@ -321,10 +350,7 @@ export function usePlaylistActions() {
         const existingId = message.split('::')[1];
         toast.dismiss(toastId);
         setIsProcessing(false);
-        dispatch({ type: 'OPEN', payload: { 
-          variant: 'surpriseName', 
-          props: { ...dialogState.props, isOverwrite: true, overwriteId: existingId } 
-        }});
+        dispatch({ type: 'OPEN', payload: { ...dialogState, props: { ...dialogState.props, isOverwrite: true, overwriteId: existingId } }});
       } else {
         toast.error(message, { id: toastId });
       }
@@ -334,7 +360,6 @@ export function usePlaylistActions() {
   };
   
   // Acciones públicas (para abrir los diálogos)
-  
   const openDeleteDialog = (playlists: ActionPlaylist[]) => {
     if (playlists.length === 0) return;
     dispatch({ type: 'OPEN', payload: { variant: 'delete', props: { playlists } } });
@@ -387,12 +412,10 @@ export function usePlaylistActions() {
   const openSurpriseMixDialog = async (sourceIds?: string[]) => {
     setIsProcessing(true);
     const toastId = toast.loading("Preparando el generador de sorpresas...");
-    
     try {
-      // Flujo 1: Sorpresa Global (sin selección previa)
       if (!sourceIds || sourceIds.length === 0) {
-        dispatch({ type: 'OPEN', payload: { variant: 'surpriseGlobal' } });
-      } else { // Flujo 2: Sorpresa desde Selección
+        dispatch({ type: 'OPEN', payload: { variant: 'surpriseGlobal', props: {} } });
+      } else {
         const count = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
         dispatch({ type: 'OPEN', payload: { variant: 'surpriseTargeted', props: { sourceIds, uniqueTrackCount: count } } });
       }
@@ -406,7 +429,6 @@ export function usePlaylistActions() {
   };
   
   // Callbacks para los componentes de diálogos
-  
   const dialogCallbacks = {
     onClose: () => dispatch({ type: 'CLOSE' }),
     
@@ -415,24 +437,34 @@ export function usePlaylistActions() {
     onConfirmShuffle: handleConfirmShuffle,
     
     // Flujo de Sincronización
-    onConfirmSyncPreview: () => dispatch({ type: 'OPEN', payload: { variant: 'syncShuffleChoice', props: dialogState.props } }),
+    onConfirmSyncPreview: () => {
+      if (dialogState.variant !== 'syncPreview') return;
+      dispatch({ type: 'OPEN', payload: { variant: 'syncShuffleChoice', props: { playlists: dialogState.props.playlists } } });
+    },
     onConfirmSyncShuffleChoice: (shouldShuffle: boolean) => handleExecuteSync(shouldShuffle),
     
     // Flujo de Creación de Megalista
-    onConfirmCreateName: (playlistName: string) => dispatch({ type: 'OPEN', payload: { variant: 'createShuffleChoice', props: { ...dialogState.props, playlistName } } }),
-    onConfirmCreateShuffleChoice: (shouldShuffle: boolean) => handleCreateOrUpdateMegalist(shouldShuffle, 'create'),
+    onConfirmCreateName: (playlistName: string) => {
+      if (dialogState.variant !== 'createName') return;
+      dispatch({ type: 'OPEN', payload: { variant: 'createShuffleChoice', props: { ...dialogState.props, playlistName } } });
+    },
+    onConfirmCreateShuffleChoice: () => handleCreateOrUpdateMegalist(true),
     onConfirmOverwrite: (mode: 'update' | 'replace') => {
+      if (dialogState.variant !== 'createOverwrite') return;
       if (mode === 'update') {
-        // Si eligen 'actualizar', lo tratamos como "Añadir a" pero con reordenado forzado
-        dispatch({ type: 'OPEN', payload: { variant: 'addToShuffleChoice', props: { ...dialogState.props, targetId: dialogState.props.overwriteId } } });
+        dispatch({ type: 'OPEN', payload: { variant: 'addToShuffleChoice', props: { sourceIds: dialogState.props.sourceIds, targetId: dialogState.props.overwriteId } } });
       } else {
-        handleCreateOrUpdateMegalist(true, 'replace');
+        // Para 'replace', el estado original tiene todo lo necesario
+        handleCreateOrUpdateMegalist(true);
       }
     },
     
     // Flujo de Añadir a Megalista
-    onConfirmAddToSelect: (targetId: string) => dispatch({ type: 'OPEN', payload: { variant: 'addToShuffleChoice', props: { ...dialogState.props, targetId } } }),
-    onConfirmAddToShuffleChoice: (shouldShuffle: boolean) => handleCreateOrUpdateMegalist(shouldShuffle, 'update'),
+    onConfirmAddToSelect: (targetId: string) => {
+      if (dialogState.variant !== 'addToSelect') return;
+      dispatch({ type: 'OPEN', payload: { variant: 'addToShuffleChoice', props: { ...dialogState.props, targetId } } });
+    },
+    onConfirmAddToShuffleChoice: (shouldShuffle: boolean) => handleCreateOrUpdateMegalist(shouldShuffle),
     
     // Flujo de Lista Sorpresa
     onConfirmSurpriseGlobal: (count: number) => {
@@ -440,11 +472,16 @@ export function usePlaylistActions() {
       const sourceIds = randomPlaylists.map(p => p.id);
       openSurpriseMixDialog(sourceIds);
     },
-    onConfirmSurpriseTargeted: (trackCount: number) => dispatch({ type: 'OPEN', payload: { variant: 'surpriseName', props: { ...dialogState.props, targetTrackCount: trackCount } } }),
+    onConfirmSurpriseTargeted: (trackCount: number) => {
+      if (dialogState.variant !== 'surpriseTargeted') return;
+      dispatch({ type: 'OPEN', payload: { variant: 'surpriseName', props: { ...dialogState.props, targetTrackCount: trackCount } } });
+    },
     onConfirmSurpriseName: (playlistName: string) => {
-      dispatch({ type: 'UPDATE_PROPS', payload: { playlistName } });
-      // Usamos un timeout corto para asegurar que el estado se actualiza antes de llamar a la acción
-      setTimeout(handleCreateSurpriseMix, 0);
+      if(playlistName.trim() === '') {
+        toast.error("El nombre de la playlist no puede estar vacío.");
+        return;
+      }
+      handleCreateSurpriseMix(playlistName);
     },
   };
   
@@ -452,8 +489,6 @@ export function usePlaylistActions() {
     isProcessing,
     dialogState,
     dialogCallbacks,
-    
-    // Acciones para exponer a la UI
     openDeleteDialog,
     openShuffleDialog,
     openSyncDialog,
