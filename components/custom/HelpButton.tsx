@@ -1,26 +1,16 @@
 // /components/custom/HelpButton.tsx
-'use client';
 
+'use client';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { HelpCircle } from 'lucide-react';
+import HeaderIconButton from './HeaderIconButton';
 
 export default function HelpButton() {
   return (
-    <TooltipProvider>
-    <Tooltip>
-    <TooltipTrigger asChild>
-    <Link href="/faq" passHref>
-    <Button variant="ghost" size="icon">
+    <Link href="/faq" passHref legacyBehavior>
+    <HeaderIconButton tooltipText="Ayuda y Guía" asChild>
     <HelpCircle className="h-5 w-5" />
-    </Button>
+    </HeaderIconButton>
     </Link>
-    </TooltipTrigger>
-    <TooltipContent>
-    <p>Ayuda y Guía</p>
-    </TooltipContent>
-    </Tooltip>
-    </TooltipProvider>
   );
 }
