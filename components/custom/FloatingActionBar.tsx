@@ -22,11 +22,16 @@ export default function FloatingActionBar() {
   
   const { 
     isProcessing, 
-    actions, 
     openCreateMegalistDialog, 
     openAddToMegalistDialog,
-    openSurpriseMixDialog 
+    openSurpriseMixDialog,
+    openShuffleDialog,
+    openSyncDialog, 
+    openDeleteDialog, 
   } = useActions();
+  
+  const playlistsInSelection = useMemo(() => 
+    playlistCache.filter(p => selectedPlaylistIds.includes(p.id)), [selectedPlaylistIds, playlistCache]);
   
   const [surpriseDialog, setSurpriseDialog] = useState({ open: false });
   
@@ -52,23 +57,6 @@ export default function FloatingActionBar() {
   if (selectedPlaylistIds.length === 0) {
     return null; // El estado de "Resumable" se ha eliminado por simplicidad, se puede re-añadir si es crítico.
   }
-  
-  const handleSyncClick = () => {
-    actions.syncPlaylists(
-      syncableMegalistsInSelection.map(p => ({ id: p.id, name: p.name }))
-    );
-  };
-  
-  const handleShuffleClick = () => {
-    const playlistsToShuffle = megamixCache.filter(p => selectedPlaylistIds.includes(p.id) && p.isMegalist);
-    actions.shufflePlaylists(playlistsToShuffle.map(p => ({ id: p.id, name: p.name })));
-  };
-  
-  const handleDeleteClick = () => {
-    const playlistsToDelete = playlistCache.filter(p => selectedPlaylistIds.includes(p.id))
-    .map(p => ({ id: p.id, name: p.name }));
-    actions.deletePlaylists(playlistsToDelete);
-  };
   
   return (
     <>
@@ -101,7 +89,7 @@ export default function FloatingActionBar() {
     <Button
     variant="ghost"
     size="lg"
-    onClick={() => handleDeleteClick}
+    onClick={() => openDeleteDialog(playlistsInSelection)}
     disabled={isProcessing} 
     className="h-14 w-14 text-red-500 hover:bg-red-500/10 hover:text-red-500 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2"
     >
@@ -119,7 +107,7 @@ export default function FloatingActionBar() {
       <Button
       variant="ghost"
       size="lg"
-      onClick={() => handleShuffleClick}
+      onClick={() => openShuffleDialog(playlistsInSelection)}
       disabled={isProcessing}
       className="h-14 w-14 text-orange-500 hover:bg-orange-500/10 hover:text-orange-500 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2"
       >
@@ -137,18 +125,26 @@ export default function FloatingActionBar() {
     {hasSyncableMegalists && (
       <Tooltip>
       <TooltipTrigger asChild>
-      <Button 
-      variant="ghost" 
-      size="lg" 
-      onClick={handleSyncClick} 
-      disabled={isProcessing} 
+      <Button
+      variant="ghost"
+      size="lg"
+      // La solución: Envolvemos la llamada en una arrow function
+      onClick={() => openSyncDialog(syncableMegalistsInSelection)}
+      disabled={isProcessing}
       className="h-14 w-14 sm:h-auto sm:w-auto sm:flex-row sm:gap-2 sm:px-4 sm:py-2"
       >
-      {isProcessing ? <Loader2 className="h-6 w-6 sm:h-5 sm:w-5 animate-spin"/> : <RefreshCw className="h-6 w-6 sm:h-5 sm:w-5" />}
+      {isProcessing ? (
+        <Loader2 className="h-6 w-6 sm:h-5 sm:w-5 animate-spin" />
+      ) : (
+        <RefreshCw className="h-6 w-6 sm:h-5 sm:w-5" />
+      )}
       <span className="hidden sm:inline-block text-sm">Sincronizar</span>
       </Button>
       </TooltipTrigger>
-      <TooltipContent><p>Sincronizar {syncableMegalists.length} Megalista(s)</p></TooltipContent>
+      <TooltipContent>
+      {/* Usamos la misma variable para consistencia en el texto */}
+      <p>Sincronizar {syncableMegalistsInSelection.length} Megalista(s) seleccionada(s)</p>
+      </TooltipContent>
       </Tooltip>
     )}
     

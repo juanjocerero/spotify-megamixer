@@ -1,377 +1,285 @@
+// lib/contexts/ActionProvider.tsx
+
 'use client';
 
-import { createContext, useContext, useState, useMemo } from 'react';
-import { usePlaylistActions } from '../hooks/usePlaylistActions';
-import { usePlaylistStore } from '../store';
-import { getUniqueTrackCountFromPlaylistsAction } from '@/lib/action';
-import { shuffleArray } from '../utils';
+import React, { createContext, useContext, useMemo, useState } from 'react';
+import { usePlaylistActions, ActionPlaylist } from '@/lib/hooks/usePlaylistActions';
+import { usePlaylistStore } from '@/lib/store';
 
+// Componentes de Diálogo y UI
 import ConfirmationDialog from '@/components/custom/ConfirmationDialog';
 import ShuffleChoiceDialog from '@/components/custom/ShuffleChoiceDialog';
-
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 
-// Definimos la forma del contexto que los componentes consumirán.
-type ActionContextType = {
-  actions: ReturnType<typeof usePlaylistActions>['actions'];
+// Definición del tipo para el contexto
+interface ActionContextType {
   isProcessing: boolean;
-  // Funciones para iniciar los flujos desde la UI
+  openDeleteDialog: (playlists: ActionPlaylist[]) => void;
+  openShuffleDialog: (playlists: ActionPlaylist[]) => void;
+  openSyncDialog: (playlists: ActionPlaylist[]) => Promise<void>;
   openCreateMegalistDialog: (sourceIds: string[]) => void;
   openAddToMegalistDialog: (sourceIds: string[]) => void;
-  openSurpriseMixDialog: (sourceIds?: string[]) => void;
-};
+  openSurpriseMixDialog: (sourceIds?: string[]) => Promise<void>;
+}
 
-// Tipos para el flujo de creación de listas sorpresa
-type SurpriseFlowStep = 'idle' | 'askSourceCount' | 'askTrackCount' | 'askName' | 'loading';
-type SurpriseFlowState = {
-  step: SurpriseFlowStep;
-  sourceIds: string[];
-  sourceCount: number; // Para el mix global
-  totalTracks: number;
-  trackCount: number;
-  playlistName: string;
-};
-
-// Creamos el contexto
+// Creación del Contexto
 const ActionContext = createContext<ActionContextType | undefined>(undefined);
 
-// Creamos el componente Provider
+// El Provider
 export function ActionProvider({ children }: { children: React.ReactNode }) {
-  const { 
-    isProcessing, 
-    progress,
-    actions, 
-    syncPreviewDialogState,
-    syncPreviewDialogCallbacks,
-    syncShuffleChoiceDialogState, 
-    syncShuffleChoiceDialogCallbacks,  
-    shuffleDialogState, 
-    shuffleDialogCallbacks, 
-    deletionDialogState, 
-    deletionDialogCallbacks 
-  } = usePlaylistActions();
-  
-  const { megamixCache, playlistCache } = usePlaylistStore();
-  
-  // Estados para controlar los diálogos del flujo de creación, actualización, reordenado y sobrescritura
-  const [createState, setCreateState] = useState({ isOpen: false, sourceIds: [] as string[], playlistName: '' });
-  const [shuffleState, setShuffleState] = useState({ isOpen: false, onConfirm: (shouldShuffle: boolean) => {} });
-  const [overwriteState, setOverwriteState] = useState({ isOpen: false, playlistName: '', onConfirm: (mode: 'update' | 'replace') => {} });
-  const [addToState, setAddToState] = useState({ isOpen: false, sourceIds: [] as string[], targetId: '' });
-  
-  // Estados para el flujo de creación de listas sorpresa
-  const [surpriseFlow, setSurpriseFlow] = useState<SurpriseFlowState>({
-    step: 'idle', sourceIds: [], sourceCount: 10, totalTracks: 0, trackCount: 50, playlistName: 'Lista Sorpresa',
-  });
-  
-  // Manejador que inicia el flujo de creación de megalistas
-  const openCreateMegalistDialog = (sourceIds: string[]) => {
-    setCreateState({ isOpen: true, sourceIds, playlistName: '' });
-  };
-  
-  // Pide el nombre de la lista y pregunta por el proceso de reordenado
-  const handleCreateNameConfirm = () => {
-    if (!createState.playlistName.trim()) {
-      toast.error('El nombre no puede estar vacío.');
-      return;
-    }
-    setCreateState(prev => ({ ...prev, isOpen: false }));
-    setShuffleState({
-      isOpen: true,
-      onConfirm: (shouldShuffle) => handleCreateExecution(shouldShuffle),
-    });
-  };
-  
-  // Ejecuta la creación de la megalista
-  const handleCreateExecution = async (shouldShuffle: boolean) => {
-    setShuffleState({ isOpen: false, onConfirm: () => {} });
-    const result = await actions.createMegalist(createState.sourceIds, createState.playlistName, shouldShuffle);
-    
-    // Si la playlist existe, pide confirmación para sobrescribir/actualizar
-    if (result.requiresOverwrite && result.playlistId) {
-      const targetId = result.playlistId;
-      setOverwriteState({
-        isOpen: true,
-        playlistName: createState.playlistName,
-        onConfirm: (mode) => {
-          setOverwriteState({ isOpen: false, playlistName: '', onConfirm: () => {} });
-          // Llama a la acción de actualizar en el modo elegido
-          actions.updateMegalist(targetId, createState.sourceIds, shouldShuffle, mode);
-        }
-      });
-    }
-  };
-  
-  // Flujo "Añadir a existente"
-  const openAddToMegalistDialog = (sourceIds: string[]) => {
-    setAddToState({ isOpen: true, sourceIds, targetId: '' });
-  };
-  
-  const handleAddToConfirm = () => {
-    if (!addToState.targetId) {
-      toast.error('Debes seleccionar una Megalista de destino.');
-      return;
-    }
-    setAddToState(prev => ({ ...prev, isOpen: false }));
-    setShuffleState({
-      isOpen: true,
-      onConfirm: (shouldShuffle) => {
-        setShuffleState({ isOpen: false, onConfirm: () => {} });
-        actions.updateMegalist(addToState.targetId, addToState.sourceIds, shouldShuffle, 'update');
-      }
-    });
-  };
-  
-  // Descripción para el diálogo de sincronización
-  const syncPreviewDescription = useMemo(() => {
-    const count = syncPreviewDialogState.playlists.length;
-    const title = count === 1 ? `"${syncPreviewDialogState.playlists[0].name}"` : `${count} Megalista(s)`;
-    return (
-      <div className="text-sm text-slate-400">
-      Vas a sincronizar <strong className="text-white">{title}</strong>.
-      <ul className="list-disc pl-5 mt-3 space-y-1">
-      <li className="text-green-400">
-      Se añadirán <strong className="text-green-300">{syncPreviewDialogState.added}</strong> canciones.
-      </li>
-      <li className="text-red-400">
-      Se eliminarán <strong className="text-red-300">{syncPreviewDialogState.removed}</strong> canciones.
-      </li>
-      </ul>
-      <p className="mt-3">¿Deseas continuar?</p>
-      </div>
-    );
-  }, [syncPreviewDialogState]);
-  
-  // Descripción para el diálogo de reordenado
-  const shuffleDescription = useMemo(() => {
-    const count = shuffleDialogState.playlists.length;
-    if (count === 1) {
-      return (
-        <span>
-        Vas a reordenar todas las canciones de la playlist{' '}
-        <strong className="text-white">&quot;{shuffleDialogState.playlists[0].name}&quot;</strong>. Esta acción no se puede deshacer.
-        </span>
-      );
-    }
-    return (
-      <span>
-      Vas a reordenar las canciones de{' '}
-      <strong className="text-white">{count}</strong> playlist(s) seleccionada(s). Esta acción no se puede deshacer.
-      </span>
-    );
-  }, [shuffleDialogState.playlists]);
-  
-  // Descripción para el diálogo de eliminación.
-  const deletionDescription = useMemo(() => {
-    if (deletionDialogState.playlists.length === 1) {
-      return (
-        <span>
-        Esta acción es irreversible. Vas a eliminar la playlist{' '}
-        <strong className="text-white">
-        &quot;{deletionDialogState.playlists[0].name}&quot;
-        </strong>.
-        </span>
-      );
-    }
-    return (
-      <span>
-      Vas a eliminar permanentemente{' '}
-      <strong className="text-white">{deletionDialogState.playlists.length} playlist(s)</strong>{' '}
-      de tu librería. Esta acción es irreversible.
-      </span>
-    );
-  }, [deletionDialogState.playlists]);
-  
-  // Lógica del flujo de creación de listas sorpresa
-  const openSurpriseMixDialog = async (sourceIds?: string[]) => {
-    setSurpriseFlow(prev => ({ ...prev, step: 'loading' }));
-    
-    // Si no se proveen IDs, es un mix global. Preguntamos cuántas fuentes usar.
-    if (!sourceIds || sourceIds.length === 0) {
-      setSurpriseFlow(prev => ({ ...prev, step: 'askSourceCount' }));
-      return;
-    }
-    
-    // Si se proveen IDs, calculamos el total de canciones y pasamos a pedir el número de tracks.
-    try {
-      let count = 0;
-      if (sourceIds.length === 1) {
-        const p = playlistCache.find(p => p.id === sourceIds[0]);
-        count = p ? p.tracks.total : await getUniqueTrackCountFromPlaylistsAction(sourceIds);
-      } else {
-        count = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
-      }
-      setSurpriseFlow(prev => ({ ...prev, step: 'askTrackCount', sourceIds, totalTracks: count }));
-    } catch (err) {
-      toast.error('No se pudo calcular el total de canciones.');
-      setSurpriseFlow(prev => ({ ...prev, step: 'idle' }));
-    }
-  };
-  
-  const handleSourceCountSubmit = () => {
-    // Seleccionar N playlists aleatorias y continuar el flujo.
-    const shuffled = shuffleArray([...playlistCache]);
-    const sources = shuffled.slice(0, Math.min(surpriseFlow.sourceCount, 50, playlistCache.length));
-    openSurpriseMixDialog(sources.map(p => p.id));
-  };
-  
-  const handleTrackCountSubmit = () => setSurpriseFlow(prev => ({ ...prev, step: 'askName' }));
-  
-  const handleNameSubmit = async () => {
-    await actions.createSurpriseMix(surpriseFlow.sourceIds, surpriseFlow.trackCount, surpriseFlow.playlistName);
-    setSurpriseFlow(prev => ({...prev, step: 'idle'})); // Resetear al final
-  };
-  
-  const closeSurpriseFlow = () => setSurpriseFlow(prev => ({ ...prev, step: 'idle' }));
-  
-  // Memoizamos el valor del contexto para evitar re-renders innecesarios.
-  // Esta declaración debe estar al final para resultar sincronizada
-  // con todos los procesos declarados anteriormente.
-  const contextValue = useMemo(() => ({ 
-    actions, 
+  const {
     isProcessing,
+    dialogState,
+    dialogCallbacks,
+    openDeleteDialog,
+    openShuffleDialog,
+    openSyncDialog,
     openCreateMegalistDialog,
     openAddToMegalistDialog,
-    openSurpriseMixDialog
-  }), [actions, isProcessing]);
+    openSurpriseMixDialog,
+  } = usePlaylistActions();
+  
+  // El valor del contexto solo expone lo que los componentes hijos necesitan llamar
+  const contextValue = useMemo(() => ({
+    isProcessing,
+    openDeleteDialog,
+    openShuffleDialog,
+    openSyncDialog,
+    openCreateMegalistDialog,
+    openAddToMegalistDialog,
+    openSurpriseMixDialog,
+  }), [isProcessing, openDeleteDialog, openShuffleDialog, openSyncDialog, openCreateMegalistDialog, openAddToMegalistDialog, openSurpriseMixDialog]);
+  
+  // --- Componente interno para renderizar los diálogos ---
+  const DialogRenderer = () => {
+    // Estado local para los inputs dentro de los diálogos
+    const [inputValue, setInputValue] = useState('');
+    const [sliderValue, setSliderValue] = useState([50]);
+    const { megamixCache } = usePlaylistStore();
+    
+    // Resetea los valores de los inputs cuando se cierra un diálogo
+    if (dialogState.variant === 'none' && (inputValue !== '' || sliderValue[0] !== 50)) {
+      setInputValue('');
+      setSliderValue([50]);
+    }
+    
+    switch (dialogState.variant) {
+      case 'delete': {
+        const playlists = dialogState.props.playlists || [];
+        const description = playlists.length === 1
+        ? `Esta acción es irreversible. Vas a eliminar la playlist "${playlists[0].name}".`
+        : `Vas a eliminar permanentemente ${playlists.length} playlist(s). Esta acción es irreversible.`;
+        return (
+          <ConfirmationDialog
+          isOpen={true}
+          onClose={dialogCallbacks.onClose}
+          onConfirm={dialogCallbacks.onConfirmDelete}
+          isLoading={isProcessing}
+          title="¿Estás absolutamente seguro?"
+          description={description}
+          confirmButtonText="Sí, eliminar"
+          confirmButtonVariant="destructive"
+          />
+        );
+      }
+      
+      case 'shuffle': {
+        const playlists = dialogState.props.playlists || [];
+        const description = playlists.length === 1
+        ? `Vas a reordenar todas las canciones de la playlist "${playlists[0].name}". Esta acción no se puede deshacer.`
+        : `Vas a reordenar las canciones de ${playlists.length} playlist(s) seleccionada(s). Esta acción no se puede deshacer.`;
+        return (
+          <ConfirmationDialog
+          isOpen={true}
+          onClose={dialogCallbacks.onClose}
+          onConfirm={dialogCallbacks.onConfirmShuffle}
+          isLoading={isProcessing}
+          title="Confirmar Reordenado"
+          description={description}
+          confirmButtonText="Sí, reordenar"
+          confirmButtonVariant="destructive"
+          />
+        );
+      }
+      
+      case 'syncPreview': {
+        const { playlists = [], syncStats } = dialogState.props;
+        const title = playlists.length === 1 ? `"${playlists[0].name}"` : `${playlists.length} Megalista(s)`;
+        const description = (
+          <div className="text-sm text-slate-400">
+          Vas a sincronizar <strong className="text-white">{title}</strong>.
+          <ul className="list-disc pl-5 mt-3 space-y-1">
+          <li className="text-green-400"> Se añadirán <strong className="text-green-300">{syncStats?.added ?? 0}</strong> canciones. </li>
+          <li className="text-red-400"> Se eliminarán <strong className="text-red-300">{syncStats?.removed ?? 0}</strong> canciones. </li>
+          </ul>
+          <p className="mt-3">¿Deseas continuar?</p>
+          </div>
+        );
+        return (
+          <ConfirmationDialog
+          isOpen={true}
+          onClose={dialogCallbacks.onClose}
+          onConfirm={dialogCallbacks.onConfirmSyncPreview}
+          isLoading={isProcessing}
+          title="Resumen de Sincronización"
+          description={description}
+          confirmButtonText="Sí, continuar"
+          />
+        );
+      }
+      
+      case 'syncShuffleChoice':
+      case 'createShuffleChoice':
+      case 'addToShuffleChoice': {
+        const onConfirm = dialogState.variant === 'syncShuffleChoice' ? dialogCallbacks.onConfirmSyncShuffleChoice :
+        dialogState.variant === 'createShuffleChoice' ? dialogCallbacks.onConfirmCreateShuffleChoice :
+        dialogCallbacks.onConfirmAddToShuffleChoice;
+        return (
+          <ShuffleChoiceDialog
+          isOpen={true}
+          onClose={dialogCallbacks.onClose}
+          onConfirm={onConfirm}
+          />
+        );
+      }
+      
+      case 'createName':
+      return (
+        <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
+        <DialogContent>
+        <DialogHeader><DialogTitle>Paso 1: Ponle un nombre</DialogTitle></DialogHeader>
+        <Input placeholder="Ej: Mi Megalista Épica" value={inputValue} onChange={(e) => setInputValue(e.target.value)} />
+        <DialogFooter>
+        <Button variant="outline" onClick={dialogCallbacks.onClose}>Cancelar</Button>
+        <Button onClick={() => dialogCallbacks.onConfirmCreateName(inputValue)}>Siguiente</Button>
+        </DialogFooter>
+        </DialogContent>
+        </Dialog>
+      );
+      
+      case 'createOverwrite':
+      return (
+        <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
+        <DialogContent>
+        <DialogHeader>
+        <DialogTitle>Playlist Existente</DialogTitle>
+        <DialogDescription>
+        La playlist "<strong className="text-white">{dialogState.props.playlistName}</strong>" ya existe. ¿Qué quieres hacer?
+        </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
+        <Button variant="outline" className="flex-1" onClick={() => dialogCallbacks.onConfirmOverwrite('update')}>
+        Añadir Canciones
+        </Button>
+        <Button variant="destructive" className="flex-1" onClick={() => dialogCallbacks.onConfirmOverwrite('replace')}>
+        Reemplazarla por Completo
+        </Button>
+        </DialogFooter>
+        </DialogContent>
+        </Dialog>
+      );
+      
+      case 'addToSelect':
+      return (
+        <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
+        <DialogContent>
+        <DialogHeader>
+        <DialogTitle>Añadir a una Megalista</DialogTitle>
+        <DialogDescription>Elige la Megalista a la que quieres añadir las canciones seleccionadas.</DialogDescription>
+        </DialogHeader>
+        <Select onValueChange={(value) => setInputValue(value)}>
+        <SelectTrigger><SelectValue placeholder="Selecciona una Megalista..." /></SelectTrigger>
+        <SelectContent>
+        {megamixCache.filter(p => p.playlistType === 'MEGALIST').map(p => (
+          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+        ))}
+        </SelectContent>
+        </Select>
+        <DialogFooter>
+        <Button variant="outline" onClick={dialogCallbacks.onClose}>Cancelar</Button>
+        <Button onClick={() => dialogCallbacks.onConfirmAddToSelect(inputValue)}>Siguiente</Button>
+        </DialogFooter>
+        </DialogContent>
+        </Dialog>
+      );
+      
+      case 'surpriseGlobal':
+      return (
+        <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
+        <DialogContent>
+        <DialogHeader><DialogTitle>Megalista Sorpresa Global</DialogTitle></DialogHeader>
+        <Label>¿De cuántas de tus playlists (elegidas al azar) quieres tomar las canciones?</Label>
+        <Input type="number" value={inputValue} onChange={e => setInputValue(e.target.value)} placeholder="Por defecto: 50" />
+        <DialogFooter>
+        <Button variant="outline" onClick={dialogCallbacks.onClose}>Cancelar</Button>
+        <Button onClick={() => dialogCallbacks.onConfirmSurpriseGlobal(parseInt(inputValue, 10) || 50)}>Crear</Button>
+        </DialogFooter>
+        </DialogContent>
+        </Dialog>
+      );
+      
+      case 'surpriseTargeted': {
+        const maxTracks = dialogState.props.uniqueTrackCount ?? 0;
+        return (
+          <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
+          <DialogContent>
+          <DialogHeader><DialogTitle>Crear Lista Sorpresa</DialogTitle></DialogHeader>
+          <Label>¿Cuántas canciones aleatorias quieres en tu nueva lista?</Label>
+          <div className='text-center font-bold text-lg'>{sliderValue[0]}</div>
+          <Slider 
+          defaultValue={[50]} 
+          value={sliderValue}
+          max={maxTracks} 
+          min={1}
+          step={1} 
+          onValueChange={setSliderValue}
+          />
+          <div className='text-xs text-muted-foreground text-center'>Total de canciones únicas disponibles: {maxTracks}</div>
+          <DialogFooter>
+          <Button variant="outline" onClick={dialogCallbacks.onClose}>Cancelar</Button>
+          <Button onClick={() => dialogCallbacks.onConfirmSurpriseTargeted(sliderValue[0])}>Siguiente</Button>
+          </DialogFooter>
+          </DialogContent>
+          </Dialog>
+        );
+      }
+      
+      case 'surpriseName':
+      const title = dialogState.props.isOverwrite ? "Actualizar Lista Sorpresa" : "Paso Final: Nombra tu Lista Sorpresa";
+      return (
+        <Dialog open={true} onOpenChange={(open) => !open && dialogCallbacks.onClose()}>
+        <DialogContent>
+        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+        <Input placeholder="Ej: Sorpresa de Viernes" defaultValue={dialogState.props.isOverwrite ? dialogState.props.playlistName : ''} onChange={(e) => setInputValue(e.target.value)} />
+        <DialogFooter>
+        <Button variant="outline" onClick={dialogCallbacks.onClose}>Cancelar</Button>
+        <Button onClick={() => dialogCallbacks.onConfirmSurpriseName(inputValue)}>
+        {dialogState.props.isOverwrite ? "Actualizar Lista" : "Crear Lista"}
+        </Button>
+        </DialogFooter>
+        </DialogContent>
+        </Dialog>
+      );
+      
+      default:
+      return null;
+    }
+  };
   
   return (
     <ActionContext.Provider value={contextValue}>
     {children}
-    
-    {/* Pide el nombre para una nueva megalista */}
-    <Dialog open={createState.isOpen} onOpenChange={(open) => !open && setCreateState({ ...createState, isOpen: false })}>
-    <DialogContent>
-    <DialogHeader><DialogTitle>Crear Nueva Megalista</DialogTitle></DialogHeader>
-    <Label htmlFor="playlist-name">Nombre de la Megalista</Label>
-    <Input id="playlist-name" value={createState.playlistName} onChange={(e) => setCreateState(prev => ({...prev, playlistName: e.target.value}))} placeholder="Ej: Mix Definitivo" />
-    <DialogFooter>
-    <Button variant="outline" onClick={() => setCreateState({ ...createState, isOpen: false })}>Cancelar</Button>
-    <Button onClick={handleCreateNameConfirm}>Continuar</Button>
-    </DialogFooter>
-    </DialogContent>
-    </Dialog>
-    
-    {/* Preguntar por reordenado (genérico) */}
-    <ShuffleChoiceDialog
-    isOpen={shuffleState.isOpen}
-    onClose={() => setShuffleState({ isOpen: false, onConfirm: () => {} })}
-    onConfirm={shuffleState.onConfirm}
-    />
-    
-    {/* Preguntar por sobrescritura si la playlist ya existe */}
-    <Dialog open={overwriteState.isOpen} onOpenChange={(open) => !open && setOverwriteState({...overwriteState, isOpen: false})}>
-    <DialogContent>
-    <DialogHeader><DialogTitle>Playlist Existente</DialogTitle></DialogHeader>
-    <DialogDescription>La playlist &quot;{overwriteState.playlistName}&quot; ya existe. ¿Qué quieres hacer?</DialogDescription>
-    <DialogFooter className="gap-2">
-    <Button variant="outline" onClick={() => setOverwriteState({...overwriteState, isOpen: false})}>Cancelar</Button>
-    <Button variant="destructive" onClick={() => overwriteState.onConfirm('replace')}>Reemplazar</Button>
-    <Button onClick={() => overwriteState.onConfirm('update')}>Actualizar</Button>
-    </DialogFooter>
-    </DialogContent>
-    </Dialog>
-    
-    {/* Preguntar a qué Megalista añadir */}
-    <Dialog open={addToState.isOpen} onOpenChange={(open) => !open && setAddToState({...addToState, isOpen: false})}>
-    <DialogContent>
-    <DialogHeader><DialogTitle>Añadir a Megalista Existente</DialogTitle></DialogHeader>
-    <Select onValueChange={(value) => setAddToState(prev => ({...prev, targetId: value}))}>
-    <SelectTrigger><SelectValue placeholder="Elige una playlist..." /></SelectTrigger>
-    <SelectContent>{megamixCache.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-    </Select>
-    <DialogFooter>
-    <Button variant="outline" onClick={() => setAddToState({...addToState, isOpen: false})}>Cancelar</Button>
-    <Button onClick={handleAddToConfirm}>Confirmar y Añadir</Button>
-    </DialogFooter>
-    </DialogContent>
-    </Dialog>
-    
-    {/* Mostrar progreso */}
-    <Dialog open={isProcessing && progress.total > 0}>
-    <DialogContent>
-    <DialogHeader><DialogTitle>Procesando...</DialogTitle></DialogHeader>
-    <div className="w-full bg-gray-700 rounded-full h-2.5"><div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${(progress.current / progress.total) * 100}%` }}></div></div>
-    <p className="text-center text-sm">{progress.current} / {progress.total} canciones procesadas</p>
-    </DialogContent>
-    </Dialog>
-    
-    {/* Diálogo de sincronización */}
-    <ConfirmationDialog
-    isOpen={syncPreviewDialogState.isOpen}
-    onClose={syncPreviewDialogCallbacks.onClose}
-    onConfirm={syncPreviewDialogCallbacks.onConfirm}
-    isLoading={isProcessing}
-    title="Confirmar Sincronización"
-    description={syncPreviewDescription}
-    confirmButtonText="Sí, continuar"
-    />
-    
-    {/* Diálogo de reordenado. */}
-    <ConfirmationDialog
-    isOpen={shuffleDialogState.isOpen}
-    onClose={shuffleDialogCallbacks.onClose}
-    onConfirm={shuffleDialogCallbacks.onConfirm}
-    isLoading={isProcessing}
-    title="Confirmar Reordenado"
-    description={shuffleDescription}
-    confirmButtonText="Sí, reordenar"
-    confirmButtonVariant="destructive"
-    />
-    
-    {/* Diálogo de eliminación. */}
-    <ConfirmationDialog
-    isOpen={deletionDialogState.isOpen}
-    onClose={deletionDialogCallbacks.onClose}
-    onConfirm={deletionDialogCallbacks.onConfirm}
-    isLoading={isProcessing}
-    title="¿Estás absolutamente seguro?"
-    description={deletionDescription}
-    confirmButtonText="Sí, eliminar"
-    confirmButtonVariant="destructive"
-    />
-    
-    {/* Diálogos para el flujo de creación de listas sorpesa */}
-    {/* Pedir número de fuentes para el mix global */}
-    <Dialog open={surpriseFlow.step === 'askSourceCount'} onOpenChange={closeSurpriseFlow}>
-    <DialogContent>
-    <DialogHeader><DialogTitle>Megamix Sorpresa Global</DialogTitle></DialogHeader>
-    <Label>Número de playlists aleatorias a usar (máx 50)</Label>
-    <Input type="number" value={surpriseFlow.sourceCount} onChange={(e) => setSurpriseFlow(p => ({...p, sourceCount: parseInt(e.target.value, 10) || 1}))} />
-    <DialogFooter><Button onClick={handleSourceCountSubmit}>Continuar</Button></DialogFooter>
-    </DialogContent>
-    </Dialog>
-    
-    {/* Pedir número de canciones */}
-    <Dialog open={surpriseFlow.step === 'askTrackCount'} onOpenChange={closeSurpriseFlow}>
-    <DialogContent>
-    <DialogHeader><DialogTitle>Crear Lista Sorpresa</DialogTitle></DialogHeader>
-    <DialogDescription>Se usarán hasta <strong>{surpriseFlow.totalTracks}</strong> canciones únicas. ¿Cuántas quieres?</DialogDescription>
-    <Input type="number" value={surpriseFlow.trackCount} onChange={(e) => setSurpriseFlow(p => ({...p, trackCount: parseInt(e.target.value, 10) || 1}))} />
-    <DialogFooter><Button onClick={handleTrackCountSubmit}>Continuar</Button></DialogFooter>
-    </DialogContent>
-    </Dialog>
-    
-    {/* Pedir nombre final de la lista sorpresa */}
-    <Dialog open={surpriseFlow.step === 'askName'} onOpenChange={closeSurpriseFlow}>
-    <DialogContent>
-    <DialogHeader><DialogTitle>Un último paso...</DialogTitle></DialogHeader>
-    <Input value={surpriseFlow.playlistName} onChange={(e) => setSurpriseFlow(p => ({...p, playlistName: e.target.value}))} />
-    <DialogFooter><Button onClick={handleNameSubmit} disabled={isProcessing}>{isProcessing ? <Loader2/> : "Crear Playlist"}</Button></DialogFooter>
-    </DialogContent>
-    </Dialog>
-    
+    <DialogRenderer />
     </ActionContext.Provider>
   );
 }
 
-// Hook personalizado para consumir el contexto fácilmente.
+// Hook para consumir el contexto fácilmente
 export const useActions = () => {
   const context = useContext(ActionContext);
   if (context === undefined) {

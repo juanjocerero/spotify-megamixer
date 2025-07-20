@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,} from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw, Pencil, Eye, Shuffle, Wand2 } from 'lucide-react';
+import { MoreHorizontal, Trash2, Loader2, Music, Pencil, Eye, Shuffle, Wand2 } from 'lucide-react';
 
 type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
 
@@ -65,7 +65,7 @@ export default function PlaylistDisplay({
     updatePlaylistInCache,
   } = usePlaylistStore();
   
-  const { actions, isProcessing, openSurpriseMixDialog } = useActions();
+  const { isProcessing, openSyncDialog, openShuffleDialog, openDeleteDialog, openSurpriseMixDialog } = useActions();
   
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoading, setIsLoading] = useState(false);
@@ -420,32 +420,27 @@ export default function PlaylistDisplay({
         
         {/* Sincronizar */}
         {isSyncable && (
-          <DropdownMenuItem
-          disabled={isProcessing}
-          onClick={(e) => {
-            e.stopPropagation();
-            actions.syncPlaylists([{ id: playlist.id, name: playlist.name }]);
-          }}
-          >
-          {isProcessing ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-2 h-4 w-4" />
-          )}
-          <span>{isProcessing ? 'Procesando...' : 'Sincronizar'}</span>
+          <DropdownMenuItem 
+          disabled={isProcessing} 
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            openSyncDialog([{ id: playlist.id, name: playlist.name }]); 
+          }}>
           </DropdownMenuItem>
         )}
         
-        <DropdownMenuItem
-        onClick={(e) => {
-          e.stopPropagation();
-          actions.shufflePlaylists([{ id: playlist.id, name: playlist.name }]);
-        }}
-        >
+        {/* Reordenar */}
+        <DropdownMenuItem 
+        disabled={isProcessing} 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          openShuffleDialog([{ id: playlist.id, name: playlist.name }]); 
+        }}>
         <Shuffle className="mr-2 h-4 w-4" />
         <span>Reordenar</span>
         </DropdownMenuItem>
         
+        {/* Crear lista sorpresa */}
         <DropdownMenuItem onClick={(e) => {
           e.stopPropagation();
           openSurpriseMixDialog([playlist.id]);
@@ -454,89 +449,89 @@ export default function PlaylistDisplay({
         </DropdownMenuItem>
         
         {/* Eliminar */}
-        <DropdownMenuItem
-        className="text-red-500 focus:text-red-500"
-        onClick={(e) => {
-          e.stopPropagation();
-          actions.deletePlaylists([{ id: playlist.id, name: playlist.name }]);
-        }}
-        >
-        <Trash2 className="mr-2 h-4 w-4" />
-        Eliminar
-        </DropdownMenuItem>
-        </DropdownMenuContent>
-        </DropdownMenu>
-        </div>
-        </div>
-      );
-    })}
-    </div>
-    </div>
-    </div>
-    
-    {/* Diálogo de edición */}
-    <Dialog open={editState.open} onOpenChange={(isOpen) => setEditState({ ...editState, open: isOpen })}>
-    <DialogContent>
-    <DialogHeader>
-    <DialogTitle>Editar: {editState.playlist?.name}</DialogTitle>
-    <DialogDescription>
-    Modifica el nombre y la descripción de tu playlist. Los cambios se reflejarán en Spotify.
-    </DialogDescription>
-    </DialogHeader>
-    <div className="grid gap-4 py-4">
-    <div className="grid gap-2">
-    <Label htmlFor="playlist-name">Nombre</Label>
-    <Input
-    id="playlist-name"
-    value={editState.newName}
-    onChange={(e) => setEditState({ ...editState, newName: e.target.value })}
-    />
-    </div>
-    <div className="grid gap-2">
-    <Label htmlFor="playlist-description">Descripción</Label>
-    <Textarea
-    id="playlist-description"
-    value={editState.newDescription}
-    onChange={(e) => setEditState({ ...editState, newDescription: e.target.value })}
-    placeholder="Añade una descripción (opcional)"
-    />
-    </div>
-    </div>
-    <DialogFooter>
-    <Button
-    variant="outline"
-    onClick={() => setEditState({ ...editState, open: false })}
-    disabled={isSaving}
-    >
-    Cancelar
-    </Button>
-    <Button onClick={handleSaveChanges} disabled={isSaving}>
-    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-    {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-    </Button>
-    </DialogFooter>
-    </DialogContent>
-    </Dialog>
-    
-    {/* Sheet para la vista de canciones */}
-    <Sheet open={trackSheetState.open} onOpenChange={(isOpen) => setTrackSheetState({ open: isOpen, playlistId: null, playlistName: null })}>
-    {/* Usamos w-full para móviles y un ancho fijo para pantallas más grandes */}
-    <SheetContent className="w-full sm:max-w-[500px] flex flex-col p-0">
-    <SheetHeader className="p-4 pb-0">
-    <SheetTitle className="text-white">{trackSheetState.playlistName ? `Canciones en "${trackSheetState.playlistName}"` : "Cargando canciones..."}</SheetTitle>
-    <SheetDescription>
-    Aquí se muestran todas las canciones de esta playlist.
-    </SheetDescription>
-    </SheetHeader>
-    {trackSheetState.playlistId && (
-      <TrackDetailView
-      playlistId={trackSheetState.playlistId}
-      playlistName={trackSheetState.playlistName || ''}
+        <DropdownMenuItem className="text-red-500 focus:text-red-500" 
+        disabled={isProcessing} 
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          openDeleteDialog([{ id: playlist.id, name: playlist.name 
+
+          }]); }}>
+          <Trash2 className="mr-2 h-4 w-4" />
+          Eliminar
+          </DropdownMenuItem>
+          </DropdownMenuContent>
+          </DropdownMenu>
+          </div>
+          </div>
+        );
+      })}
+      </div>
+      </div>
+      </div>
+      
+      {/* Diálogo de edición */}
+      <Dialog open={editState.open} onOpenChange={(isOpen) => setEditState({ ...editState, open: isOpen })}>
+      <DialogContent>
+      <DialogHeader>
+      <DialogTitle>Editar: {editState.playlist?.name}</DialogTitle>
+      <DialogDescription>
+      Modifica el nombre y la descripción de tu playlist. Los cambios se reflejarán en Spotify.
+      </DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-4 py-4">
+      <div className="grid gap-2">
+      <Label htmlFor="playlist-name">Nombre</Label>
+      <Input
+      id="playlist-name"
+      value={editState.newName}
+      onChange={(e) => setEditState({ ...editState, newName: e.target.value })}
       />
-    )}
-    </SheetContent>
-    </Sheet>
-    
-    </div>
-  );
-}
+      </div>
+      <div className="grid gap-2">
+      <Label htmlFor="playlist-description">Descripción</Label>
+      <Textarea
+      id="playlist-description"
+      value={editState.newDescription}
+      onChange={(e) => setEditState({ ...editState, newDescription: e.target.value })}
+      placeholder="Añade una descripción (opcional)"
+      />
+      </div>
+      </div>
+      <DialogFooter>
+      <Button
+      variant="outline"
+      onClick={() => setEditState({ ...editState, open: false })}
+      disabled={isSaving}
+      >
+      Cancelar
+      </Button>
+      <Button onClick={handleSaveChanges} disabled={isSaving}>
+      {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+      </Button>
+      </DialogFooter>
+      </DialogContent>
+      </Dialog>
+      
+      {/* Sheet para la vista de canciones */}
+      <Sheet open={trackSheetState.open} onOpenChange={(isOpen) => setTrackSheetState({ open: isOpen, playlistId: null, playlistName: null })}>
+      {/* Usamos w-full para móviles y un ancho fijo para pantallas más grandes */}
+      <SheetContent className="w-full sm:max-w-[500px] flex flex-col p-0">
+      <SheetHeader className="p-4 pb-0">
+      <SheetTitle className="text-white">{trackSheetState.playlistName ? `Canciones en "${trackSheetState.playlistName}"` : "Cargando canciones..."}</SheetTitle>
+      <SheetDescription>
+      Aquí se muestran todas las canciones de esta playlist.
+      </SheetDescription>
+      </SheetHeader>
+      {trackSheetState.playlistId && (
+        <TrackDetailView
+        playlistId={trackSheetState.playlistId}
+        playlistName={trackSheetState.playlistName || ''}
+        />
+      )}
+      </SheetContent>
+      </Sheet>
+      
+      </div>
+    );
+  }
