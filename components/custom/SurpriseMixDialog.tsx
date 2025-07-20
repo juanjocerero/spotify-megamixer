@@ -18,7 +18,7 @@ interface SurpriseMixDialogProps {
 }
 
 export default function SurpriseMixDialog({ isOpen, onClose, sourceIds }: SurpriseMixDialogProps) {
-  const { addPlaylistToCache, clearSelection } = usePlaylistStore();
+  const { addPlaylistToCache, clearSelection, playlistCache } = usePlaylistStore();
   const [step, setStep] = useState<'loading' | 'askCount' | 'askName'>('loading');
   const [isLoading, setIsLoading] = useState(false);
   const [totalTracks, setTotalTracks] = useState(0);
@@ -34,23 +34,42 @@ export default function SurpriseMixDialog({ isOpen, onClose, sourceIds }: Surpri
   }, [onClose]);
   
   useEffect(() => {
-    if (isOpen && sourceIds.length > 0) {
-      const fetchTotal = async () => {
-        setIsLoading(true);
-        try {
-          const count = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
-          setTotalTracks(count);
-          setStep('askCount');
-        } catch (err) {
-          toast.error('No se pudo calcular el total de canciones.');
-          resetAndClose();
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchTotal();
+    if (!isOpen || sourceIds.length === 0) {
+      return;
     }
-  }, [isOpen, sourceIds, resetAndClose]);
+    
+    const getTrackCount = async () => {
+      setStep('loading');
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        let count = 0;
+        if (sourceIds.length === 1) {
+          // Ruta rápida: Obtiene el total desde la caché del cliente. Instantáneo.
+          const playlist = playlistCache.find((p) => p.id === sourceIds[0]);
+          if (playlist) {
+            count = playlist.tracks.total;
+          } else {
+            // Fallback por si la playlist no estuviera en caché (improbable)
+            count = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
+          }
+        } else {
+          // Ruta lenta: Necesaria para múltiples playlists para eliminar duplicados.
+          count = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
+        }
+        setTotalTracks(count);
+        setStep('askCount');
+      } catch (err) {
+        toast.error('No se pudo calcular el total de canciones.');
+        resetAndClose();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    getTrackCount();
+  }, [isOpen, sourceIds, playlistCache, resetAndClose]);
   
   const handleContinue = () => {
     if (trackCount <= 0) {
