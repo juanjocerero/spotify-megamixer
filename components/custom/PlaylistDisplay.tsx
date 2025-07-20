@@ -16,6 +16,10 @@ import {
 } from '@/lib/action';
 import { usePlaylistStore } from '@/lib/store';
 
+import TrackDetailView from './TrackDetailView';
+import ConfirmationDialog from './ConfirmationDialog';
+import SurpriseMixDialog from './SurpriseMixDialog';
+
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -50,8 +54,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { MoreHorizontal, Trash2, Loader2, Music, RefreshCw, Pencil, Eye, Shuffle, Wand2 } from 'lucide-react';
 
-import TrackDetailView from './TrackDetailView';
-import SurpriseMixDialog from './SurpriseMixDialog';
+
 
 type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
 
@@ -629,28 +632,22 @@ export default function PlaylistDisplay({
     </div>
     
     {/* Diálogo de confirmación de eliminación */}
-    <AlertDialog open={deleteAlert.open} onOpenChange={(open) => setDeleteAlert({ ...deleteAlert, open })}>
-    <AlertDialogContent>
-    <AlertDialogHeader>
-    <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
-    <AlertDialogDescription>
-    Esta acción es irreversible. Estás a punto de eliminar la playlist{' '}
-    <strong className="text-white">{deleteAlert.playlist?.name}</strong> de tu librería de Spotify.
-    </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-    <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-    <AlertDialogAction
-    onClick={handleConfirmDelete}
-    disabled={isDeleting}
-    className="text-white bg-red-600 hover:bg-red-700"
-    >
-    {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-    Sí, eliminar
-    </AlertDialogAction>
-    </AlertDialogFooter>
-    </AlertDialogContent>
-    </AlertDialog>
+    <ConfirmationDialog
+    isOpen={deleteAlert.open}
+    onClose={() => setDeleteAlert({ ...deleteAlert, open: false })}
+    onConfirm={handleConfirmDelete}
+    title="¿Estás absolutamente seguro?"
+    description={
+      <span>
+      Esta acción es irreversible. Estás a punto de eliminar la playlist{' '}
+      <strong className="text-white">{deleteAlert.playlist?.name}</strong> de
+      tu librería de Spotify.
+      </span>
+    }
+    confirmButtonText="Sí, eliminar"
+    confirmButtonVariant="destructive"
+    isLoading={isDeleting}
+    />
     
     {/* Diálogo de edición */}
     <Dialog open={editState.open} onOpenChange={(isOpen) => setEditState({ ...editState, open: isOpen })}>
