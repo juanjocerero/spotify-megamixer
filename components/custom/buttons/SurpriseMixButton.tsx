@@ -3,7 +3,7 @@
 'use client';
 import { Wand2 } from 'lucide-react';
 import { useActions } from '@/lib/contexts/ActionProvider';
-import HeaderIconButton from './buttons/HeaderIconButton';
+import HeaderIconButton from '../buttons/HeaderIconButton';
 
 export default function SurpriseMixButton() {
   const { openSurpriseMixDialog } = useActions();

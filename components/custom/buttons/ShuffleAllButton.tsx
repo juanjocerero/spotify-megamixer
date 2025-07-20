@@ -5,7 +5,7 @@ import { Shuffle } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePlaylistStore } from '@/lib/store';
 import { useActions } from '@/lib/contexts/ActionProvider';
-import HeaderIconButton from './buttons/HeaderIconButton';
+import HeaderIconButton from '../buttons/HeaderIconButton';
 
 export default function ShuffleAllButton() {
   const allMegalists = usePlaylistStore((state) =>
