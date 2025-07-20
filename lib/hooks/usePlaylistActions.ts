@@ -99,7 +99,6 @@ export function usePlaylistActions() {
     updatePlaylistInCache,
     removeMultipleFromCache,
     clearSelection,
-    megamixCache,
     playlistCache,
   } = usePlaylistStore();
   
@@ -445,10 +444,13 @@ export function usePlaylistActions() {
   
   const openAddToMegalistDialog = (sourceIds: string[]) => {
     if (sourceIds.length === 0) return;
-    if (megamixCache.length === 0) {
+
+    const existingMegalists = playlistCache.filter(p => p.playlistType === 'MEGALIST');
+    if (existingMegalists.length === 0) {
       toast.info('No tienes ninguna Megalista creada por la app a la que añadir canciones.');
       return;
     }
+    
     dispatch({ type: 'OPEN', payload: { variant: 'addToSelect', props: { sourceIds } } });
   };
   

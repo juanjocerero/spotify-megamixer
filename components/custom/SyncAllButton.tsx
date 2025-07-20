@@ -16,13 +16,13 @@ import {
 } from '@/components/ui/tooltip';
 
 export default function SyncAllButton() {
-  const { megamixCache } = usePlaylistStore();
+  const { playlistCache } = usePlaylistStore();
   // Obtenemos openSyncDialog directamente del hook
   const { openSyncDialog, isProcessing } = useActions();
   
   const syncableMegalists = useMemo(
-    () => megamixCache.filter((p) => p.isSyncable),
-    [megamixCache]
+    () => playlistCache.filter((p) => p.isSyncable),
+    [playlistCache]
   );
   
   const handleSyncAll = () => {

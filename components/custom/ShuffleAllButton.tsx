@@ -16,14 +16,11 @@ import {
 } from '@/components/ui/tooltip';
 
 export default function ShuffleAllButton() {
-  const { megamixCache } = usePlaylistStore();
+  const { playlistCache } = usePlaylistStore(); 
   // Pedimos openShuffleDialog directamente en lugar de 'actions'
   const { openShuffleDialog, isProcessing } = useActions();
   
-  const allMegalists = useMemo(
-    () => megamixCache.filter((p) => p.isMegalist),
-    [megamixCache]
-  );
+  const allMegalists = useMemo(() => playlistCache.filter((p) => p.isMegalist), [playlistCache]);
   
   const handleShuffleAll = () => {
     if (allMegalists.length === 0) {
