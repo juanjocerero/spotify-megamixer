@@ -25,7 +25,7 @@ La función estrella de la aplicación, diseñada para ser increíblemente rápi
 *   **Autocuración:** Si una de las playlists de origen fue eliminada, la aplicación la excluye de futuras sincronizaciones para evitar errores.
 
 ### 🔀 Control Total Sobre el Orden
-Para darte el máximo control, la función de reordenar es ahora una acción flexible que puedes usar de dos maneras.
+Para darte el máximo control, la función de reordenar es una acción flexible que puedes usar de dos maneras.
 
 *   **Reordenado Explícito:** Reordena cualquier playlist creada (Megalista o Sorpresa) cuando quieras, ya sea de forma individual, en lote o global.
 *   **Reordenado Opcional:** Después de crear o actualizar una playlist, la aplicación siempre te preguntará si deseas reordenar el contenido como último paso.
@@ -47,9 +47,9 @@ La aplicación distingue entre dos tipos de playlists inteligentes:
 *   **Eliminación Múltiple:** Elimina una o varias playlists a la vez de forma segura.
 
 ### 💻 Interfaz y Experiencia de Usuario
-*   **Carga Infinita y Virtualización:** Navega por miles de playlists sin esfuerzo.
+*   **Carga Infinita y Virtualización:** Navega por miles de playlists sin esfuerzo gracias a `@tanstack/react-virtual`.
 *   **Interacción Avanzada:** Búsqueda difusa, ordenación flexible y navegación completa por teclado.
-*   **Robusto y Resiliente:** La app maneja automáticamente el rate limiting de la API y te permite reanudar mezclas fallidas.
+*   **Manejo de Errores:** La aplicación gestiona el *rate limiting* de la API y proporciona feedback claro al usuario.
 
 ---
 
@@ -61,8 +61,10 @@ La aplicación distingue entre dos tipos de playlists inteligentes:
 *   **Base de Datos:** [Vercel Postgres](https://vercel.com/postgres) (provisto por Neon)
 *   **ORM:** [Prisma](https://www.prisma.io/)
 *   **Autenticación:** [NextAuth.js (Auth.js v5)](https://next-auth.js.org/)
-*   **UI y Estilos:** [Tailwind CSS](https://tailwindcss.com/), [Shadcn](https://shadcn.com/) y **[@tanstack/react-virtual](https://tanstack.com/virtual/latest/docs/framework/react)** (para virtualización)
-*   **Gestión de Estado:** [Zustand](https://github.com/pmndrs/zustand)
+*   **UI y Estilos:** [Tailwind CSS](https://tailwindcss.com/), [Shadcn/ui](https://ui.shadcn.com/)
+*   **Gestión de Estado:**
+    *   **Caché de Datos:** [Zustand](https://github.com/pmndrs/zustand) para la caché global de playlists.
+    *   **Estado de UI/Acciones:** [React `useReducer` & `Context`](https://react.dev/) para una gestión de estado centralizada y predecible de los flujos de usuario.
 *   **Notificaciones:** [Sonner](https://sonner.emilkowal.ski/)
 *   **Despliegue:** [Vercel](https://vercel.com/)
 
@@ -70,15 +72,25 @@ La aplicación distingue entre dos tipos de playlists inteligentes:
 
 ## 🏛️ Arquitectura
 
-Este proyecto sigue un patrón de arquitectura moderno que separa claramente las responsabilidades:
+Tras una refactorización clave, el proyecto sigue un patrón de **"Cerebro vs. Renderizadores"**, que centraliza la lógica y simplifica los componentes.
 
-1.  **Componente de Servidor (`/app/dashboard/page.tsx`):** La página principal se encarga de la carga de datos inicial. Obtiene las playlists del usuario desde Spotify y las cruza con la **base de datos propia** de la aplicación (Postgres). Finalmente, **enriquece** los datos de Spotify con las propiedades `isMegalist`, `isSyncable` y `playlistType` (`MEGALIST` o `SURPRISE`) antes de pasarlos al cliente.
+1.  **Capa de Datos Inicial (`/app/dashboard/page.tsx`):**
+    *   Un **Server Component** se encarga de la carga de datos inicial. Obtiene las playlists de Spotify y las cruza con la base de datos propia para enriquecerlas con metadatos (`isMegalist`, `playlistType`).
 
-2.  **Componente Cliente Orquestador (`/components/custom/DashboardClient.tsx`):** Recibe los datos enriquecidos y gestiona el estado de la interfaz (filtros, búsqueda, ordenación) usando Zustand.
+2.  **El Cerebro de la UI (`/lib/hooks/usePlaylistActions.ts`):**
+    *   Este hook es la **Única Fuente de Verdad** para todo el estado interactivo.
+    *   Utiliza un `useReducer` para gestionar un único objeto de estado que define qué diálogo o flujo de usuario está activo (`delete`, `syncPreview`, `createName`, etc.).
+    *   Contiene **toda la lógica de negocio del cliente**: decide cuándo llamar a las Server Actions, qué `toast` mostrar, y cómo encadenar los pasos de un flujo (ej: previsualizar sincronización → pedir reordenado → ejecutar).
 
-3.  **Componentes Especializados:**
-    *   **`PlaylistDisplay.tsx`:** Renderiza la lista de playlists usando **virtualización**. Gestiona la interacción con cada playlist (selección, menú contextual) y muestra insignias de distinto color según el `playlistType`.
-    *   **`FloatingActionBar.tsx`, `SyncAllButton.tsx`, etc.:** Componentes dedicados para las acciones en lote (crear, añadir, sincronizar, reordenar).
-    *   **`SurpriseMixDialog.tsx`:** Un componente reutilizable que encapsula todo el flujo de creación de una "Lista Sorpresa".
+3.  **El Puente/Renderizador (`/lib/contexts/ActionProvider.tsx`):**
+    *   Este componente es un **"puente tonto"** cuya única misión es conectar el "cerebro" con la UI.
+    *   Consume el estado y los callbacks del hook `usePlaylistActions`.
+    *   Expone las funciones para iniciar acciones (ej: `openDeleteDialog`) a los componentes hijos a través del hook `useActions`.
+    *   Renderiza el diálogo activo basándose en el estado del cerebro, sin contener lógica propia.
 
-4.  **Lógica de Backend (`/lib/action.ts`):** Todas las operaciones de escritura se centralizan en Server Actions. Estas acciones se comunican con la API de Spotify (para ejecutar los cambios) y con la base de datos (para mantener la persistencia y la consistencia del `type` de cada playlist, gestionando incluso la conversión de un tipo a otro).
+4.  **Consumidores (`/components/custom/*`):**
+    *   Componentes como `FloatingActionBar.tsx` o `PlaylistDisplay.tsx` son ahora "tontos".
+    *   Simplemente llaman a una función del contexto (`useActions()`) cuando el usuario hace clic en un botón (ej: `openSyncDialog(selection)`). No saben ni les importa cómo funciona el flujo; solo lo inician.
+
+5.  **Backend (`/lib/action.ts`):**
+    *   Las **Server Actions** siguen siendo el corazón del backend. Son funciones puras que interactúan con la API de Spotify y la base de datos. Ahora son llamadas exclusivamente por el "cerebro" (`usePlaylistActions`), asegurando un flujo de datos unidireccional y claro.
