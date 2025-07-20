@@ -2,14 +2,20 @@
 
 import { useState } from 'react';
 import { usePlaylistStore } from '@/lib/store';
-import { toast } from 'sonner';
-import { SpotifyPlaylist } from '@/types/spotify';
+import { shuffleArray } from '../utils';
 import { 
   unfollowPlaylistsBatch, 
   shufflePlaylistsAction, 
   previewBatchSync, 
-  executeMegalistSync 
+  executeMegalistSync,
+  getTrackUris, 
+  findOrCreatePlaylist, 
+  addTracksBatch, 
+  clearPlaylist, 
+  addTracksToMegalistAction 
 } from '@/lib/action';
+
+import { toast } from 'sonner';
 
 // Tipo para definir una playlist para una acción, solo necesitamos id y nombre.
 export type ActionPlaylist = {
@@ -49,14 +55,14 @@ type DeletionDialogState = {
   playlists: ActionPlaylist[];
 };
 
-
 /**
 * Hook centralizado para gestionar todas las acciones de playlists (eliminar, sincronizar, crear, etc.).
 * Encapsula la lógica de estado, diálogos y notificaciones.
 */
 export function usePlaylistActions() {
-  const [actionState, setActionState] = useState<ActionState>({ isLoading: false });
+  
   const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
   
   const [syncPreviewDialog, setSyncPreviewDialog] = useState<SyncPreviewDialogState>({
     isOpen: false, playlists: [], added: 0, removed: 0,
@@ -79,6 +85,7 @@ export function usePlaylistActions() {
     playlistCache,
     megamixCache,
     clearSelection,
+    addPlaylistToCache,
     removeMultipleFromCache,
     updatePlaylistInCache,
   } = usePlaylistStore();
@@ -160,6 +167,95 @@ export function usePlaylistActions() {
     }
   };
   
+  // Función pública para crear una megalista
+  const createMegalist = async (
+    sourceIds: string[],
+    playlistName: string,
+    shouldShuffle: boolean
+  ): Promise<{ success: boolean; requiresOverwrite?: boolean; playlistId?: string }> => {
+    setIsLoading(true);
+    setProgress({ current: 0, total: 0 });
+    const toastId = toast.loading('Calculando canciones únicas...');
+    
+    try {
+      const tracks = await getTrackUris(sourceIds);
+      if (tracks.length === 0) {
+        toast.error('No se encontraron canciones en las playlists seleccionadas.', { id: toastId });
+        setIsLoading(false);
+        return { success: false };
+      }
+      toast.success(`Se encontraron ${tracks.length} canciones únicas.`, { id: toastId });
+      
+      const tracksToMix = shouldShuffle ? shuffleArray(tracks) : tracks;
+      setProgress({ current: 0, total: tracksToMix.length });
+      
+      toast.loading('Preparando la playlist de destino...', { id: toastId });
+      const { playlist, exists } = await findOrCreatePlaylist(playlistName, sourceIds, tracksToMix.length);
+      
+      if (exists) {
+        toast.dismiss(toastId);
+        setIsLoading(false);
+        // Devolvemos la información para que el Provider abra el diálogo de sobrescritura.
+        return { success: false, requiresOverwrite: true, playlistId: playlist.id };
+      }
+      
+      addPlaylistToCache(playlist);
+      toast.loading(`Añadiendo canciones... 0 / ${tracksToMix.length}`, { id: toastId });
+      
+      for (let i = 0; i < tracksToMix.length; i += 100) {
+        const batch = tracksToMix.slice(i, i + 100);
+        await addTracksBatch(playlist.id, batch);
+        setProgress(prev => ({ ...prev, current: prev.current + batch.length }));
+        toast.loading(`Añadiendo canciones... ${i + batch.length} / ${tracksToMix.length}`, { id: toastId });
+      }
+      
+      toast.success('¡Megalista creada con éxito!', { id: toastId });
+      clearSelection();
+      setIsLoading(false);
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al crear la Megalista.';
+      toast.error(message, { id: toastId });
+      setIsLoading(false);
+      return { success: false };
+    }
+  };
+  
+  // Función pública para actualizar una megalista
+  const updateMegalist = async (
+    targetId: string,
+    sourceIds: string[],
+    shouldShuffle: boolean,
+    mode: 'update' | 'replace'
+  ): Promise<void> => {
+    setIsLoading(true);
+    const toastId = toast.loading(`Actualizando playlist...`);
+    
+    try {
+      if (mode === 'replace') {
+        const tracks = await getTrackUris(sourceIds);
+        await clearPlaylist(targetId);
+        await addTracksBatch(targetId, tracks);
+        updatePlaylistInCache(targetId, { trackCount: tracks.length });
+        toast.success('Playlist reemplazada con éxito.', { id: toastId });
+      } else { // mode === 'update'
+        const { finalCount, addedCount } = await addTracksToMegalistAction(targetId, sourceIds, shouldShuffle);
+        updatePlaylistInCache(targetId, { trackCount: finalCount });
+        if (addedCount > 0) {
+          toast.success(`¡Megalista actualizada! Se añadieron ${addedCount} canciones.`, { id: toastId });
+        } else {
+          toast.info('La playlist ya estaba al día.', { id: toastId });
+        }
+      }
+      clearSelection();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error al actualizar la playlist.';
+      toast.error(message, { id: toastId });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   // Función pública para iniciar la sincronización
   const syncPlaylists = async (playlists: ActionPlaylist[]) => {
     if (playlists.length === 0) return;
@@ -211,10 +307,10 @@ export function usePlaylistActions() {
     });
   };
   
-  
-  // Aquí definiremos todas las funciones que los componentes de la UI podrán llamar.
-  // Por ahora, es un objeto vacío que llenaremos en los siguientes pasos.
+  // Aquí se definen todas las funciones que los componentes de la UI podrán llamar.
   const actions = {
+    createMegalist, 
+    updateMegalist, 
     syncPlaylists, 
     shufflePlaylists,
     deletePlaylists, 
@@ -222,6 +318,7 @@ export function usePlaylistActions() {
   
   return {
     isProcessing: isLoading,
+    progress,
     actions,
     
     syncPreviewDialogState: syncPreviewDialog,

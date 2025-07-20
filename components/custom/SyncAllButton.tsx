@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { RefreshCw, Loader2 } from 'lucide-react';
 
 export default function SyncAllButton() {
-  const { megamixCache, updatePlaylistInCache } = usePlaylistStore();
+  const { megamixCache } = usePlaylistStore();
   const { actions, isProcessing } = useActions();
   
   
