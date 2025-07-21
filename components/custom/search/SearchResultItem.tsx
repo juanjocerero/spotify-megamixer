@@ -55,10 +55,12 @@ export default function SearchResultItem({ itemProps, onAdd, isAdding }: SearchR
     <AvatarImage src={imageUrl} alt={title} />
     <AvatarFallback>{fallbackIcon}</AvatarFallback>
     </Avatar>
+    
     <div className="flex-grow min-w-0">
     <p className="font-medium text-sm truncate">{title}</p>
     <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
     </div>
+    
     <Button
     size="icon"
     variant="ghost"
