@@ -144,9 +144,9 @@ export default function PlaylistDisplay({
     resetFocus();
   }, [searchTerm, showOnlySelected, sortOption, resetFocus]);
   
-  // useEffect(() => {
-  //   onFilteredChange(filteredPlaylists.map(p => p.id));
-  // }, [filteredPlaylists, onFilteredChange]);
+  useEffect(() => {
+    onFilteredChange(filteredPlaylists.map(p => p.id));
+  }, [filteredPlaylists, onFilteredChange]);
   
   
   const virtualItems = rowVirtualizer.getVirtualItems();
