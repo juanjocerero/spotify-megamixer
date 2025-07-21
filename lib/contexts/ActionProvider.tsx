@@ -4,7 +4,7 @@
 
 import React, { createContext, useContext, useMemo, useState } from 'react';
 import { SpotifyPlaylist } from '@/types/spotify';
-import { usePlaylistActions, ActionPlaylist } from '@/lib/hooks/usePlaylistActions';
+import { usePlaylistActions, ActionPlaylist, DialogState, DialogCallbacks } from '@/lib/hooks/usePlaylistActions';
 
 import CreateMegalistNameDialog from '@/components/custom/dialogs/CreateMegalistNameDialog';
 import EditPlaylistDialog from '@/components/custom/dialogs/EditPlaylistDialog';
@@ -32,8 +32,164 @@ interface ActionContextType {
   openSurpriseMixDialog: (sourceIds?: string[]) => Promise<void>;
 }
 
+interface DialogRendererProps {
+  dialogState: DialogState;
+  dialogCallbacks: DialogCallbacks;
+}
+
 // Creación del Contexto
 const ActionContext = createContext<ActionContextType | undefined>(undefined);
+
+// --- Componente interno para renderizar los diálogos ---
+const DialogRenderer = ({ dialogState, dialogCallbacks }: DialogRendererProps) => {
+  // Estado local para los inputs dentro de los diálogos
+  const [inputValue, setInputValue] = useState('');
+  const [sliderValue, setSliderValue] = useState([50]);
+  
+  // Resetea los valores de los inputs cuando se cierra un diálogo
+  if (dialogState.variant === 'none' && (inputValue !== '' || sliderValue[0] !== 50)) {
+    setInputValue('');
+    setSliderValue([50]);
+  }
+  
+  switch (dialogState.variant) {
+    case 'edit': {
+      return (
+        <EditPlaylistDialog
+        isOpen={true}
+        playlist={dialogState.props.playlist}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmEdit}
+        />
+      );
+    }
+    
+    case 'delete': {
+      return (
+        <DeletePlaylistDialog
+        isOpen={true}
+        playlists={dialogState.props.playlists}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmDelete}
+        />
+      );
+    }
+    
+    case 'shuffle': {
+      return (
+        <ShufflePlaylistDialog
+        isOpen={true}
+        playlists={dialogState.props.playlists}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmShuffle}
+        />
+      );
+    }
+    
+    case 'syncPreview': {
+      return (
+        <SyncPreviewDialog
+        isOpen={true}
+        playlists={dialogState.props.playlists}
+        syncStats={dialogState.props.syncStats}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmSyncPreview}
+        />
+      );
+    }
+    
+    case 'syncShuffleChoice': {
+      return (
+        <ShuffleChoiceDialog
+        isOpen={true}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmSyncShuffleChoice}
+        />
+      );
+    }
+    case 'createShuffleChoice': {
+      return (
+        <ShuffleChoiceDialog
+        isOpen={true}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmCreateShuffleChoice}
+        />
+      );
+    }
+    case 'addToShuffleChoice': {
+      return (
+        <ShuffleChoiceDialog
+        isOpen={true}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmAddToShuffleChoice}
+        />
+      );
+    }
+    
+    case 'createName':
+    return (
+      <CreateMegalistNameDialog
+      isOpen={true}
+      onClose={dialogCallbacks.onClose}
+      onConfirm={dialogCallbacks.onConfirmCreateName}
+      />
+    );
+    
+    case 'createOverwrite':
+    return (
+      <CreateOverwriteDialog
+      isOpen={true}
+      playlistName={dialogState.props.playlistName}
+      onClose={dialogCallbacks.onClose}
+      onConfirm={dialogCallbacks.onConfirmOverwrite}
+      />
+    );
+    
+    case 'addToSelect':
+    return (
+      <AddToMegalistDialog
+      isOpen={true}
+      onClose={dialogCallbacks.onClose}
+      onConfirm={dialogCallbacks.onConfirmAddToSelect}
+      />
+    );
+    
+    case 'surpriseGlobal':
+    return (
+      <SurpriseGlobalDialog
+      isOpen={true}
+      onClose={dialogCallbacks.onClose}
+      onConfirm={dialogCallbacks.onConfirmSurpriseGlobal}
+      />
+    );
+    
+    case 'surpriseTargeted': {
+      return (
+        <SurpriseTargetedDialog
+        isOpen={true}
+        uniqueTrackCount={dialogState.props.uniqueTrackCount}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmSurpriseTargeted}
+        />
+      );
+    }
+    
+    case 'surpriseName': {
+      return (
+        <SurpriseNameDialog
+        isOpen={true}
+        isOverwrite={!!dialogState.props.isOverwrite}
+        overwriteId={dialogState.props.overwriteId}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmSurpriseName}
+        />
+      );
+    }
+    
+    default:
+    return null;
+  }
+};
 
 // El Provider
 export function ActionProvider({ children }: { children: React.ReactNode }) {
@@ -71,161 +227,13 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     openEditDialog
   ]);
   
-  // --- Componente interno para renderizar los diálogos ---
-  const DialogRenderer = () => {
-    // Estado local para los inputs dentro de los diálogos
-    const [inputValue, setInputValue] = useState('');
-    const [sliderValue, setSliderValue] = useState([50]);
-    
-    // Resetea los valores de los inputs cuando se cierra un diálogo
-    if (dialogState.variant === 'none' && (inputValue !== '' || sliderValue[0] !== 50)) {
-      setInputValue('');
-      setSliderValue([50]);
-    }
-    
-    switch (dialogState.variant) {
-      case 'edit': {
-        return (
-          <EditPlaylistDialog
-          isOpen={true}
-          playlist={dialogState.props.playlist}
-          onClose={dialogCallbacks.onClose}
-          onConfirm={dialogCallbacks.onConfirmEdit}
-          />
-        );
-      }
-
-      case 'delete': {
-        return (
-          <DeletePlaylistDialog
-          isOpen={true}
-          playlists={dialogState.props.playlists}
-          onClose={dialogCallbacks.onClose}
-          onConfirm={dialogCallbacks.onConfirmDelete}
-          />
-        );
-      }
-      
-      case 'shuffle': {
-        return (
-          <ShufflePlaylistDialog
-          isOpen={true}
-          playlists={dialogState.props.playlists}
-          onClose={dialogCallbacks.onClose}
-          onConfirm={dialogCallbacks.onConfirmShuffle}
-          />
-        );
-      }
-      
-      case 'syncPreview': {
-        return (
-          <SyncPreviewDialog
-          isOpen={true}
-          playlists={dialogState.props.playlists}
-          syncStats={dialogState.props.syncStats}
-          onClose={dialogCallbacks.onClose}
-          onConfirm={dialogCallbacks.onConfirmSyncPreview}
-          />
-        );
-      }
-      
-      case 'syncShuffleChoice': {
-        return (
-          <ShuffleChoiceDialog
-          isOpen={true}
-          onClose={dialogCallbacks.onClose}
-          onConfirm={dialogCallbacks.onConfirmSyncShuffleChoice}
-          />
-        );
-      }
-      case 'createShuffleChoice': {
-        return (
-          <ShuffleChoiceDialog
-          isOpen={true}
-          onClose={dialogCallbacks.onClose}
-          onConfirm={dialogCallbacks.onConfirmCreateShuffleChoice}
-          />
-        );
-      }
-      case 'addToShuffleChoice': {
-        return (
-          <ShuffleChoiceDialog
-          isOpen={true}
-          onClose={dialogCallbacks.onClose}
-          onConfirm={dialogCallbacks.onConfirmAddToShuffleChoice}
-          />
-        );
-      }
-      
-      case 'createName':
-      return (
-        <CreateMegalistNameDialog
-        isOpen={true}
-        onClose={dialogCallbacks.onClose}
-        onConfirm={dialogCallbacks.onConfirmCreateName}
-        />
-      );
-      
-      case 'createOverwrite':
-      return (
-        <CreateOverwriteDialog
-        isOpen={true}
-        playlistName={dialogState.props.playlistName}
-        onClose={dialogCallbacks.onClose}
-        onConfirm={dialogCallbacks.onConfirmOverwrite}
-        />
-      );
-      
-      case 'addToSelect':
-      return (
-        <AddToMegalistDialog
-        isOpen={true}
-        onClose={dialogCallbacks.onClose}
-        onConfirm={dialogCallbacks.onConfirmAddToSelect}
-        />
-      );
-      
-      case 'surpriseGlobal':
-      return (
-        <SurpriseGlobalDialog
-        isOpen={true}
-        onClose={dialogCallbacks.onClose}
-        onConfirm={dialogCallbacks.onConfirmSurpriseGlobal}
-        />
-      );
-      
-      case 'surpriseTargeted': {
-        return (
-          <SurpriseTargetedDialog
-          isOpen={true}
-          uniqueTrackCount={dialogState.props.uniqueTrackCount}
-          onClose={dialogCallbacks.onClose}
-          onConfirm={dialogCallbacks.onConfirmSurpriseTargeted}
-          />
-        );
-      }
-      
-      case 'surpriseName': {
-        return (
-          <SurpriseNameDialog
-          isOpen={true}
-          isOverwrite={!!dialogState.props.isOverwrite}
-          overwriteId={dialogState.props.overwriteId}
-          onClose={dialogCallbacks.onClose}
-          onConfirm={dialogCallbacks.onConfirmSurpriseName}
-          />
-        );
-      }
-      
-      default:
-      return null;
-    }
-  };
-  
   return (
     <ActionContext.Provider value={contextValue}>
     {children}
-    <DialogRenderer />
+    <DialogRenderer
+    dialogState={dialogState}
+    dialogCallbacks={dialogCallbacks}
+    />
     </ActionContext.Provider>
   );
 }

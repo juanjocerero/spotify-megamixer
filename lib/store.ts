@@ -112,6 +112,10 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   },
 }));
 
-// SELECTOR: Selector para obtener todas las megalistas de la caché.
+// Selector Selector para obtener todas las megalistas de la caché.
 export const selectAllMegalists = (state: PlaylistStore) => 
   state.playlistCache.filter(p => p.isMegalist);
+
+// Selector de listas sincronizables. 
+export const selectSyncableMegalists = (state: PlaylistStore) => 
+  state.playlistCache.filter(p => p.isSyncable);

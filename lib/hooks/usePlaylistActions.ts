@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 // Tipos de datos que usan las acciones
 export type ActionPlaylist = { id: string; name: string };
 
-type DialogState =
+export type DialogState =
 | { variant: 'none' }
 | { variant: 'edit'; props: { playlist: SpotifyPlaylist } }
 | { variant: 'delete'; props: { playlists: ActionPlaylist[] } }
@@ -72,6 +72,22 @@ type DialogState =
   };
 };
 
+export interface DialogCallbacks {
+  onClose: () => void;
+  onConfirmEdit: (newName: string, newDescription: string) => void;
+  onConfirmDelete: () => void;
+  onConfirmShuffle: () => void;
+  onConfirmSyncPreview: () => void;
+  onConfirmSyncShuffleChoice: (shouldShuffle: boolean) => void;
+  onConfirmCreateName: (playlistName: string) => void;
+  onConfirmCreateShuffleChoice: (shouldShuffle: boolean) => void;
+  onConfirmOverwrite: (mode: 'update' | 'replace') => void;
+  onConfirmAddToSelect: (targetId: string) => void;
+  onConfirmAddToShuffleChoice: (shouldShuffle: boolean) => void;
+  onConfirmSurpriseGlobal: (count: number) => void;
+  onConfirmSurpriseTargeted: (trackCount: number) => void;
+  onConfirmSurpriseName: (playlistName: string) => void;
+}
 
 type OpenActionPayload = Exclude<DialogState, { variant: 'none' }>;
 // Acciones que pueden modificar el estado del diálogo
