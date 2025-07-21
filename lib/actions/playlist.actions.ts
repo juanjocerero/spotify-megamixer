@@ -16,11 +16,6 @@ import {
 } from '../spotify';
 import { getTrackUris } from './spotify.actions';
 
-interface PlaylistsApiResponse {
-  items: SpotifyPlaylist[];
-  next: string | null;
-}
-
 /**
 * Encuentra o crea la playlist de destino.
 * Puede forzar la creación sin metadatos de sincronización si la descripción es muy larga.

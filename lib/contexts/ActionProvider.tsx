@@ -73,7 +73,7 @@ const DialogRenderer = ({ dialogState, dialogCallbacks }: DialogRendererProps) =
         />
       );
     }
-
+    
     case 'edit': {
       return (
         <EditPlaylistDialog
@@ -241,6 +241,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     openSurpriseMixDialog,
   }), [
     isProcessing, 
+    openFreezeDialog,
     openDeleteDialog, 
     openShuffleDialog, 
     openSyncDialog, 

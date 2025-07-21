@@ -49,9 +49,7 @@ export default function PlaylistDisplay({
   // Referencia para el contenedor de scroll
   const parentRef = useRef<HTMLDivElement>(null);
   
-  // BUGFIX: Eliminado el useCallback de esta función.
-  // Ahora se recrea en cada render, asegurando que siempre tiene el `nextUrl` más actual.
-  const loadMorePlaylists = async () => {
+  const loadMorePlaylists = useCallback(async () => {
     if (isLoading || !nextUrl || showOnlySelected) return;
     
     setIsLoading(true);
@@ -59,10 +57,12 @@ export default function PlaylistDisplay({
       const { items: newPlaylists, next: newNextUrl } = await fetchMorePlaylists(nextUrl);
       addMoreToCache(newPlaylists);
       setNextUrl(newNextUrl);
-    } catch { } finally {
+    } catch {
+      // Manejo de errores
+    } finally {
       setIsLoading(false);
     }
-  };
+  }, [isLoading, nextUrl, showOnlySelected, addMoreToCache]);
   
   const fuseOptions: IFuseOptions<SpotifyPlaylist> = useMemo(
     () => ({
@@ -157,7 +157,7 @@ export default function PlaylistDisplay({
     if (lastItem && lastItem.index >= filteredPlaylists.length - 1 && nextUrl && !isLoading) {
       loadMorePlaylists();
     }
-  }, [rowVirtualizer, filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
+  }, [rowVirtualizer.getVirtualItems(), filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
   
   const handleShowTracks = useCallback((playlist: SpotifyPlaylist) => {
     setTrackSheetState({ open: true, playlist });

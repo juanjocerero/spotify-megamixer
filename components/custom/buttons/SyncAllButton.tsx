@@ -2,7 +2,6 @@
 
 'use client';
 
-import { useMemo } from 'react';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePlaylistStore, selectSyncableMegalists } from '@/lib/store';
@@ -10,8 +9,7 @@ import { useActions } from '@/lib/contexts/ActionProvider';
 import HeaderIconButton from '../buttons/HeaderIconButton';
 
 export default function SyncAllButton() {
-  const state = usePlaylistStore();
-  const syncableMegalists = useMemo(() => selectSyncableMegalists(state), [state.playlistCache]);
+  const syncableMegalists = usePlaylistStore(selectSyncableMegalists);
   
   const { openSyncDialog, isProcessing } = useActions();
   

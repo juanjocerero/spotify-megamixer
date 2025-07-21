@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { usePlaylistStore, selectAllMegalists } from '@/lib/store';
 import { useActions } from '@/lib/contexts/ActionProvider';
 
@@ -11,8 +10,7 @@ import { toast } from 'sonner';
 
 
 export default function ShuffleAllButton() {
-  const state = usePlaylistStore();
-  const allMegalists = useMemo(() => selectAllMegalists(state), [state.playlistCache]);
+  const allMegalists = usePlaylistStore(selectAllMegalists);
   
   const { openShuffleDialog, isProcessing } = useActions();
   
