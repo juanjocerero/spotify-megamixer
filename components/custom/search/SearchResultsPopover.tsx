@@ -12,11 +12,15 @@ interface SearchResultsPopoverProps {
   setQuery: (query: string) => void;
 }
 
-// Hook para detectar clics fuera de un elemento
-function useClickOutside(ref: React.RefObject<any>, handler: () => void) {
+// La firma ahora acepta explícitamente que el ref puede ser null
+function useClickOutside(
+  ref: React.RefObject<HTMLElement | null>,
+  handler: () => void
+) {
   useEffect(() => {
     const listener = (event: MouseEvent | TouchEvent) => {
-      if (!ref.current || ref.current.contains(event.target)) {
+      // La lógica interna ya manejaba correctamente el caso 'null', el problema era solo de tipos.
+      if (!ref.current || ref.current.contains(event.target as Node)) {
         return;
       }
       handler();
@@ -36,12 +40,12 @@ export default function SearchResultsPopover({
   isLoading,
   setQuery,
 }: SearchResultsPopoverProps) {
-  const popoverRef = useRef(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   
-  // Cierra el popover (limpiando el query) si se hace clic fuera
+  // Esta llamada ahora es válida porque el tipo de popoverRef (RefObject<HTMLDivElement | null>)
+  // es asignable al parámetro del hook (RefObject<HTMLElement | null>).
   useClickOutside(popoverRef, () => setQuery(''));
   
-  // No renderizar nada si no hay búsqueda activa
   if (!query.trim()) {
     return null;
   }

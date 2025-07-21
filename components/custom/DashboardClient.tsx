@@ -5,7 +5,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { SpotifyPlaylist } from '@/types/spotify';
 import { usePlaylistStore } from '@/lib/store';
 import { useSpotifySearch } from '@/lib/hooks/useSpotifySearch';
-import SearchResultsPopover from './SearchResultsPopover';
+import SearchResultsPopover from './search/SearchResultsPopover';
 
 // Importamos los componentes que va a orquestar
 import PlaylistDisplay from './PlaylistDisplay';

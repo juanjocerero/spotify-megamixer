@@ -9,14 +9,19 @@ import {
 } from '@/types/spotify';
 import { Album, ListMusic, Music, Plus, Loader2 } from 'lucide-react';
 
+export type SearchResultItemType =
+| { type: 'track'; item: SpotifyTrack }
+| { type: 'album'; item: SpotifyAlbum }
+| { type: 'playlist'; item: SpotifyPlaylist };
+
 type ItemType =
 | { type: 'track'; item: SpotifyTrack }
 | { type: 'album'; item: SpotifyAlbum }
 | { type: 'playlist'; item: SpotifyPlaylist };
 
 interface SearchResultItemProps {
-  itemProps: ItemType;
-  onAdd: (itemProps: ItemType) => void;
+  itemProps: SearchResultItemType;
+  onAdd: (itemProps: SearchResultItemType) => void;
   isAdding: boolean;
 }
 

@@ -5,30 +5,31 @@ import { useActions } from '@/lib/contexts/ActionProvider';
 import { getAlbumTracksAction } from '@/lib/actions/spotify.actions';
 import { SearchResults } from '@/lib/actions/search.actions';
 import SearchResultItem from './SearchResultItem';
+import { SearchResultItemType } from './SearchResultItem';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 
 export default function SearchResultsDisplay({ results }: { results: SearchResults; }) {
-
+  
   const { openAddToMegalistDialog, openAddTracksDialog } = useActions();
   const [addingItemId, setAddingItemId] = useState<string | null>(null);
-
+  
   // Acción de añadir
-  const handleAdd = async (itemProps: any) => {
+  const handleAdd = async (itemProps: SearchResultItemType) => {
     const { type, item } = itemProps;
-
+    
     if (type === 'playlist') {
       openAddToMegalistDialog([item.id]);
       return;
     }
-
+    
     if (type === 'track') {
       openAddTracksDialog([item.uri]);
       return;
     }
-
+    
     if (type === 'album') {
       setAddingItemId(item.id);
       const result = await getAlbumTracksAction(item.id);
@@ -47,6 +48,12 @@ export default function SearchResultsDisplay({ results }: { results: SearchResul
   results.playlists.length > 0;
   
   if (!hasContent) return null;
+  
+  const showAlbumSeparator =
+  results.tracks.length > 0 && results.albums.length > 0;
+  const showPlaylistSeparator =
+  (results.tracks.length > 0 || results.albums.length > 0) &&
+  results.playlists.length > 0;
   
   return (
     <ScrollArea className="max-h-[50vh] p-1">
@@ -67,6 +74,8 @@ export default function SearchResultsDisplay({ results }: { results: SearchResul
       </div>
     )}
     
+    {showAlbumSeparator && <Separator className="my-1" />}
+    
     {results.albums.length > 0 && (
       <div className="mb-2">
       <h4 className="text-sm font-semibold text-muted-foreground px-2 py-1">
@@ -82,6 +91,8 @@ export default function SearchResultsDisplay({ results }: { results: SearchResul
       ))}
       </div>
     )}
+    
+    {showPlaylistSeparator && <Separator className="my-1" />}
     
     {results.playlists.length > 0 && (
       <div>
