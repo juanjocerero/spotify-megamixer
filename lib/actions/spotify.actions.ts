@@ -69,9 +69,9 @@ export async function fetchMorePlaylists(
     });
     
     const megalistDataMap = new Map<string, MegalistClientData>(
-      userMegalists.map((m: SpotifyPlaylist) => [
+      userMegalists.map((m) => [
         m.id,
-        { isMegalist: true, isSyncable: m.playlistType === 'MEGALIST', type: m.playlistType },
+        { isMegalist: true, isSyncable: m.type === 'MEGALIST', type: m.type },
       ])
     );
     

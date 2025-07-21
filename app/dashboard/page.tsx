@@ -48,23 +48,23 @@ export default async function DashboardPage() {
   
   // Creamos un mapa para un enriquecimiento más eficiente
   const megalistDataMap = new Map<string, MegalistClientData>(
-    userMegalists.map((m:SpotifyPlaylist) => [
+    userMegalists.map((m) => [
       m.id,
-      { isMegalist: true, isSyncable: m.playlistType === 'MEGALIST', type: m.playlistType },
+      { isMegalist: true, isSyncable: m.type === 'MEGALIST', type: m.type },
     ])
   );
   
   const initialData = await getUserPlaylists(session.accessToken);
   const initialPlaylists = initialData.items;
   
-  const finalPlaylists = initialPlaylists.map(p => {
+  const finalPlaylists: SpotifyPlaylist[] = initialPlaylists.map(p => {
     const megalistData = megalistDataMap.get(p.id);
     if (megalistData) {
       return {
         ...p,
         isMegalist: megalistData.isMegalist,
         isSyncable: megalistData.isSyncable,
-        playlistType: megalistData.type, // Pasamos el tipo al cliente
+        playlistType: megalistData.type,
       };
     }
     return p;
