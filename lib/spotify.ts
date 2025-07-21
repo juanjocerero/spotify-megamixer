@@ -65,6 +65,33 @@ export async function getAllPlaylistTracks(
   return allTracksDetails;
 }
 
+export async function getPlaylistTracksPage(
+  accessToken: string,
+  url: string
+): Promise<{ tracks: { uri: string; name: string; artists: string }[]; next: string | null }> {
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error(`Fallo al obtener la página de tracks de la playlist:`, errorData);
+    throw new Error(`Fallo al obtener la página de tracks de la playlist`);
+  }
+  
+  const data: PlaylistTracksApiResponse = await response.json();
+  
+  const tracksInBatch = data.items
+  .filter(item => item && item.track && item.track.type === 'track' && item.track.uri && !item.track.uri.startsWith('spotify:local:'))
+  .map(item => ({
+    uri: item.track!.uri,
+    name: item.track!.name,
+    artists: item.track!.artists.map(artist => artist.name).join(', '),
+  }));
+  
+  return { tracks: tracksInBatch, next: data.next };
+}
+
 /**
 * Obtiene el objeto completo de una playlist por su ID.
 * @param accessToken - El token de acceso del usuario.

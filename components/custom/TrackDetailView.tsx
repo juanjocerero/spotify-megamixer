@@ -1,11 +1,9 @@
-// components/custom/TrackDetailView.tsx
 'use client';
-
-import { useState, useEffect } from 'react'; // Importa useEffect
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
 import { Loader2, Music } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getPlaylistTracksDetailsAction } from '@/lib/actions/spotify.actions';
-import { toast } from 'sonner'; // Para notificaciones de errores
 
 interface Track {
   name: string;
@@ -18,53 +16,76 @@ interface TrackDetailViewProps {
 }
 
 export default function TrackDetailView({ playlistId, playlistName }: TrackDetailViewProps) {
-  const [tracks, setTracks] = useState<Track[]>([]); // Inicialmente vacío
-  const [isLoading, setIsLoading] = useState(true); // Empieza en true para mostrar el cargador
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [nextUrl, setNextUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loaderRef = useRef<HTMLDivElement>(null);
   
-  useEffect(() => {
-    const fetchTracks = async () => {
-      setIsLoading(true);
+  const fetchPage = useCallback(async (url: string | null) => {
+    setIsLoading(true);
+    try {
+      const { tracks: newTracks, next: newNextUrl } = await getPlaylistTracksDetailsAction(playlistId, url);
+      // Si la URL es null, es la carga inicial, así que reemplazamos los tracks. Si no, añadimos.
+      setTracks(prev => (url === null ? newTracks : [...prev, ...newTracks]));
+      setNextUrl(newNextUrl);
       setError(null);
-      setTracks([]); // Limpia las canciones previas al cargar
-      try {
-        const fetchedTracks = await getPlaylistTracksDetailsAction(playlistId);
-        setTracks(fetchedTracks);
-      } catch (err: unknown) {
-        console.error('[TrackDetailView] Error al cargar canciones:', err);
-        let errorMessage = 'Error desconocido al cargar las canciones.';
-        if (err instanceof Error) { 
-          errorMessage = err.message;
-        }
-        setError(errorMessage);
-        toast.error(`Error al cargar canciones de "${playlistName}"`, {
-          description: errorMessage + ' Inténtalo de nuevo más tarde.',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    if (playlistId) { // Solo si tenemos un playlistId válido
-      fetchTracks();
-    } else {
-      setIsLoading(false); // Si no hay playlistId, no hay nada que cargar
+    } catch (err: any) {
+      const errorMessage = err.message || 'Error desconocido al cargar las canciones.';
+      setError(errorMessage);
+      toast.error(`Error al cargar la página de canciones de "${playlistName}"`, {
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
     }
-  }, [playlistId, playlistName]); // Ejecutar cuando playlistId o playlistName cambien
+  }, [playlistId, playlistName]);
   
-  if (isLoading) {
+  // Efecto para la carga inicial
+  useEffect(() => {
+    setTracks([]);
+    setNextUrl(null);
+    fetchPage(null);
+  }, [playlistId, fetchPage]);
+  
+  // Efecto para el IntersectionObserver que carga más páginas
+  useEffect(() => {
+    if (!nextUrl || isLoading) return;
+    
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting) {
+          fetchPage(nextUrl);
+        }
+      },
+      { rootMargin: '200px' } // Carga un poco antes de llegar al final
+    );
+    
+    const loaderElement = loaderRef.current;
+    if (loaderElement) {
+      observer.observe(loaderElement);
+    }
+    
+    return () => {
+      if (loaderElement) observer.unobserve(loaderElement);
+    };
+  }, [nextUrl, isLoading, fetchPage]);
+  
+  const isInitialLoading = isLoading && tracks.length === 0;
+  
+  if (isInitialLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4">
       <Loader2 className="h-8 w-8 animate-spin mb-4" />
-      <p>Cargando canciones de &quot;{playlistName}&quot;...</p>
+      <p>Cargando canciones de "{playlistName}"...</p>
       </div>
     );
   }
   
-  if (error) {
+  if (error && tracks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-red-400 p-4 text-center">
-      <p>Error al cargar las canciones de &quot;{playlistName}&quot;:</p>
+      <p>Error al cargar las canciones:</p>
       <p className="text-sm mt-2">{error}</p>
       </div>
     );
@@ -74,15 +95,13 @@ export default function TrackDetailView({ playlistId, playlistName }: TrackDetai
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4">
       <Music className="h-8 w-8 mb-4" />
-      <p>Esta playlist no contiene canciones o no se pudieron cargar.</p>
+      <p>Esta playlist no contiene canciones.</p>
       </div>
     );
   }
   
   return (
-    <div className="p-4">
-    {/* El título de la playlist se mostrará en el Sheet, no aquí directamente. */}
-    <ScrollArea className="h-[calc(100vh-180px)] pr-4"> {/* Ajusta la altura según necesidad */}
+    <ScrollArea className="h-[calc(100vh-120px)] p-4 pr-6">
     <ul className="space-y-2">
     {tracks.map((track, index) => (
       <li key={index} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-800 transition-colors">
@@ -94,7 +113,10 @@ export default function TrackDetailView({ playlistId, playlistName }: TrackDetai
       </li>
     ))}
     </ul>
-    </ScrollArea>
+    {/* Elemento centinela y spinner de carga */}
+    <div ref={loaderRef} className="h-10 w-full flex justify-center items-center">
+    {isLoading && <Loader2 className="h-6 w-6 animate-spin text-gray-500" />}
     </div>
+    </ScrollArea>
   );
 }

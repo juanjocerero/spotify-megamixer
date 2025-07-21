@@ -4,7 +4,7 @@
 
 import { auth } from '@/auth';
 import { db } from '../db';
-import { getAllPlaylistTracks } from '../spotify';
+import { getPlaylistTracksPage, getAllPlaylistTracks } from '../spotify';
 import { SpotifyPlaylist, MegalistClientData } from '@/types/spotify';
 
 interface PlaylistsApiResponse {
@@ -98,22 +98,36 @@ export async function fetchMorePlaylists(
   }
 }
 
-export async function getPlaylistTracksDetailsAction(playlistId: string): Promise<{ name: string; artists: string; }[]> {
-  console.log(`[ACTION:getPlaylistTracksDetailsAction] Iniciando obtención de detalles para la playlist ${playlistId}`);
+export async function getPlaylistTracksDetailsAction(
+  playlistId: string,
+  fetchUrl?: string | null
+): Promise<{ tracks: { name: string; artists: string }[]; next: string | null }> {
+  console.log(`[ACTION:getPlaylistTracksDetailsAction] Obteniendo página de tracks para ${playlistId}`);
   try {
     const session = await auth();
     if (!session?.accessToken) {
       throw new Error('No autenticado o token no disponible.');
     }
     const { accessToken } = session;
-    const detailedTracksWithUri = await getAllPlaylistTracks(accessToken, playlistId);
-    console.log(`[ACTION:getPlaylistTracksDetailsAction] Obtenidos detalles para ${detailedTracksWithUri.length} canciones.`);
-    return detailedTracksWithUri.map(track => ({
+    
+    // Construye la URL inicial si no se proporciona una. Limitamos a 75 para una carga rápida.
+    const urlToFetch =
+    fetchUrl ||
+    `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=items(track(name,artists(name),type,uri)),next&limit=75`;
+    
+    const { tracks: detailedTracks, next } = await getPlaylistTracksPage(accessToken, urlToFetch);
+    
+    console.log(`[ACTION:getPlaylistTracksDetailsAction] Obtenidos ${detailedTracks.length} tracks.`);
+    
+    const tracksForClient = detailedTracks.map(track => ({
       name: track.name,
-      artists: track.artists,
+      artists: track.artists
     }));
+    
+    return { tracks: tracksForClient, next };
+    
   } catch (error) {
-    console.error(`[ACTION_ERROR:getPlaylistTracksDetailsAction] Fallo al obtener detalles de las canciones para la playlist ${playlistId}.`, error);
+    console.error(`[ACTION_ERROR:getPlaylistTracksDetailsAction] Fallo al obtener página de tracks para ${playlistId}.`, error);
     throw error;
   }
 }
