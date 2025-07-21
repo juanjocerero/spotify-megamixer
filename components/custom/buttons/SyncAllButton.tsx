@@ -3,13 +3,14 @@
 'use client';
 
 import { RefreshCw, Loader2 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { toast } from 'sonner';
 import { usePlaylistStore, selectSyncableMegalists } from '@/lib/store';
 import { useActions } from '@/lib/contexts/ActionProvider';
 import HeaderIconButton from '../buttons/HeaderIconButton';
 
 export default function SyncAllButton() {
-  const syncableMegalists = usePlaylistStore(selectSyncableMegalists);
+  const syncableMegalists = usePlaylistStore(useShallow(selectSyncableMegalists));
   
   const { openSyncDialog, isProcessing } = useActions();
   

@@ -93,8 +93,8 @@ export default async function DashboardPage() {
     <div className="flex items-center gap-2">
     <HelpButton />
     <SurpriseMixButton />
-    {/* <ShuffleAllButton />
-    <SyncAllButton /> */}
+    <ShuffleAllButton />
+    <SyncAllButton />
     <LogoutButton />
     </div>
     

@@ -17,8 +17,6 @@ import {
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Search, ListChecks, XCircle, ListX, ArrowUpDown } from 'lucide-react';

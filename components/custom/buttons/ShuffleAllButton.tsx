@@ -2,6 +2,7 @@
 
 import { usePlaylistStore, selectAllMegalists } from '@/lib/store';
 import { useActions } from '@/lib/contexts/ActionProvider';
+import { useShallow } from 'zustand/react/shallow';
 
 import HeaderIconButton from './HeaderIconButton';
 
@@ -10,7 +11,7 @@ import { toast } from 'sonner';
 
 
 export default function ShuffleAllButton() {
-  const allMegalists = usePlaylistStore(selectAllMegalists);
+  const allMegalists = usePlaylistStore(useShallow(selectAllMegalists));
   
   const { openShuffleDialog, isProcessing } = useActions();
   
