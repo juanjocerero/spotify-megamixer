@@ -5,12 +5,17 @@
 import { auth } from '@/auth';
 import { db } from '../db';
 import { getPlaylistTracksPage, getAllPlaylistTracks } from '../spotify';
-import { SpotifyPlaylist, MegalistClientData } from '@/types/spotify';
+import { SpotifyPlaylist, MegalistClientData, ActionResult, SpotifyTrack } from '@/types/spotify';
 import { Megalist } from '@prisma/client';
 
 interface PlaylistsApiResponse {
   items: SpotifyPlaylist[];
   next: string | null;
+}
+
+// Interface para la respuesta de la API de tracks de un álbum
+interface AlbumTracksResponse {
+  items: SpotifyTrack[];
 }
 
 /**
@@ -136,5 +141,50 @@ export async function getPlaylistTracksDetailsAction(
   } catch (error) {
     console.error(`[ACTION_ERROR:getPlaylistTracksDetailsAction] Fallo al obtener página de tracks para ${playlistId}.`, error);
     throw error;
+  }
+}
+
+/**
+* Obtiene todas las URIs de las canciones de un álbum específico.
+* @param albumId El ID del álbum de Spotify.
+* @returns Un ActionResult con un array de URIs de las canciones.
+*/
+export async function getAlbumTracksAction(
+  albumId: string
+): Promise<ActionResult<string[]>> {
+  const session = await auth();
+  if (!session?.accessToken) {
+    return { success: false, error: 'No autenticado.' };
+  }
+  const { accessToken } = session;
+  
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/albums/${albumId}/tracks?limit=50`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        `Error al obtener las canciones del álbum: ${
+          errorData.error?.message || response.status
+        }`
+      );
+    }
+    
+    const data: AlbumTracksResponse = await response.json();
+    const trackUris = data.items.map(track => track.uri);
+    
+    return { success: true, data: trackUris };
+  } catch (error) {
+    console.error('[ACTION_ERROR:getAlbumTracksAction]', error);
+    const errorMessage =
+    error instanceof Error ? error.message : 'Error desconocido.';
+    return { success: false, error: errorMessage };
   }
 }

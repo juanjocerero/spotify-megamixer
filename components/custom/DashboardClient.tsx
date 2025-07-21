@@ -4,6 +4,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import { SpotifyPlaylist } from '@/types/spotify';
 import { usePlaylistStore } from '@/lib/store';
+import { useSpotifySearch } from '@/lib/hooks/useSpotifySearch';
+import SearchResultsPopover from './SearchResultsPopover';
 
 // Importamos los componentes que va a orquestar
 import PlaylistDisplay from './PlaylistDisplay';
@@ -57,6 +59,14 @@ export default function DashboardClient({ initialNextUrl }: DashboardClientProps
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
   const [sortOption, setSortOption] = useState<SortOption>('custom');
+  
+  // Elementos de integración de estado de la búsqueda en Spotify
+  const {
+    query: spotifyQuery,
+    setQuery: setSpotifyQuery,
+    results,
+    isLoading,
+  } = useSpotifySearch();
   
   const handleFilteredChange = useCallback((ids: string[]) => {
     setFilteredIds(ids);
@@ -124,7 +134,27 @@ export default function DashboardClient({ initialNextUrl }: DashboardClientProps
     </div>
     </div>
     
-    {/* Botón de ordenar */}
+    {/* Búsqueda en Spotify */}
+    <div className="relative flex-grow w-full sm:w-auto">
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
+    <Input
+    type="text"
+    placeholder="Buscar en Spotify..."
+    className="pl-10 text-base w-full"
+    value={spotifyQuery}
+    onChange={(e) => setSpotifyQuery(e.target.value)}
+    />
+    {/* El popover de resultados se renderizará aquí */}
+    <SearchResultsPopover
+    query={spotifyQuery}
+    results={results}
+    isLoading={isLoading}
+    setQuery={setSpotifyQuery}
+    />
+    </div>
+    
+    
+    {/* Menú de ordenación */}
     <DropdownMenu>
     <DropdownMenuTrigger asChild>
     <Button

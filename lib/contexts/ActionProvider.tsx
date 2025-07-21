@@ -32,6 +32,7 @@ interface ActionContextType {
   openCreateMegalistDialog: (sourceIds: string[]) => void;
   openAddToMegalistDialog: (sourceIds: string[]) => void;
   openSurpriseMixDialog: (sourceIds?: string[]) => Promise<void>;
+  openAddTracksDialog: (trackUris: string[]) => void;
 }
 
 interface DialogRendererProps {
@@ -186,6 +187,16 @@ const DialogRenderer = ({ dialogState, dialogCallbacks }: DialogRendererProps) =
       />
     );
     
+    case 'addTracksToMegalist':
+    return (
+      <AddToMegalistDialog
+      isOpen={true}
+      onClose={dialogCallbacks.onClose}
+      onConfirm={dialogCallbacks.onConfirmAddTracks}
+      isAddingTracks={true}
+      />
+    );
+    
     case 'surpriseGlobal':
     return (
       <SurpriseGlobalDialog
@@ -238,6 +249,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     openCreateMegalistDialog,
     openAddToMegalistDialog,
     openSurpriseMixDialog,
+    openAddTracksDialog,
   } = usePlaylistActions();
   
   // El valor del contexto solo expone lo que los componentes hijos necesitan llamar
@@ -252,6 +264,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     openCreateMegalistDialog,
     openAddToMegalistDialog,
     openSurpriseMixDialog,
+    openAddTracksDialog,
   }), [
     isProcessing, 
     openCreateEmptyMegalistDialog,
@@ -262,7 +275,8 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     openCreateMegalistDialog, 
     openAddToMegalistDialog, 
     openSurpriseMixDialog, 
-    openEditDialog
+    openEditDialog, 
+    openAddTracksDialog,
   ]);
   
   return (

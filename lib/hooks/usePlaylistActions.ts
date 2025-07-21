@@ -14,7 +14,8 @@ import {
   getUniqueTrackCountFromPlaylistsAction,
   updatePlaylistDetailsAction, 
   toggleFreezeStateAction,
-  createEmptyMegalistAction
+  createEmptyMegalistAction, 
+  addTracksToPlaylistAction 
 } from '@/lib/actions/playlist.actions';
 
 import { getTrackUris } from '@/lib/actions/spotify.actions';
@@ -61,6 +62,7 @@ export type DialogState =
   variant: 'addToShuffleChoice';
   props: { sourceIds: string[]; targetId: string };
 }
+| { variant: 'addTracksToMegalist'; props: { trackUris: string[] } }
 | { variant: 'surpriseGlobal'; }
 | {
   variant: 'surpriseTargeted';
@@ -89,6 +91,7 @@ export interface DialogCallbacks {
   onConfirmOverwrite: (mode: 'update' | 'replace') => void;
   onConfirmAddToSelect: (targetId: string) => void;
   onConfirmAddToShuffleChoice: (shouldShuffle: boolean) => void;
+  onConfirmAddTracks: (targetPlaylistId: string) => void;
   onConfirmSurpriseGlobal: (count: number) => void;
   onConfirmSurpriseTargeted: (trackCount: number) => void;
   onConfirmSurpriseName: (playlistName: string) => void;
@@ -502,6 +505,31 @@ export function usePlaylistActions() {
     setIsProcessing(false);
   };
   
+  // Manejador privado para añadir canciones invididuales a una lista
+  const handleConfirmAddTracks = async (targetPlaylistId: string) => {
+    if (dialogState.variant !== 'addTracksToMegalist') return;
+    const { trackUris } = dialogState.props;
+    dispatch({ type: 'CLOSE' });
+    
+    await executeAction(
+      addTracksToPlaylistAction,
+      [{ playlistId: targetPlaylistId, trackUris }],
+      {
+        loading: 'Añadiendo canciones...',
+        success: `${trackUris.length} cancion(es) añadidas con éxito.`,
+        error: 'No se pudieron añadir las canciones.',
+        onSuccess: (result) => {
+          if (result.success) {
+            updatePlaylistInCache(targetPlaylistId, {
+              trackCount: result.data.newTrackCount,
+            });
+            // La búsqueda no se limpia para permitir añadir a más listas
+          }
+        },
+      }
+    );
+  };
+  
   // Acciones públicas (para abrir los diálogos)
   
   // Abre el diálogo para crear una lista vacía
@@ -594,6 +622,19 @@ export function usePlaylistActions() {
     }
   };
   
+  // Función pública para abrir el diálogo de añadir canciones sueltas a una lista
+  const openAddTracksDialog = (trackUris: string[]) => {
+    const existingMegalists = playlistCache.filter(p => p.playlistType === 'MEGALIST');
+    if (existingMegalists.length === 0) {
+      toast.info('No tienes ninguna Megalista creada para añadir canciones.');
+      return;
+    }
+    dispatch({
+      type: 'OPEN',
+      payload: { variant: 'addTracksToMegalist', props: { trackUris } },
+    });
+  };
+  
   // Callbacks para los componentes de diálogos
   const dialogCallbacks = {
     onConfirmCreateEmpty: handleConfirmCreateEmpty,
@@ -640,6 +681,9 @@ export function usePlaylistActions() {
       if (dialogState.variant !== 'addToShuffleChoice') return;
       handleCreateOrUpdateMegalist(shouldShuffle, 'update');
     },
+
+    // Flujo de añadir canciones a una lista
+    onConfirmAddTracks: handleConfirmAddTracks,
     
     // Flujo de Lista Sorpresa
     onConfirmSurpriseGlobal: (count: number) => {
@@ -673,5 +717,6 @@ export function usePlaylistActions() {
     openCreateMegalistDialog,
     openAddToMegalistDialog,
     openSurpriseMixDialog,
+    openAddTracksDialog
   };
 }

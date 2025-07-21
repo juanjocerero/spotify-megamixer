@@ -12,6 +12,7 @@ import {
   createNewPlaylist,
   addTracksToPlaylist,
   replacePlaylistTracks,
+  getPlaylistDetails,
   updatePlaylistDetails,
 } from '../spotify';
 import { getTrackUris } from './spotify.actions';
@@ -74,7 +75,10 @@ export async function findOrCreatePlaylist(
       };
       
       if (!enrichedPlaylist.owner) {
-        enrichedPlaylist.owner = { display_name: session.user.name || 'Tú' };
+        enrichedPlaylist.owner = {
+          id: user.id,
+          display_name: session.user.name || 'Tú',
+        };
       }
       
       // Devolvemos el objeto enriquecido
@@ -101,6 +105,62 @@ export async function getUniqueTrackCountFromPlaylistsAction(playlistIds: string
   } catch (error) {
     console.error('[ACTION_ERROR:getUniqueTrackCountFromPlaylistsAction]', error);
     throw error;
+  }
+}
+
+/**
+* Añade un conjunto de URIs de canciones a una playlist específica y actualiza
+* el recuento de pistas en la base de datos si es una Megalista registrada.
+* Esta acción NO modifica las 'sourcePlaylistIds'.
+*
+* @param {object} params - Los parámetros para la acción.
+* @param {string} params.playlistId - El ID de la playlist a la que se añadirán las canciones.
+* @param {string[]} params.trackUris - Un array de URIs de las canciones a añadir.
+* @returns Un ActionResult con el nuevo recuento total de canciones.
+*/
+export async function addTracksToPlaylistAction({
+  playlistId,
+  trackUris,
+}: {
+  playlistId: string;
+  trackUris: string[];
+}): Promise<ActionResult<{ newTrackCount: number }>> {
+  if (!playlistId || !trackUris || trackUris.length === 0) {
+    return { success: false, error: 'Faltan datos para realizar la acción.' };
+  }
+  
+  const session = await auth();
+  if (!session?.accessToken) {
+    return { success: false, error: 'No autenticado.' };
+  }
+  const { accessToken } = session;
+  
+  try {
+    // 1. Añadir las canciones a la playlist en Spotify
+    await addTracksToPlaylist(accessToken, playlistId, trackUris);
+    
+    // 2. Obtener el estado actualizado de la playlist de Spotify para el nuevo recuento
+    const updatedPlaylist = await getPlaylistDetails(accessToken, playlistId);
+    const newTrackCount = updatedPlaylist.tracks.total;
+    
+    // 3. Actualizar el recuento en nuestra DB si es una Megalista
+    // Usamos updateMany para que no falle si la playlist no está en nuestra DB.
+    await db.megalist.updateMany({
+      where: { id: playlistId },
+      data: {
+        trackCount: newTrackCount,
+      },
+    });
+    
+    // 4. Devolver éxito con el nuevo recuento
+    return { success: true, data: { newTrackCount } };
+  } catch (error) {
+    console.error('[ACTION_ERROR:addTracksToPlaylistAction]', error);
+    const errorMessage =
+    error instanceof Error
+    ? error.message
+    : 'Error al añadir las canciones a la playlist.';
+    return { success: false, error: errorMessage };
   }
 }
 
