@@ -23,6 +23,7 @@ import ShuffleChoiceDialog from '@/components/custom/dialogs/ShuffleChoiceDialog
 // Definición del tipo para el contexto
 interface ActionContextType {
   isProcessing: boolean;
+  openCreateEmptyMegalistDialog: () => void;
   openFreezeDialog: (playlist: SpotifyPlaylist) => void;
   openEditDialog: (playlist: SpotifyPlaylist) => void;
   openDeleteDialog: (playlists: ActionPlaylist[]) => void;
@@ -54,6 +55,16 @@ const DialogRenderer = ({ dialogState, dialogCallbacks }: DialogRendererProps) =
   }
   
   switch (dialogState.variant) {
+    
+    case 'createEmpty':
+    return (
+      <CreateMegalistNameDialog
+      isOpen={true}
+      onClose={dialogCallbacks.onClose}
+      onConfirm={dialogCallbacks.onConfirmCreateEmpty}
+      />
+    );
+    
     case 'freezeConfirmation': {
       const { playlist } = dialogState.props;
       const isFreezing = !playlist.isFrozen;
@@ -218,6 +229,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     isProcessing,
     dialogState,
     dialogCallbacks,
+    openCreateEmptyMegalistDialog,
     openFreezeDialog,
     openEditDialog,
     openDeleteDialog,
@@ -231,6 +243,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
   // El valor del contexto solo expone lo que los componentes hijos necesitan llamar
   const contextValue = useMemo(() => ({
     isProcessing,
+    openCreateEmptyMegalistDialog,
     openFreezeDialog,
     openEditDialog,
     openDeleteDialog,
@@ -241,6 +254,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     openSurpriseMixDialog,
   }), [
     isProcessing, 
+    openCreateEmptyMegalistDialog,
     openFreezeDialog,
     openDeleteDialog, 
     openShuffleDialog, 

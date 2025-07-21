@@ -14,6 +14,7 @@ import {
   getUniqueTrackCountFromPlaylistsAction,
   updatePlaylistDetailsAction, 
   toggleFreezeStateAction,
+  createEmptyMegalistAction
 } from '@/lib/actions/playlist.actions';
 
 import { getTrackUris } from '@/lib/actions/spotify.actions';
@@ -29,6 +30,7 @@ export type ActionPlaylist = { id: string; name: string };
 
 export type DialogState =
 | { variant: 'none' }
+| { variant: 'createEmpty' }
 | { variant: 'edit'; props: { playlist: SpotifyPlaylist } }
 | { variant: 'delete'; props: { playlists: ActionPlaylist[] } }
 | { variant: 'shuffle'; props: { playlists: ActionPlaylist[] } }
@@ -76,6 +78,7 @@ export type DialogState =
 
 export interface DialogCallbacks {
   onClose: () => void;
+  onConfirmCreateEmpty: (playlistName: string) => void
   onConfirmEdit: (newName: string, newDescription: string) => void;
   onConfirmDelete: () => void;
   onConfirmShuffle: () => void;
@@ -188,6 +191,21 @@ export function usePlaylistActions() {
       setIsProcessing(false);
     }
   }, [clearSelection]);
+  
+  // Función manejadora de creación de listas vacías
+  const handleConfirmCreateEmpty = async (playlistName: string) => {
+    dispatch({ type: 'CLOSE' });
+    await executeAction(createEmptyMegalistAction, [playlistName], {
+      loading: `Creando la lista "${playlistName}"...`,
+      success: '¡Lista vacía creada con éxito!',
+      error: 'No se pudo crear la lista.',
+      onSuccess: (result) => {
+        if (result.success) {
+          addPlaylistToCache(result.data);
+        }
+      },
+    });
+  };
   
   const handleConfirmEdit = async (newName: string, newDescription: string) => {
     if (dialogState.variant !== 'edit') return;
@@ -366,10 +384,26 @@ export function usePlaylistActions() {
     
     try {
       if (mode === 'update' && finalTargetId) {
+        const targetPlaylist = playlistCache.find(p => p.id === finalTargetId);
+        const wasEmptyAndFrozen = targetPlaylist?.isFrozen && targetPlaylist.tracks.total === 0;
+        
         const result = await addTracksToMegalistAction(finalTargetId, sourceIds, shouldShuffle);
         
         if (result.success) {
           const { finalCount, addedCount } = result.data;
+          
+          const cacheUpdates: Parameters<typeof updatePlaylistInCache>[1] = {
+            trackCount: finalCount,
+            playlistType: 'MEGALIST',
+          };
+          
+          if (wasEmptyAndFrozen) {
+            cacheUpdates.isFrozen = false;
+            cacheUpdates.isSyncable = true;
+          }
+          
+          updatePlaylistInCache(finalTargetId, cacheUpdates);
+          
           updatePlaylistInCache(finalTargetId, { trackCount: finalCount, playlistType: 'MEGALIST' });
           if (addedCount > 0) {
             toast.success(`¡Megalista actualizada! Se añadieron ${addedCount} canciones nuevas.`, { id: toastId });
@@ -469,6 +503,13 @@ export function usePlaylistActions() {
   };
   
   // Acciones públicas (para abrir los diálogos)
+  
+  // Abre el diálogo para crear una lista vacía
+  const openCreateEmptyMegalistDialog = () => {
+    dispatch({ type: 'OPEN', payload: { variant: 'createEmpty' } });
+  };
+  
+  // Abre el diálogo de edición
   const openEditDialog = (playlist: SpotifyPlaylist) => {
     dispatch({ type: 'OPEN', payload: { variant: 'edit', props: { playlist } } });
   };
@@ -555,6 +596,7 @@ export function usePlaylistActions() {
   
   // Callbacks para los componentes de diálogos
   const dialogCallbacks = {
+    onConfirmCreateEmpty: handleConfirmCreateEmpty,
     onConfirmEdit: handleConfirmEdit,
     onClose: () => dispatch({ type: 'CLOSE' }),
     
@@ -622,6 +664,7 @@ export function usePlaylistActions() {
     isProcessing,
     dialogState,
     dialogCallbacks,
+    openCreateEmptyMegalistDialog,
     openEditDialog,
     openFreezeDialog,
     openDeleteDialog,

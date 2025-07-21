@@ -16,6 +16,7 @@ import SurpriseMixButton from '@/components/custom/buttons/SurpriseMixButton';
 import HelpButton from '@/components/custom/buttons/HelpButton';
 import SyncAllButton from '@/components/custom/buttons/SyncAllButton';
 import ShuffleAllButton from '@/components/custom/buttons/ShuffleAllButton';
+import CreateEmptyMegalistButton from '@/components/custom/buttons/CreateEmptyMegalistButton';
 import Footer from '@/components/custom/Footer';
 import StoreInitializer from '@/components/custom/StoreInitializer';
 
@@ -85,7 +86,7 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
     <div className="max-w-3xl mx-auto">
     <header className="flex justify-between items-center mb-6">
-    <h1 className="text-3xl font-thin text-green-500">
+    <h1 className="text-2xl font-thin text-green-500">
     Spotify Megamixer
     </h1>
     
@@ -95,6 +96,7 @@ export default async function DashboardPage() {
     <SurpriseMixButton />
     <ShuffleAllButton />
     <SyncAllButton />
+    <CreateEmptyMegalistButton />
     <LogoutButton />
     </div>
     
@@ -105,10 +107,9 @@ export default async function DashboardPage() {
     initialPlaylists={finalPlaylists}
     initialNextUrl={initialData.next}
     />
-    
+    <Footer />
     <FloatingActionBar />
     
-    <Footer />
     </div>
     </div>
     </TooltipProvider>

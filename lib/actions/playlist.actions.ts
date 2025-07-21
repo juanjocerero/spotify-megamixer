@@ -139,7 +139,11 @@ export async function addTracksToMegalistAction(
     const { accessToken } = session;
     
     // Obtiene el estado actual de la megalista y las nuevas canciones
-    const megalist = await db.megalist.findUnique({ where: { id: targetPlaylistId } });
+    const megalist = await db.megalist.findUnique({
+      where: { id: targetPlaylistId },
+    });
+    const isActivatingEmptyList = megalist?.isFrozen && megalist.sourcePlaylistIds.length === 0;
+    
     const allSourceIds = Array.from(new Set([...(megalist?.sourcePlaylistIds || []), ...newSourceIds]));
     
     const [existingTracks, newTracksFromSources] = await Promise.all([
@@ -165,15 +169,19 @@ export async function addTracksToMegalistAction(
       await shufflePlaylistsAction([targetPlaylistId]);
     }
     
+    // Actualizar isFrozen si se está actualizando una lista vacía
+    const updateData = {
+      sourcePlaylistIds: allSourceIds,
+      trackCount: finalCount,
+      type: 'MEGALIST' as const,
+      isFrozen: isActivatingEmptyList ? false : megalist?.isFrozen, // Descongelar si se activa
+    };
+    
     // Actualiza el registro en la base de datos
-    await db.megalist.upsert({ // Usamos upsert para cubrir todos los casos
+    await db.megalist.upsert({
       where: { id: targetPlaylistId },
-      update: { // Si existe, actualizamos su tipo a MEGALIST
-        sourcePlaylistIds: allSourceIds,
-        trackCount: finalCount,
-        type: 'MEGALIST', 
-      },
-      create: { // Si no existe, la creamos como MEGALIST
+      update: updateData,
+      create: {
         id: targetPlaylistId,
         spotifyUserId: session.user.id,
         sourcePlaylistIds: allSourceIds,
@@ -381,5 +389,55 @@ export async function toggleFreezeStateAction(
       success: false,
       error: `No se pudo ${action} la playlist. Puede que no sea una Megalista gestionada por esta app.`,
     };
+  }
+}
+
+/**
+* Crea una nueva playlist vacía en Spotify y la registra en la base de datos
+* como una Megalista no sincronizable (congelada por defecto).
+* @param name El nombre de la nueva playlist.
+* @returns Un ActionResult con el objeto de la playlist creada y enriquecida.
+*/
+export async function createEmptyMegalistAction(
+  name: string
+): Promise<ActionResult<SpotifyPlaylist>> {
+  const session = await auth();
+  if (!session?.accessToken || !session.user?.id) {
+    return { success: false, error: 'No autenticado.' };
+  }
+  const { accessToken, user } = session;
+  
+  try {
+    // Crear la playlist en Spotify
+    const newPlaylist = await createNewPlaylist(accessToken, user.id, name);
+    
+    // Registrar en la base de datos como "vacía" y "congelada"
+    await db.megalist.create({
+      data: {
+        id: newPlaylist.id,
+        spotifyUserId: user.id,
+        sourcePlaylistIds: [], // Sin fuentes
+        trackCount: 0,
+        type: 'MEGALIST',
+        isFrozen: true, // Congelada por defecto para que no sea sincronizable
+      },
+    });
+    
+    // Enriquecer el objeto para el cliente
+    const enrichedPlaylist: SpotifyPlaylist = {
+      ...newPlaylist,
+      isMegalist: true,
+      isSyncable: false, // No es sincronizable porque está congelada
+      isFrozen: true,
+      playlistType: 'MEGALIST',
+      tracks: { ...newPlaylist.tracks, total: 0 },
+    };
+    
+    return { success: true, data: enrichedPlaylist };
+  } catch (error) {
+    console.error('[ACTION_ERROR:createEmptyMegalist]', error);
+    const errorMessage =
+    error instanceof Error ? error.message : 'Error al crear la playlist.';
+    return { success: false, error: errorMessage };
   }
 }
