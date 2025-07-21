@@ -147,19 +147,34 @@ export default function PlaylistDisplay({
   useEffect(() => {
     onFilteredChange(filteredPlaylists.map(p => p.id));
   }, [filteredPlaylists, onFilteredChange]);
-
-  const virtualItems = rowVirtualizer.getVirtualItems();
   
   // Lógica para el scroll infinito adaptada a la virtualización
   useEffect(() => {
+    // La llamada a getVirtualItems() se hace dentro del efecto.
     const virtualItems = rowVirtualizer.getVirtualItems();
     if (virtualItems.length === 0) return;
     
     const lastItem = virtualItems[virtualItems.length - 1];
-    if (lastItem && lastItem.index >= filteredPlaylists.length - 1 && nextUrl && !isLoading) {
+    
+    // La condición clave para cargar más.
+    if (
+      lastItem &&
+      lastItem.index >= filteredPlaylists.length - 1 &&
+      nextUrl &&
+      !isLoading
+    ) {
       loadMorePlaylists();
     }
-  }, [rowVirtualizer, virtualItems, filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
+  }, [
+    // El array de dependencias ahora contiene valores estables.
+    // rowVirtualizer es un objeto estable devuelto por el hook.
+    // Las demás son primitivas o funciones memoizadas con useCallback.
+    rowVirtualizer,
+    filteredPlaylists.length,
+    nextUrl,
+    isLoading,
+    loadMorePlaylists,
+  ]);
   
   const handleShowTracks = useCallback((playlist: SpotifyPlaylist) => {
     setTrackSheetState({ open: true, playlist });
