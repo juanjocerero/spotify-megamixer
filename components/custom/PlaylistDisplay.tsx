@@ -148,33 +148,18 @@ export default function PlaylistDisplay({
     onFilteredChange(filteredPlaylists.map(p => p.id));
   }, [filteredPlaylists, onFilteredChange]);
   
-  // Lógica para el scroll infinito adaptada a la virtualización
+  // Obtenemos los items virtuales fuera del efecto.
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  // Derivamos un valor primitivo (número) que será nuestra dependencia estable.
+  const lastItemIndex = virtualItems.length > 0 ? virtualItems[virtualItems.length - 1].index : 0;
+  
   useEffect(() => {
-    // La llamada a getVirtualItems() se hace dentro del efecto.
-    const virtualItems = rowVirtualizer.getVirtualItems();
-    if (virtualItems.length === 0) return;
-    
-    const lastItem = virtualItems[virtualItems.length - 1];
-    
-    // La condición clave para cargar más.
-    if (
-      lastItem &&
-      lastItem.index >= filteredPlaylists.length - 1 &&
-      nextUrl &&
-      !isLoading
-    ) {
+    if (lastItemIndex >= filteredPlaylists.length - 1 && nextUrl && !isLoading) {
       loadMorePlaylists();
     }
-  }, [
-    // El array de dependencias ahora contiene valores estables.
-    // rowVirtualizer es un objeto estable devuelto por el hook.
-    // Las demás son primitivas o funciones memoizadas con useCallback.
-    rowVirtualizer,
-    filteredPlaylists.length,
-    nextUrl,
-    isLoading,
-    loadMorePlaylists,
-  ]);
+    // Usamos el valor primitivo como dependencia. El efecto solo se ejecutará
+    // cuando el índice del último elemento cambie (es decir, cuando el usuario haga scroll).
+  }, [lastItemIndex, filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
   
   const handleShowTracks = useCallback((playlist: SpotifyPlaylist) => {
     setTrackSheetState({ open: true, playlist });
