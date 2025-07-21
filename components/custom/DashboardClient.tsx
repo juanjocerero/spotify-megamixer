@@ -44,7 +44,7 @@ const sortLabels: Record<SortOption, string> = {
   owner_asc: 'Propietario (A-Z)',
 };
 
-export default function DashboardClient({ initialPlaylists, initialNextUrl }: DashboardClientProps) {
+export default function DashboardClient({ initialNextUrl }: DashboardClientProps) {
   
   const { 
     selectedPlaylistIds, 

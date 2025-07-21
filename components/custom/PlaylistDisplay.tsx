@@ -157,7 +157,7 @@ export default function PlaylistDisplay({
     if (lastItem && lastItem.index >= filteredPlaylists.length - 1 && nextUrl && !isLoading) {
       loadMorePlaylists();
     }
-  }, [rowVirtualizer.getVirtualItems(), filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
+  }, [rowVirtualizer, filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
   
   const handleShowTracks = useCallback((playlist: SpotifyPlaylist) => {
     setTrackSheetState({ open: true, playlist });

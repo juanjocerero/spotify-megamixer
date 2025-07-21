@@ -30,8 +30,8 @@ export default function TrackDetailView({ playlistId, playlistName }: TrackDetai
       setTracks(prev => (url === null ? newTracks : [...prev, ...newTracks]));
       setNextUrl(newNextUrl);
       setError(null);
-    } catch (err: any) {
-      const errorMessage = err.message || 'Error desconocido al cargar las canciones.';
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido al cargar las canciones.';
       setError(errorMessage);
       toast.error(`Error al cargar la página de canciones de "${playlistName}"`, {
         description: errorMessage,
@@ -77,7 +77,7 @@ export default function TrackDetailView({ playlistId, playlistName }: TrackDetai
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4">
       <Loader2 className="h-8 w-8 animate-spin mb-4" />
-      <p>Cargando canciones de "{playlistName}"...</p>
+      <p>Cargando canciones de &quot;{playlistName}&quot;...</p>
       </div>
     );
   }
