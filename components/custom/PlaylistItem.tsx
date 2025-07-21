@@ -13,7 +13,8 @@ import {
   Wand2,
   RefreshCw,
   Snowflake, 
-  Sun
+  Sun,
+  ListPlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useActions } from '@/lib/contexts/ActionProvider';
@@ -48,6 +49,7 @@ function PlaylistItem({
 }: PlaylistItemProps) {
   const { 
     isProcessing, 
+    openAddToMegalistDialog,
     openEditDialog, 
     openSyncDialog, 
     openShuffleDialog, 
@@ -155,6 +157,13 @@ function PlaylistItem({
         <span>{playlist.isFrozen ? 'Descongelar' : 'Congelar'}</span>
         </DropdownMenuItem>
       )}
+      
+      <DropdownMenuItem
+      onClick={(e) => {
+        e.stopPropagation();
+        openAddToMegalistDialog([playlist.id]);
+      }}
+      ></DropdownMenuItem>
       
       {isSyncable && (
         <DropdownMenuItem disabled={isProcessing} onClick={(e) => { e.stopPropagation(); openSyncDialog([playlist]); }}>
