@@ -46,6 +46,7 @@ export default function SurpriseGlobalDialog({
     onChange={(e) => setCount(e.target.value)}
     placeholder="Por defecto: 50"
     autoFocus
+    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
     />
     <DialogFooter>
     <Button variant="outline" onClick={onClose}>
