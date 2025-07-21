@@ -50,7 +50,7 @@ export default function CreateMegalistNameDialog({
     Cancelar
     </Button>
     <Button onClick={handleConfirm} disabled={!name.trim()}>
-    Siguiente
+    Crear
     </Button>
     </DialogFooter>
     </DialogContent>

@@ -163,7 +163,10 @@ function PlaylistItem({
         e.stopPropagation();
         openAddToMegalistDialog([playlist.id]);
       }}
-      ></DropdownMenuItem>
+      >
+      <ListPlus className="mr-2 h-4 w-4 text-blue-500" />
+      <span>Añadir a Megalista</span>
+      </DropdownMenuItem>
       
       {isSyncable && (
         <DropdownMenuItem disabled={isProcessing} onClick={(e) => { e.stopPropagation(); openSyncDialog([playlist]); }}>
