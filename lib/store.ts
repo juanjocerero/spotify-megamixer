@@ -8,10 +8,9 @@ interface PlaylistStore {
   isSelected: (id: string) => boolean;
   clearSelection: () => void;
   addMultipleToSelection: (playlistIds: string[]) => void;
-  
+  removeMultipleFromSelection: (playlistIds: string[]) => void;
   showOnlySelected: boolean;
   setShowOnlySelected: (value: boolean) => void;
-  
   playlistCache: SpotifyPlaylist[];
   setPlaylistCache: (playlists: SpotifyPlaylist[]) => void;
   addMoreToCache: (playlists: SpotifyPlaylist[]) => void;
@@ -56,6 +55,14 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
       const combinedIds = new Set([...state.selectedPlaylistIds, ...playlistIds]);
       return { selectedPlaylistIds: Array.from(combinedIds) };
     });
+  },
+  removeMultipleFromSelection: (playlistIds) => {
+    const idSet = new Set(playlistIds);
+    set((state) => ({
+      selectedPlaylistIds: state.selectedPlaylistIds.filter(
+        (id) => !idSet.has(id)
+      ),
+    }));
   },
   setShowOnlySelected: (value) => {
     set({ showOnlySelected: value })

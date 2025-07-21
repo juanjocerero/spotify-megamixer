@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { Search, ListChecks, XCircle, ArrowUpDown } from 'lucide-react';
+import { Search, ListChecks, XCircle, ListX, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Definimos las props que recibirá este componente desde la página del servidor
@@ -49,6 +49,7 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
   const { 
     selectedPlaylistIds, 
     addMultipleToSelection, 
+    removeMultipleFromSelection, 
     showOnlySelected, 
     setShowOnlySelected 
   } = usePlaylistStore();
@@ -73,11 +74,15 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     return filteredIds.every(id => selectedPlaylistIds.includes(id));
   }, [filteredIds, selectedPlaylistIds]);
   
-  // Manejador para el botón 
+  // Manejador para el botón de selección múltiple en el filtrado
   const handleSelectAllFiltered = () => {
-    if (areAllFilteredSelected) return;
-    addMultipleToSelection(filteredIds);
-    toast.info(`${filteredIds.length} playlists de la búsqueda han sido añadidas.`);
+    if (areAllFilteredSelected) {
+      removeMultipleFromSelection(filteredIds);
+      toast.info(`${filteredIds.length} playlists de la búsqueda han sido deseleccionadas.`);
+    } else {
+      addMultipleToSelection(filteredIds);
+      toast.info(`${filteredIds.length} playlists de la búsqueda han sido añadidas.`);
+    }
   };
   
   return (
@@ -112,15 +117,9 @@ export default function DashboardClient({ initialPlaylists, initialNextUrl }: Da
     {searchTerm.trim() !== '' && filteredIds.length > 0 && (
       <>
       <div className="mx-1 h-6 w-px bg-gray-600"></div>
-      <Button
-      variant="ghost"
-      size="sm"
-      className="h-8"
-      onClick={handleSelectAllFiltered}
-      disabled={areAllFilteredSelected}
-      >
-      <ListChecks className="mr-2 h-4 w-4" />
-      {areAllFilteredSelected ? 'Seleccionado' : 'Seleccionar'}
+      <Button variant="ghost" size="sm" className="h-8" onClick={handleSelectAllFiltered}>
+      {areAllFilteredSelected ? <ListX className="mr-2 h-4 w-4" /> : <ListChecks className="mr-2 h-4 w-4" />}
+      {areAllFilteredSelected ? 'Deseleccionar' : 'Seleccionar'}
       </Button>
       </>
     )}
