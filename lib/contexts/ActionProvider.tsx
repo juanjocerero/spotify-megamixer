@@ -5,7 +5,7 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
 import { SpotifyPlaylist } from '@/types/spotify';
 import { usePlaylistActions, ActionPlaylist, DialogState, DialogCallbacks } from '@/lib/hooks/usePlaylistActions';
-
+import ConfirmationDialog from '@/components/custom/dialogs/ConfirmationDialog';
 import CreateMegalistNameDialog from '@/components/custom/dialogs/CreateMegalistNameDialog';
 import EditPlaylistDialog from '@/components/custom/dialogs/EditPlaylistDialog';
 import AddToMegalistDialog from '@/components/custom/dialogs/AddToMegalistDialog';
@@ -23,6 +23,7 @@ import ShuffleChoiceDialog from '@/components/custom/dialogs/ShuffleChoiceDialog
 // Definición del tipo para el contexto
 interface ActionContextType {
   isProcessing: boolean;
+  openFreezeDialog: (playlist: SpotifyPlaylist) => void;
   openEditDialog: (playlist: SpotifyPlaylist) => void;
   openDeleteDialog: (playlists: ActionPlaylist[]) => void;
   openShuffleDialog: (playlists: ActionPlaylist[]) => void;
@@ -53,6 +54,26 @@ const DialogRenderer = ({ dialogState, dialogCallbacks }: DialogRendererProps) =
   }
   
   switch (dialogState.variant) {
+    case 'freezeConfirmation': {
+      const { playlist } = dialogState.props;
+      const isFreezing = !playlist.isFrozen;
+      const title = isFreezing ? '¿Congelar esta Megalista?' : '¿Descongelar esta Megalista?';
+      const description = isFreezing
+      ? `Si congelas "${playlist.name}", ya no podrás sincronizarla con sus listas de origen. Esta acción es reversible.`
+      : `Si descongelas "${playlist.name}", volverá a ser sincronizable.`;
+      
+      return (
+        <ConfirmationDialog
+        isOpen={true}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmFreeze}
+        title={title}
+        description={description}
+        confirmButtonText={isFreezing ? 'Sí, congelar' : 'Sí, descongelar'}
+        />
+      );
+    }
+
     case 'edit': {
       return (
         <EditPlaylistDialog
@@ -197,6 +218,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     isProcessing,
     dialogState,
     dialogCallbacks,
+    openFreezeDialog,
     openEditDialog,
     openDeleteDialog,
     openShuffleDialog,
@@ -209,6 +231,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
   // El valor del contexto solo expone lo que los componentes hijos necesitan llamar
   const contextValue = useMemo(() => ({
     isProcessing,
+    openFreezeDialog,
     openEditDialog,
     openDeleteDialog,
     openShuffleDialog,

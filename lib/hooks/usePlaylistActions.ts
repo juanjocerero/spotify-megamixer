@@ -12,7 +12,8 @@ import {
   addTracksBatch,
   addTracksToMegalistAction,
   getUniqueTrackCountFromPlaylistsAction,
-  updatePlaylistDetailsAction
+  updatePlaylistDetailsAction, 
+  toggleFreezeStateAction,
 } from '@/lib/actions/playlist.actions';
 
 import { getTrackUris } from '@/lib/actions/spotify.actions';
@@ -44,6 +45,7 @@ export type DialogState =
   variant: 'createShuffleChoice';
   props: { sourceIds: string[]; playlistName: string };
 }
+| { variant: 'freezeConfirmation'; props: { playlist: SpotifyPlaylist } }
 | {
   variant: 'createOverwrite';
   props: {
@@ -87,6 +89,7 @@ export interface DialogCallbacks {
   onConfirmSurpriseGlobal: (count: number) => void;
   onConfirmSurpriseTargeted: (trackCount: number) => void;
   onConfirmSurpriseName: (playlistName: string) => void;
+  onConfirmFreeze: () => void;
 }
 
 type OpenActionPayload = Exclude<DialogState, { variant: 'none' }>;
@@ -200,6 +203,36 @@ export function usePlaylistActions() {
         error: 'No se pudieron guardar los cambios.',
         onSuccess: () => {
           updatePlaylistInCache(playlist.id, { name: newName, description: newDescription });
+        },
+      }
+    );
+  };
+  
+  // Diálogo de confirmación de congelación de una megalista
+  const handleConfirmFreeze = async () => {
+    if (dialogState.variant !== 'freezeConfirmation') return;
+    const { playlist } = dialogState.props;
+    const shouldFreeze = !playlist.isFrozen;
+    const actionText = shouldFreeze ? 'Congelando' : 'Descongelando';
+    const successText = shouldFreeze ? 'congelada' : 'descongelada';
+    
+    dispatch({ type: 'CLOSE' });
+    
+    await executeAction(
+      toggleFreezeStateAction,
+      [playlist.id, shouldFreeze],
+      {
+        loading: `${actionText} la playlist...`,
+        success: `¡Playlist ${successText} con éxito!`,
+        error: `No se pudo actualizar la playlist.`,
+        onSuccess: (result) => {
+          if (result.success) {
+            updatePlaylistInCache(playlist.id, {
+              isFrozen: result.data.isFrozen,
+              // Importante: recalcular isSyncable también
+              isSyncable: !result.data.isFrozen,
+            });
+          }
         },
       }
     );
@@ -440,6 +473,15 @@ export function usePlaylistActions() {
     dispatch({ type: 'OPEN', payload: { variant: 'edit', props: { playlist } } });
   };
   
+  // Abre el diálogo de congelación
+  const openFreezeDialog = (playlist: SpotifyPlaylist) => {
+    if (!playlist.isMegalist || playlist.playlistType !== 'MEGALIST') {
+      toast.error('Esta acción solo está disponible para Megalistas.');
+      return;
+    }
+    dispatch({ type: 'OPEN', payload: { variant: 'freezeConfirmation', props: { playlist } } });
+  };
+  
   const openDeleteDialog = (playlists: ActionPlaylist[]) => {
     if (playlists.length === 0) return;
     dispatch({ type: 'OPEN', payload: { variant: 'delete', props: { playlists } } });
@@ -519,6 +561,7 @@ export function usePlaylistActions() {
     // Callbacks genéricos para diálogos de confirmación
     onConfirmDelete: handleConfirmDelete,
     onConfirmShuffle: handleConfirmShuffle,
+    onConfirmFreeze: handleConfirmFreeze,
     
     // Flujo de Sincronización
     onConfirmSyncPreview: () => {
@@ -580,6 +623,7 @@ export function usePlaylistActions() {
     dialogState,
     dialogCallbacks,
     openEditDialog,
+    openFreezeDialog,
     openDeleteDialog,
     openShuffleDialog,
     openSyncDialog,

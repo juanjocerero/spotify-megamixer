@@ -5,6 +5,7 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getUserPlaylists } from '@/lib/spotify';
 import { MegalistClientData, SpotifyPlaylist } from '@/types/spotify';
+import { Megalist } from '@prisma/client';
 
 import { ActionProvider } from '@/lib/contexts/ActionProvider';
 
@@ -48,9 +49,15 @@ export default async function DashboardPage() {
   
   // Creamos un mapa para un enriquecimiento más eficiente
   const megalistDataMap = new Map<string, MegalistClientData>(
-    userMegalists.map((m) => [
+    userMegalists.map((m: Megalist) => [
       m.id,
-      { isMegalist: true, isSyncable: m.type === 'MEGALIST', type: m.type },
+      {
+        isMegalist: true,
+        // La lógica depende de si está congelada
+        isSyncable: m.type === 'MEGALIST' && !m.isFrozen,
+        type: m.type,
+        isFrozen: m.isFrozen,
+      },
     ])
   );
   
@@ -65,6 +72,7 @@ export default async function DashboardPage() {
         isMegalist: megalistData.isMegalist,
         isSyncable: megalistData.isSyncable,
         playlistType: megalistData.type,
+        isFrozen: megalistData.isFrozen,
       };
     }
     return p;

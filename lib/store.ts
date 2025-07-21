@@ -20,6 +20,7 @@ interface PlaylistStore {
     description?: string; 
     trackCount?: number; 
     isSyncable?: boolean; 
+    isFrozen?: boolean;
     playlistType?: 'MEGALIST' | 'SURPRISE'; 
   }) => void; 
   removePlaylistFromCache: (playlistId: string) => void;

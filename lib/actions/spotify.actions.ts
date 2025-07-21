@@ -6,6 +6,7 @@ import { auth } from '@/auth';
 import { db } from '../db';
 import { getPlaylistTracksPage, getAllPlaylistTracks } from '../spotify';
 import { SpotifyPlaylist, MegalistClientData } from '@/types/spotify';
+import { Megalist } from '@prisma/client';
 
 interface PlaylistsApiResponse {
   items: SpotifyPlaylist[];
@@ -41,7 +42,7 @@ export async function fetchMorePlaylists(
 ): Promise<PlaylistsApiResponse> {
   try {
     const session = await auth();
-    if (!session?.accessToken) {
+    if (!session?.accessToken || !session.user?.id) {
       throw new Error('Not authenticated');
     }
     
@@ -69,9 +70,14 @@ export async function fetchMorePlaylists(
     });
     
     const megalistDataMap = new Map<string, MegalistClientData>(
-      userMegalists.map((m) => [
+      userMegalists.map((m: Megalist) => [
         m.id,
-        { isMegalist: true, isSyncable: m.type === 'MEGALIST', type: m.type },
+        {
+          isMegalist: true,
+          isSyncable: m.type === 'MEGALIST' && !m.isFrozen,
+          type: m.type,
+          isFrozen: m.isFrozen,
+        },
       ])
     );
     
@@ -83,6 +89,7 @@ export async function fetchMorePlaylists(
           isMegalist: megalistData.isMegalist,
           isSyncable: megalistData.isSyncable,
           playlistType: megalistData.type,
+          isFrozen: megalistData.isFrozen,
         };
       }
       return p;

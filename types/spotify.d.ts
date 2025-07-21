@@ -5,6 +5,7 @@
 declare module '@/types/spotify' {
   interface SpotifyPlaylist {
     isSyncable?: boolean; // true si la playlist tiene metadatos para sincronizar.
+    isFrozen?: boolean;
   }
 }
 
@@ -23,7 +24,8 @@ export interface SpotifyPlaylist {
   };
   description?: string;
   isMegalist?: boolean;
-  playlistType?: PlaylistType
+  playlistType?: PlaylistType;
+  isFrozen?: boolean;
 }
 
 // Representa un único track de una playlist
@@ -46,6 +48,7 @@ export interface MegalistClientData {
   isMegalist: true;
   isSyncable: boolean;
   type: PlaylistType;
+  isFrozen: boolean;
 }
 
 /**

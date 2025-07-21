@@ -351,3 +351,40 @@ export async function clearPlaylist(playlistId: string) {
     throw error;
   }
 }
+
+// Maneja el estado de 'congelación' (no sincronizable) de una megalista
+export async function toggleFreezeStateAction(
+  playlistId: string,
+  freeze: boolean
+): Promise<ActionResult<{ id: string; isFrozen: boolean }>> {
+  console.log(`[ACTION] Cambiando estado de congelado a ${freeze} para la playlist ${playlistId}`);
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Usuario no autenticado.' };
+    }
+    
+    const updatedMegalist = await db.megalist.update({
+      where: {
+        id: playlistId,
+        // Nos aseguramos de que solo el propietario pueda modificarla
+        spotifyUserId: session.user.id,
+      },
+      data: {
+        isFrozen: freeze,
+      },
+    });
+    
+    return {
+      success: true,
+      data: { id: updatedMegalist.id, isFrozen: updatedMegalist.isFrozen },
+    };
+  } catch (error) {
+    console.error(`[ACTION_ERROR:toggleFreezeState]`, error);
+    const action = freeze ? 'congelar' : 'descongelar';
+    return {
+      success: false,
+      error: `No se pudo ${action} la playlist. Puede que no sea una Megalista gestionada por esta app.`,
+    };
+  }
+}

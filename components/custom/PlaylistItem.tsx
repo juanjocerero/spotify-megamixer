@@ -2,6 +2,7 @@
 
 'use client';
 import { memo } from 'react';
+
 import {
   MoreHorizontal,
   Music,
@@ -11,6 +12,8 @@ import {
   Trash2,
   Wand2,
   RefreshCw,
+  Snowflake, 
+  Sun
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useActions } from '@/lib/contexts/ActionProvider';
@@ -43,7 +46,15 @@ function PlaylistItem({
   onToggleSelect,
   onShowTracks,
 }: PlaylistItemProps) {
-  const { isProcessing, openEditDialog, openSyncDialog, openShuffleDialog, openDeleteDialog, openSurpriseMixDialog } = useActions();
+  const { 
+    isProcessing, 
+    openEditDialog, 
+    openSyncDialog, 
+    openShuffleDialog, 
+    openDeleteDialog, 
+    openSurpriseMixDialog, 
+    openFreezeDialog,
+  } = useActions();
   
   const isSyncable = playlist.isSyncable ?? false;
   
@@ -74,13 +85,24 @@ function PlaylistItem({
     {playlist.owner.display_name}
     </span>
     </div>
+    
+    {/* Lógica condicional de badges para las megalistas */}
     {playlist.playlistType === 'MEGALIST' && (
-      <Badge variant="outline" className="whitespace-nowrap shrink-0 mt-1 sm:mt-0 border-green-500 text-green-500">
-      Megalista
+      <Badge
+      variant="outline"
+      className={cn(
+        'whitespace-nowrap shrink-0 mt-1 sm:mt-0',
+        playlist.isFrozen
+        ? 'border-blue-500 text-blue-500' // Azul si está congelada
+        : 'border-green-500 text-green-500' // Verde si es sincronizable
+      )}
+      >
+      {playlist.isFrozen ? 'Congelada' : 'Megalista'}
       </Badge>
     )}
+    
     {playlist.playlistType === 'SURPRISE' && (
-      <Badge variant="outline" className="whitespace-nowrap shrink-0 mt-1 sm:mt-0 border-blue-500 text-blue-500">
+      <Badge variant="outline" className="whitespace-nowrap shrink-0 mt-1 sm:mt-0 border-purple-500 text-purple-500">
       Sorpresa
       </Badge>
     )}
@@ -108,12 +130,29 @@ function PlaylistItem({
     <Pencil className="mr-2 h-4 w-4" />
     <span>Editar detalles</span>
     </DropdownMenuItem>
+    
+    {/* Congelación condicional */}
+    {playlist.playlistType === 'MEGALIST' && (
+      <DropdownMenuItem
+      disabled={isProcessing}
+      onClick={(e) => { e.stopPropagation(); openFreezeDialog(playlist); }}
+      >
+      {playlist.isFrozen ? (
+        <Sun className="mr-2 h-4 w-4 text-yellow-500" />
+      ) : (
+        <Snowflake className="mr-2 h-4 w-4 text-blue-500" />
+      )}
+      <span>{playlist.isFrozen ? 'Descongelar' : 'Congelar'}</span>
+      </DropdownMenuItem>
+    )}
+    
     {isSyncable && (
       <DropdownMenuItem disabled={isProcessing} onClick={(e) => { e.stopPropagation(); openSyncDialog([playlist]); }}>
       <RefreshCw className="mr-2 h-4 w-4" />
       <span>Sincronizar</span>
       </DropdownMenuItem>
     )}
+    
     <DropdownMenuItem disabled={isProcessing} onClick={(e) => { e.stopPropagation(); openShuffleDialog([playlist]); }}>
     <Shuffle className="mr-2 h-4 w-4" />
     <span>Reordenar</span>
