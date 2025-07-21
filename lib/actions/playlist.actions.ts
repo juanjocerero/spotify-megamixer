@@ -364,47 +364,6 @@ export async function updatePlaylistDetailsAction(
   }
 }
 
-export async function fetchMorePlaylists(
-  url: string
-): Promise<PlaylistsApiResponse> {
-  try {
-    const session = await auth();
-    if (!session?.accessToken) {
-      throw new Error('Not authenticated');
-    }
-    
-    // --- Modificamos la URL para asegurarnos de que incluye los campos ---
-    // Esto es crucial porque la URL 'next' de Spotify no hereda los parámetros 'fields'.
-    const urlObject = new URL(url);
-    const fields = "items(id,name,description,images,owner,tracks(total)),next";
-    
-    // Usamos .set() para añadir o sobreescribir el parámetro de campos.
-    urlObject.searchParams.set('fields', fields);
-    
-    const response = await fetch(urlObject.toString(), {
-      headers: {
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-    });
-    
-    if (!response.ok) {
-      // Este error ya era explícito, lo mantenemos
-      const errorData = await response.json();
-      console.error('Failed to fetch more playlists:', errorData);
-      throw new Error(`Failed to fetch more playlists. Status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return {
-      items: data.items,
-      next: data.next,
-    };
-  } catch (error) {
-    console.error('[ACTION_ERROR:fetchMorePlaylists] Fallo al cargar más playlists.', error);
-    throw error;
-  }
-}
-
 /**
 * Acción para vaciar una playlist.
 */

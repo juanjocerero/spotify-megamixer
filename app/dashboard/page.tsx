@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getUserPlaylists } from '@/lib/spotify';
+import { MegalistClientData, SpotifyPlaylist } from '@/types/spotify';
 
 import { ActionProvider } from '@/lib/contexts/ActionProvider';
 
@@ -46,8 +47,11 @@ export default async function DashboardPage() {
   });
   
   // Creamos un mapa para un enriquecimiento más eficiente
-  const megalistDataMap = new Map(
-    userMegalists.map((m) => [m.id, { isMegalist: true, isSyncable: true, type: m.type }])
+  const megalistDataMap = new Map<string, MegalistClientData>(
+    userMegalists.map((m:SpotifyPlaylist) => [
+      m.id,
+      { isMegalist: true, isSyncable: m.playlistType === 'MEGALIST', type: m.playlistType },
+    ])
   );
   
   const initialData = await getUserPlaylists(session.accessToken);

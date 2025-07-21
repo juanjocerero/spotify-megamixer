@@ -3,8 +3,9 @@
 'use server';
 
 import { auth } from '@/auth';
+import { db } from '../db';
 import { getAllPlaylistTracks } from '../spotify';
-import { SpotifyPlaylist } from '@/types/spotify';
+import { SpotifyPlaylist, MegalistClientData } from '@/types/spotify';
 
 interface PlaylistsApiResponse {
   items: SpotifyPlaylist[];
@@ -44,15 +45,7 @@ export async function fetchMorePlaylists(
       throw new Error('Not authenticated');
     }
     
-    // --- Modificamos la URL para asegurarnos de que incluye los campos ---
-    // Esto es crucial porque la URL 'next' de Spotify no hereda los parámetros 'fields'.
-    const urlObject = new URL(url);
-    const fields = "items(id,name,description,images,owner,tracks(total)),next";
-    
-    // Usamos .set() para añadir o sobreescribir el parámetro de campos.
-    urlObject.searchParams.set('fields', fields);
-    
-    const response = await fetch(urlObject.toString(), {
+    const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${session.accessToken}`,
       },
@@ -66,8 +59,39 @@ export async function fetchMorePlaylists(
     }
     
     const data = await response.json();
+    
+    const playlistIds = data.items.map((p: SpotifyPlaylist) => p.id);
+    const userMegalists = await db.megalist.findMany({
+      where: {
+        id: { in: playlistIds },
+        spotifyUserId: session.user.id
+      },
+    });
+    
+    const megalistDataMap = new Map<string, MegalistClientData>(
+      userMegalists.map((m: SpotifyPlaylist) => [
+        m.id,
+        { isMegalist: true, isSyncable: m.playlistType === 'MEGALIST', type: m.playlistType },
+      ])
+    );
+    
+    const finalPlaylists: SpotifyPlaylist[] = data.items.map((p: SpotifyPlaylist) => {
+      const megalistData = megalistDataMap.get(p.id);
+      if (megalistData) {
+        // Ahora TS entiende 'megalistData' y no hay error
+        return {
+          ...p,
+          isMegalist: megalistData.isMegalist,
+          isSyncable: megalistData.isSyncable,
+          playlistType: megalistData.type,
+        };
+      }
+      return p;
+    });
+    
+    
     return {
-      items: data.items,
+      items: finalPlaylists,
       next: data.next,
     };
   } catch (error) {

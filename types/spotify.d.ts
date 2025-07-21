@@ -8,6 +8,8 @@ declare module '@/types/spotify' {
   }
 }
 
+export type PlaylistType = 'MEGALIST' | 'SURPRISE';
+
 // Usaremos esto para representar una playlist en nuestra UI
 export interface SpotifyPlaylist {
   id: string;
@@ -21,7 +23,7 @@ export interface SpotifyPlaylist {
   };
   description?: string;
   isMegalist?: boolean;
-  playlistType?: 'MEGALIST' | 'SURPRISE';
+  playlistType?: PlaylistType
 }
 
 // Representa un único track de una playlist
@@ -37,6 +39,13 @@ export interface SpotifyTrack {
   artists: {
     name: string;
   }[];
+}
+
+// Tipo que describe los datos enriquecidos que vienen de la db
+export interface MegalistClientData {
+  isMegalist: true;
+  isSyncable: boolean;
+  type: PlaylistType;
 }
 
 /**
