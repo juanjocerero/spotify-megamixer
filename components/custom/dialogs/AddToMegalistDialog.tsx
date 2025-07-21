@@ -55,7 +55,7 @@ export default function AddToMegalistDialog({
     </DialogDescription>
     </DialogHeader>
     <Select onValueChange={setSelectedId} value={selectedId}>
-    <SelectTrigger>
+    <SelectTrigger className="w-full">
     <SelectValue placeholder="Selecciona una Megalista..." />
     </SelectTrigger>
     <SelectContent>
