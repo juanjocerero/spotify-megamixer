@@ -138,8 +138,6 @@ export default function DashboardClient({ initialNextUrl }: DashboardClientProps
     </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
-    <DropdownMenuLabel>Ordenar por</DropdownMenuLabel>
-    <DropdownMenuSeparator />
     <DropdownMenuItem onSelect={() => setSortOption('custom')}>Orden por defecto</DropdownMenuItem>
     <DropdownMenuItem onSelect={() => setSortOption('megalist_first')}>Megalistas Primero</DropdownMenuItem>
     <DropdownMenuItem onSelect={() => setSortOption('name_asc')}>Nombre (A-Z)</DropdownMenuItem>
