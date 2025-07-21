@@ -148,18 +148,27 @@ export default function PlaylistDisplay({
     onFilteredChange(filteredPlaylists.map(p => p.id));
   }, [filteredPlaylists, onFilteredChange]);
   
-  // Obtenemos los items virtuales fuera del efecto.
+  // --- DEBUG: Desactivación temporal del scroll infinito ---
+  /*
   const virtualItems = rowVirtualizer.getVirtualItems();
-  // Derivamos un valor primitivo (número) que será nuestra dependencia estable.
   const lastItemIndex = virtualItems.length > 0 ? virtualItems[virtualItems.length - 1].index : 0;
   
   useEffect(() => {
-    if (lastItemIndex >= filteredPlaylists.length - 1 && nextUrl && !isLoading) {
-      loadMorePlaylists();
-    }
-    // Usamos el valor primitivo como dependencia. El efecto solo se ejecutará
-    // cuando el índice del último elemento cambie (es decir, cuando el usuario haga scroll).
-  }, [lastItemIndex, filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
+  if (
+  lastItemIndex >= filteredPlaylists.length - 1 &&
+  nextUrl &&
+  !isLoading
+  ) {
+  loadMorePlaylists();
+  }
+  }, [
+  lastItemIndex,
+  filteredPlaylists.length,
+  nextUrl,
+  isLoading,
+  loadMorePlaylists,
+  ]);
+  */
   
   const handleShowTracks = useCallback((playlist: SpotifyPlaylist) => {
     setTrackSheetState({ open: true, playlist });
