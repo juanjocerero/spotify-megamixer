@@ -91,34 +91,6 @@ export async function findOrCreatePlaylist(
   }
 }
 
-/**
-* Server Action para obtener los nombres de las canciones y los artistas de una playlist.
-* Utiliza la optimización donde getAllPlaylistTracks ya trae los detalles necesarios.
-* @param playlistId El ID de la playlist de Spotify.
-* @returns Un array de objetos con el nombre y los artistas de cada canción.
-*/
-export async function getPlaylistTracksDetailsAction(playlistId: string): Promise<{ name: string; artists: string; }[]> {
-  console.log(`[ACTION:getPlaylistTracksDetailsAction] Iniciando obtención de detalles para la playlist ${playlistId}`);
-  try {
-    const session = await auth();
-    if (!session?.accessToken) {
-      throw new Error('No autenticado o token no disponible.');
-    }
-    const { accessToken } = session;
-    
-    // Paso único: Obtener todas las canciones con sus detalles directamente
-    // getAllPlaylistTracks ahora devuelve objetos como { uri: string; name: string; artists: string; }[]
-    const detailedTracksWithUri = await getAllPlaylistTracks(accessToken, playlistId);
-    console.log(`[ACTION:getPlaylistTracksDetailsAction] Obtenidos detalles para ${detailedTracksWithUri.length} canciones.`);
-    
-    // Mapear para devolver solo 'name' y 'artists', como requiere el componente TrackDetailView
-    return detailedTracksWithUri.map(track => ({ name: track.name, artists: track.artists }));
-  } catch (error) {
-    console.error(`[ACTION_ERROR:getPlaylistTracksDetailsAction] Fallo al obtener detalles de las canciones para la playlist ${playlistId}.`, error);
-    throw error;
-  }
-}
-
 export async function getUniqueTrackCountFromPlaylistsAction(playlistIds: string[]): Promise<number> {
   try {
     const session = await auth();

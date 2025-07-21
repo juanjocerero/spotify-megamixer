@@ -52,7 +52,6 @@ export async function fetchMorePlaylists(
     });
     
     if (!response.ok) {
-      // Este error ya era explícito, lo mantenemos
       const errorData = await response.json();
       console.error('Failed to fetch more playlists:', errorData);
       throw new Error(`Failed to fetch more playlists. Status: ${response.status}`);
@@ -60,6 +59,7 @@ export async function fetchMorePlaylists(
     
     const data = await response.json();
     
+    // La lógica de enriquecimiento que ya corregimos antes
     const playlistIds = data.items.map((p: SpotifyPlaylist) => p.id);
     const userMegalists = await db.megalist.findMany({
       where: {
@@ -78,7 +78,6 @@ export async function fetchMorePlaylists(
     const finalPlaylists: SpotifyPlaylist[] = data.items.map((p: SpotifyPlaylist) => {
       const megalistData = megalistDataMap.get(p.id);
       if (megalistData) {
-        // Ahora TS entiende 'megalistData' y no hay error
         return {
           ...p,
           isMegalist: megalistData.isMegalist,
@@ -88,7 +87,6 @@ export async function fetchMorePlaylists(
       }
       return p;
     });
-    
     
     return {
       items: finalPlaylists,

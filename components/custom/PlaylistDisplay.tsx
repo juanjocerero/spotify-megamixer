@@ -49,19 +49,20 @@ export default function PlaylistDisplay({
   // Referencia para el contenedor de scroll
   const parentRef = useRef<HTMLDivElement>(null);
   
-  const loadMorePlaylists = useCallback(async () => {
+  // BUGFIX: Eliminado el useCallback de esta función.
+  // Ahora se recrea en cada render, asegurando que siempre tiene el `nextUrl` más actual.
+  const loadMorePlaylists = async () => {
     if (isLoading || !nextUrl || showOnlySelected) return;
+    
     setIsLoading(true);
     try {
       const { items: newPlaylists, next: newNextUrl } = await fetchMorePlaylists(nextUrl);
       addMoreToCache(newPlaylists);
       setNextUrl(newNextUrl);
-    } catch {
-      // Silenciamos el error para evitar el warning
-    } finally {
+    } catch { } finally {
       setIsLoading(false);
     }
-  }, [nextUrl, isLoading, showOnlySelected, addMoreToCache]);
+  };
   
   const fuseOptions: IFuseOptions<SpotifyPlaylist> = useMemo(
     () => ({
@@ -147,15 +148,16 @@ export default function PlaylistDisplay({
     onFilteredChange(filteredPlaylists.map(p => p.id));
   }, [filteredPlaylists, onFilteredChange]);
   
-  // --- Lógica para el scroll infinito adaptada a la virtualización ---
+  // Lógica para el scroll infinito adaptada a la virtualización
   useEffect(() => {
     const virtualItems = rowVirtualizer.getVirtualItems();
     if (virtualItems.length === 0) return;
+    
     const lastItem = virtualItems[virtualItems.length - 1];
     if (lastItem && lastItem.index >= filteredPlaylists.length - 1 && nextUrl && !isLoading) {
       loadMorePlaylists();
     }
-  }, [rowVirtualizer, filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
+  }, [rowVirtualizer.getVirtualItems(), filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
   
   const handleShowTracks = useCallback((playlist: SpotifyPlaylist) => {
     setTrackSheetState({ open: true, playlist });

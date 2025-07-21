@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'; // Importa useEffect
 import { Loader2, Music } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { getPlaylistTracksDetailsAction } from '@/lib/actions/playlist.actions';
+import { getPlaylistTracksDetailsAction } from '@/lib/actions/spotify.actions';
 import { toast } from 'sonner'; // Para notificaciones de errores
 
 interface Track {
