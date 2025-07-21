@@ -67,15 +67,17 @@ export async function searchSpotifyAction(
     }
     
     const results: SpotifySearchResponse = await response.json();
-    
+
+    // Filtramos las playlists para excluir las propias del usuario
+    // y cualquier item nulo
     const filteredPlaylists = results.playlists.items.filter(
-      playlist => playlist.owner.id !== user.id
+      playlist => playlist && playlist.owner.id !== user.id
     );
     
     const finalResults: SearchResults = {
       playlists: filteredPlaylists,
-      albums: results.albums.items,
-      tracks: results.tracks.items,
+      albums: results.albums.items.filter(album => album),
+      tracks: results.tracks.items.filter(track => track),
     };
     
     return { success: true, data: finalResults };

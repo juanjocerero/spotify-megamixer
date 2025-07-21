@@ -14,11 +14,6 @@ export type SearchResultItemType =
 | { type: 'album'; item: SpotifyAlbum }
 | { type: 'playlist'; item: SpotifyPlaylist };
 
-type ItemType =
-| { type: 'track'; item: SpotifyTrack }
-| { type: 'album'; item: SpotifyAlbum }
-| { type: 'playlist'; item: SpotifyPlaylist };
-
 interface SearchResultItemProps {
   itemProps: SearchResultItemType;
   onAdd: (itemProps: SearchResultItemType) => void;
