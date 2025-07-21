@@ -99,7 +99,7 @@ export default function DashboardClient({ initialNextUrl }: DashboardClientProps
     <div className="sticky top-0 z-10 bg-gray-900/80 py-4 backdrop-blur-md">
     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
     {/* Barra de búsqueda */}
-    <div className="relative flex-grow w-full sm:w-auto">
+    <div className="relative w-full sm:flex-[1.5] sm:min-w-0">
     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
     <Input
     type="text"
@@ -135,7 +135,7 @@ export default function DashboardClient({ initialNextUrl }: DashboardClientProps
     </div>
     
     {/* Búsqueda en Spotify */}
-    <div className="relative flex-grow w-full sm:w-auto">
+    <div className="relative w-full sm:flex-[2] sm:min-w-0">
     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground z-10" />
     <Input
     type="text"
