@@ -37,7 +37,7 @@ export default function CreateMegalistNameDialog({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
     <DialogContent>
     <DialogHeader>
-    <DialogTitle>Paso 1: Ponle un nombre</DialogTitle>
+    <DialogTitle>Nombre para la lista</DialogTitle>
     </DialogHeader>
     <Input
     placeholder="Ej: Mi Megalista"
