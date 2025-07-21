@@ -93,22 +93,30 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
     }));
   },
   updatePlaylistInCache: (playlistId, updates) => {
-    const update = (p: SpotifyPlaylist): SpotifyPlaylist => {
-      if (p.id !== playlistId) return p;
-      return {
-        ...p,
-        name: updates.name ?? p.name,
-        description: updates.description ?? p.description,
-        tracks: {
-          ...p.tracks,
-          total: updates.trackCount ?? p.tracks.total,
-        },
-        isSyncable: updates.isSyncable ?? p.isSyncable,
-        playlistType: updates.playlistType ?? p.playlistType,
-      };
-    };
     set((state) => ({
-      playlistCache: state.playlistCache.map(update),
+      playlistCache: state.playlistCache.map((playlist) => {
+        // Si no es la playlist que buscamos, la devolvemos sin cambios.
+        if (playlist.id !== playlistId) {
+          return playlist;
+        }
+        
+        // Para la playlist correcta, creamos un nuevo objeto fusionando
+        // la original con las actualizaciones. Esto asegura que propiedades
+        // como `isFrozen` y `isSyncable` se actualicen correctamente.
+        const updatedPlaylist = { ...playlist, ...updates };
+        
+        // Manejo especial para la propiedad anidada `trackCount`.
+        if (updates.trackCount !== undefined) {
+          updatedPlaylist.tracks = {
+            ...playlist.tracks,
+            total: updates.trackCount,
+          };
+          // Eliminamos trackCount del nivel superior para no ensuciar el objeto.
+          delete (updatedPlaylist as any).trackCount;
+        }
+        
+        return updatedPlaylist;
+      }),
     }));
   },
   removeMultipleFromCache: (playlistIds) => {
