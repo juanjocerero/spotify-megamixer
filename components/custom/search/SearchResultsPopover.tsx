@@ -60,7 +60,7 @@ export default function SearchResultsPopover({
   return (
     <div
     ref={popoverRef}
-    className="absolute top-full mt-2 w-full bg-popover text-popover-foreground rounded-md border shadow-md z-20"
+    className="absolute top-full mt-2 w-full bg-popover text-popover-foreground rounded-md border shadow-md z-30"
     >
     {isLoading && (
       <div className="flex items-center justify-center p-4">
