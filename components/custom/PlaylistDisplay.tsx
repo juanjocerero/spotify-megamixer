@@ -149,24 +149,24 @@ export default function PlaylistDisplay({
   // }, [filteredPlaylists, onFilteredChange]);
   
   
-  // const virtualItems = rowVirtualizer.getVirtualItems();
-  // const lastItemIndex = virtualItems.length > 0 ? virtualItems[virtualItems.length - 1].index : 0;
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const lastItemIndex = virtualItems.length > 0 ? virtualItems[virtualItems.length - 1].index : 0;
   
-  // useEffect(() => {
-  //   if (
-  //     lastItemIndex >= filteredPlaylists.length - 1 &&
-  //     nextUrl &&
-  //     !isLoading
-  //   ) {
-  //     loadMorePlaylists();
-  //   }
-  // }, [
-  //   lastItemIndex,
-  //   filteredPlaylists.length,
-  //   nextUrl,
-  //   isLoading,
-  //   loadMorePlaylists,
-  // ]);
+  useEffect(() => {
+    if (
+      lastItemIndex >= filteredPlaylists.length - 1 &&
+      nextUrl &&
+      !isLoading
+    ) {
+      loadMorePlaylists();
+    }
+  }, [
+    lastItemIndex,
+    filteredPlaylists.length,
+    nextUrl,
+    isLoading,
+    loadMorePlaylists,
+  ]);
   
   const handleShowTracks = useCallback((playlist: SpotifyPlaylist) => {
     setTrackSheetState({ open: true, playlist });
