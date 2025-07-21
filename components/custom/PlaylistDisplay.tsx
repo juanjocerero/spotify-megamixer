@@ -147,6 +147,8 @@ export default function PlaylistDisplay({
   useEffect(() => {
     onFilteredChange(filteredPlaylists.map(p => p.id));
   }, [filteredPlaylists, onFilteredChange]);
+
+  const virtualItems = rowVirtualizer.getVirtualItems();
   
   // Lógica para el scroll infinito adaptada a la virtualización
   useEffect(() => {
@@ -157,7 +159,7 @@ export default function PlaylistDisplay({
     if (lastItem && lastItem.index >= filteredPlaylists.length - 1 && nextUrl && !isLoading) {
       loadMorePlaylists();
     }
-  }, [rowVirtualizer.getVirtualItems(), filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
+  }, [rowVirtualizer, virtualItems, filteredPlaylists.length, nextUrl, isLoading, loadMorePlaylists]);
   
   const handleShowTracks = useCallback((playlist: SpotifyPlaylist) => {
     setTrackSheetState({ open: true, playlist });

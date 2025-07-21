@@ -95,26 +95,25 @@ export const usePlaylistStore = create<PlaylistStore>((set, get) => ({
   updatePlaylistInCache: (playlistId, updates) => {
     set((state) => ({
       playlistCache: state.playlistCache.map((playlist) => {
-        // Si no es la playlist que buscamos, la devolvemos sin cambios.
         if (playlist.id !== playlistId) {
           return playlist;
         }
+
+        // Desestructuramos para separar trackCount del resto de las actualizaciones.
+        const { trackCount, ...otherUpdates } = updates;
         
-        // Para la playlist correcta, creamos un nuevo objeto fusionando
-        // la original con las actualizaciones. Esto asegura que propiedades
-        // como `isFrozen` y `isSyncable` se actualicen correctamente.
-        const updatedPlaylist = { ...playlist, ...updates };
+        // Creamos el nuevo objeto fusionando el original con las otras actualizaciones.
+        const updatedPlaylist = { ...playlist, ...otherUpdates };
         
-        // Manejo especial para la propiedad anidada `trackCount`.
-        if (updates.trackCount !== undefined) {
+        // Si trackCount existe, actualizamos la propiedad anidada 'tracks'.
+        if (trackCount !== undefined) {
           updatedPlaylist.tracks = {
             ...playlist.tracks,
-            total: updates.trackCount,
+            total: trackCount,
           };
-          // Eliminamos trackCount del nivel superior para no ensuciar el objeto.
-          delete (updatedPlaylist as any).trackCount;
         }
         
+        // 4. Devolvemos el objeto limpio, sin 'delete' ni 'as any'.
         return updatedPlaylist;
       }),
     }));
