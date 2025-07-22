@@ -1,14 +1,5 @@
 // types/spotify.d.ts
 
-// Esta es una técnica llamada "declaration merging".
-// Le decimos a TypeScript que queremos añadir una nueva propiedad a la interfaz existente.
-declare module '@/types/spotify' {
-  interface SpotifyPlaylist {
-    isSyncable?: boolean; // true si la playlist tiene metadatos para sincronizar.
-    isFrozen?: boolean;
-  }
-}
-
 // Representa un único track de una playlist
 export interface SpotifyTrack {
   id: string;
@@ -41,20 +32,21 @@ export interface MegalistClientData {
 
 export type PlaylistType = 'MEGALIST' | 'SURPRISE';
 
-// Usaremos esto para representar una playlist en nuestra UI
+// Interfaz SpotifyPlaylist consolidada y unificada
 export interface SpotifyPlaylist {
   id: string;
   name: string;
-  images: { url: string; }[];
-  tracks: {
-    total: number;
-  };
-  owner: { id: string; display_name: string };
   description?: string;
-  isMegalist?: boolean;
-  playlistType?: PlaylistType;
-  isFrozen?: boolean;
+  images: { url: string }[];
+  tracks: { total: number };
+  owner: { id: string; display_name: string };
   uri: string;
+  
+  // Propiedades personalizadas para la lógica de la aplicación
+  isMegalist?: boolean;
+  isSyncable?: boolean;
+  isFrozen?: boolean;
+  playlistType?: PlaylistType;
 }
 
 /**
