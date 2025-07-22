@@ -204,7 +204,7 @@ export function usePlaylistActions(
         error: 'Ocurrió un error inesperado durante la sincronización.',
         onSuccess: (results, items) => {
           let successCount = 0;
-          results.forEach((result, index) => {
+          results.forEach((result) => {
             if (result.status === 'fulfilled' && result.value.success) {
               successCount++;
               const { id, finalCount } = result.value.data;

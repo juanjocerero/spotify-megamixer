@@ -172,7 +172,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
         actions.handleConfirmAddTracks(targetPlaylistId, dialogState.props.trackUris);
       }
     },
-    onConfirmSurpriseGlobal: (count: number) => {
+    onConfirmSurpriseGlobal: () => {
       // La lógica para esto se puede quedar en el opener ya que no depende del estado del diálogo
     },
     onConfirmSurpriseTargeted: (trackCount: number) => {

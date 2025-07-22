@@ -5,7 +5,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 
-import { PlaylistItemSkeleton } from './skeletons/PlaylistItemSkeleton';
 import { ListFooterLoader } from './skeletons/ListFooterLoader';
 
 import { SpotifyPlaylist } from '@/types/spotify';
