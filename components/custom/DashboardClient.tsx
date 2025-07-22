@@ -48,12 +48,6 @@ const sortLabels: Record<SortOption, string> = {
   owner_asc: 'Propietario (A-Z)',
 };
 
-// Definimos las props que recibirá este componente desde la página del servidor
-interface DashboardClientProps {
-  initialPlaylists: SpotifyPlaylist[];
-  initialNextUrl: string | null;
-}
-
 export default function DashboardClient() {
   
   const {
