@@ -111,19 +111,18 @@ function PlaylistItem({
     
     {/* SECCIÓN CENTRAL: NOMBRE, BADGE Y PROPIETARIO */}
     <div className="flex-grow min-w-0 pr-2">
-    <div className="flex flex-col sm:flex-row sm:items-center sm:gap-x-2">
+    {/* CAMBIO: Contenedor siempre vertical */}
+    <div className="flex flex-col">
     {badgeText && badgeVariant && (
       <Badge variant="outline" className={cn(
-        'whitespace-nowrap h-5 w-fit mb-1 sm:mb-0 text-xs',
+        'whitespace-nowrap h-5 w-fit mb-1 text-xs', // Eliminado sm:mb-0
         badgeVariant
       )}>
       {badgeText}
       </Badge>
     )}
-    {/* CAMBIO: Reducida la tipografía para móvil (xs) y escritorio (sm) */}
     <span className="text-xs sm:text-sm font-medium text-white truncate">{playlist.name}</span>
     </div>
-    {/* CAMBIO: Reducida la tipografía para móvil ([11px]) y escritorio (xs) */}
     <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
     de {playlist.owner.display_name}
     </p>
@@ -131,7 +130,6 @@ function PlaylistItem({
     
     {/* SECCIÓN DERECHA: CONTEO Y MENÚ */}
     <div className="flex items-center gap-x-2 sm:gap-x-4 flex-shrink-0 pl-2">
-    {/* CAMBIO: Reducida la tipografía para móvil (xs) y escritorio (sm) */}
     <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
     <Music2 className="h-4 w-4" />
     <span>{playlist.tracks.total}</span>
