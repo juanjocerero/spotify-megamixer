@@ -190,20 +190,21 @@ export default function PlaylistDisplay({
   const virtualItems = rowVirtualizer.getVirtualItems();
   const lastItemIndex = virtualItems.length > 0 ? virtualItems[virtualItems.length - 1].index : 0;
   
-  
   useEffect(() => {
-    // La condición no cambia: se activa cuando el último elemento visible
-    // está cerca del final de la lista de datos cargados.
+    // No activar el scroll infinito si hay filtros activos
+    if (showOnlySelected || searchTerm.trim() !== '') return;
+    
     if (lastItemIndex >= filteredPlaylists.length - 1 && nextUrl && !isLoadingMore) {
-      // En lugar de tener su propia lógica, ahora solo notifica al padre.
-      onLoadMore(); 
+      onLoadMore();
     }
   }, [
     lastItemIndex,
     filteredPlaylists.length,
     nextUrl,
     isLoadingMore,
-    onLoadMore, // <-- Se añade la dependencia al callback.
+    onLoadMore,
+    showOnlySelected,
+    searchTerm,
   ]);
   
   const handleShowTracks = useCallback((playlist: SpotifyPlaylist) => {
