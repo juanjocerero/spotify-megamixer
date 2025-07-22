@@ -1,7 +1,7 @@
 // /lib/contexts/PlaylistStoreProvider.tsx
 'use client';
 
-import { type ReactNode, createContext, useRef, useContext } from 'react';
+import { type ReactNode, createContext, useRef } from 'react';
 import { type StoreApi } from 'zustand';
 
 import { type PlaylistStore, createPlaylistStore } from '@/lib/store';
