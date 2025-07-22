@@ -8,18 +8,30 @@ import { getPlaylistTracksPage, getAllPlaylistTracks } from '../spotify';
 import { SpotifyPlaylist, MegalistClientData, ActionResult, SpotifyTrack } from '@/types/spotify';
 import { Megalist } from '@prisma/client';
 
+/**
+* La estructura esperada de la respuesta de la API para una página de playlists.
+* @internal
+*/
 interface PlaylistsApiResponse {
   items: SpotifyPlaylist[];
   next: string | null;
 }
 
-// Interface para la respuesta de la API de tracks de un álbum
+
+/**
+* La estructura esperada de la respuesta de la API para los tracks de un álbum.
+* @internal
+*/
 interface AlbumTracksResponse {
   items: SpotifyTrack[];
 }
 
 /**
-* Obtiene y prepara las URIs de las canciones.
+* Obtiene todas las URIs de las canciones de un conjunto de playlists, las combina
+* y devuelve un array plano sin duplicados.
+* @param playlistIds - Un array de IDs de las playlists de origen.
+* @returns Una promesa que se resuelve a un array de URIs de canciones únicas.
+* @throws Si el usuario no está autenticado o si la obtención de tracks falla.
 */
 export async function getTrackUris(playlistIds: string[]) {
   try {
@@ -42,6 +54,13 @@ export async function getTrackUris(playlistIds: string[]) {
   }
 }
 
+/**
+* Server Action para obtener la siguiente página de playlists del usuario (paginación).
+* Enriquece las playlists obtenidas de Spotify con metadatos de la base de datos local.
+* @param url - La URL completa para la siguiente página, proporcionada por la API de Spotify.
+* @returns Una promesa que se resuelve a un objeto con las playlists de la página y la URL de la siguiente.
+* @throws Si el usuario no está autenticado o si la petición a Spotify falla.
+*/
 export async function fetchMorePlaylists(
   url: string
 ): Promise<PlaylistsApiResponse> {
@@ -110,6 +129,14 @@ export async function fetchMorePlaylists(
   }
 }
 
+/**
+* Server Action para obtener los detalles de una página de canciones de una playlist.
+* Devuelve una estructura de datos simplificada, optimizada para la vista de detalles.
+* @param playlistId - El ID de la playlist.
+* @param fetchUrl - (Opcional) La URL para la página específica de tracks a obtener (para paginación). Si se omite, obtiene la primera página.
+* @returns Un objeto con un array de tracks simplificados y la URL de la siguiente página.
+* @throws Si el usuario no está autenticado.
+*/
 export async function getPlaylistTracksDetailsAction(
   playlistId: string,
   fetchUrl?: string | null
@@ -145,9 +172,9 @@ export async function getPlaylistTracksDetailsAction(
 }
 
 /**
-* Obtiene todas las URIs de las canciones de un álbum específico.
-* @param albumId El ID del álbum de Spotify.
-* @returns Un ActionResult con un array de URIs de las canciones.
+* Server Action para obtener todas las URIs de las canciones de un álbum específico.
+* @param albumId - El ID del álbum de Spotify.
+* @returns Un `ActionResult` con un array de URIs de las canciones.
 */
 export async function getAlbumTracksAction(
   albumId: string

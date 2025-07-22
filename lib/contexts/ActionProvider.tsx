@@ -1,7 +1,9 @@
+// lib/contexts/ActionProvider.tsx
 'use client';
 
 import React, { createContext, useContext, useMemo } from 'react';
 
+// Importa todos los componentes de diálogo para el renderer
 import AddToMegalistDialog from '@/components/custom/dialogs/AddToMegalistDialog';
 import ConfirmationDialog from '@/components/custom/dialogs/ConfirmationDialog';
 import CreateMegalistNameDialog from '@/components/custom/dialogs/CreateMegalistNameDialog';
@@ -19,8 +21,12 @@ import { usePlaylistActions, ActionPlaylist } from '@/lib/hooks/usePlaylistActio
 import { useDialogManager, DialogState } from '@/lib/hooks/useDialogManager';
 import { SpotifyPlaylist } from '@/types/spotify';
 
-// Esta interfaz define lo que el contexto expondrá a los componentes consumidores
-interface ActionContextType {
+
+/**
+* Define la forma del objeto que `ActionContext` proveerá.
+* Expone el estado de procesamiento (`isProcessing`) y todas las funciones
+* que los componentes de la UI pueden llamar para iniciar un flujo de acción (ej. abrir un diálogo).
+*/interface ActionContextType {
   isProcessing: boolean;
   openCreateEmptyMegalistDialog: () => void;
   openFreezeDialog: (playlist: SpotifyPlaylist) => void;
@@ -34,9 +40,16 @@ interface ActionContextType {
   openAddTracksDialog: (trackUris: string[]) => void;
 }
 
+/**
+* Contexto de React para proveer las acciones a cualquier componente hijo.
+*/
 const ActionContext = createContext<ActionContextType | undefined>(undefined);
 
-// Interfaz para los callbacks que se pasarán al DialogRenderer
+/**
+* Define la interfaz para el objeto de callbacks que se pasa al `DialogRenderer`.
+* Cada función `onConfirm...` corresponde a la acción de confirmación de un diálogo específico.
+* Esto desacopla al `DialogRenderer` de la lógica de negocio concreta.
+*/
 export interface DialogCallbacks {
   onClose: () => void;
   onConfirmCreateEmpty: (playlistName: string) => void;
@@ -57,6 +70,15 @@ export interface DialogCallbacks {
   onConfirmFreeze: () => void;
 }
 
+/**
+* Componente funcional "tonto" que actúa como un 'switch'.
+* Su única responsabilidad es renderizar el componente de diálogo correcto
+* basándose en el `dialogState.variant` actual.
+* @param {object} props - Las props del componente.
+* @param {DialogState} props.dialogState - El estado actual del gestor de diálogos.
+* @param {DialogCallbacks} props.dialogCallbacks - El objeto con las funciones de callback a pasar al diálogo.
+* @returns El componente de diálogo correspondiente o `null` si no hay diálogo activo.
+*/
 const DialogRenderer: React.FC<{ dialogState: DialogState; dialogCallbacks: DialogCallbacks }> = ({ dialogState, dialogCallbacks }) => {
   switch (dialogState.variant) {
     case 'createEmpty':
@@ -99,11 +121,22 @@ const DialogRenderer: React.FC<{ dialogState: DialogState; dialogCallbacks: Dial
   }
 };
 
+/**
+* El proveedor de acciones, un componente compositor clave en la arquitectura.
+* Responsabilidades:
+* 1. Instancia los hooks "cerebro": `useDialogManager` y `usePlaylistActions`.
+* 2. Conecta los cerebros "inyectando" el `dispatch` de los diálogos en el hook de acciones.
+* 3. Construye los callbacks de confirmación (`dialogCallbacks`), uniendo el estado de un diálogo
+*    (ej: el nombre de la playlist a crear) con la función de lógica de negocio correspondiente.
+* 4. Renderiza el `DialogRenderer` con el estado y los callbacks correctos.
+* 5. Provee las funciones para abrir diálogos (`open...`) al resto de la app a través del contexto `useActions`.
+* @param {object} props - Props del componente, incluye `children`.
+*/
 export function ActionProvider({ children }: { children: React.ReactNode }) {
   const { dialogState, dispatch } = useDialogManager();
   const actions = usePlaylistActions(dispatch);
   
-  // CONSTRUCCIÓN DE LOS CALLBACKS
+  // Construcción de los callbacks
   // Este es el punto de conexión: se une el estado del diálogo con la lógica de las acciones.
   const dialogCallbacks: DialogCallbacks = {
     onClose: () => dispatch({ type: 'CLOSE' }),
@@ -159,6 +192,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     },
     onConfirmAddToSelect: (targetId) => {
       if (dialogState.variant === 'addToSelect') {
+        // Pasa al siguiente paso: elegir si reordenar
         dispatch({ type: 'OPEN', payload: { variant: 'addToShuffleChoice', props: { ...dialogState.props, targetId } }});
       }
     },
@@ -173,7 +207,8 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
       }
     },
     onConfirmSurpriseGlobal: () => {
-      // La lógica para esto se puede quedar en el opener ya que no depende del estado del diálogo
+      // La lógica para este diálogo simple se maneja directamente en el 'opener'
+      // ya que no depende de estado previo del diálogo.
     },
     onConfirmSurpriseTargeted: (trackCount: number) => {
       if (dialogState.variant === 'surpriseTargeted') {
@@ -209,6 +244,13 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+* Hook de consumidor para acceder fácilmente a las funciones de acción
+* proporcionadas por `ActionProvider`.
+* Lanza un error si se utiliza fuera de un `ActionProvider` para asegurar
+* un uso correcto del contexto.
+* @returns El objeto de contexto con todas las funciones para abrir diálogos.
+*/
 export const useActions = () => {
   const context = useContext(ActionContext);
   if (context === undefined) {

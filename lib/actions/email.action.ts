@@ -1,9 +1,17 @@
+// lib/actions/email.action.ts
 'use server';
 
 import { Resend } from 'resend';
 import { ContactEmailTemplate } from '@/components/emails/ContactEmailTemplate';
 
-// Enviar correo electrónico de contacto
+/**
+* Server Action para enviar un correo electrónico desde el formulario de contacto.
+* Utiliza Resend para el envío. Las credenciales deben estar configuradas
+* en las variables de entorno (`RESEND_API_KEY`, `CONTACT_EMAIL_TO`).
+*
+* @param formData - Un objeto con los datos del formulario: `name`, `email`, `subject`, `message`.
+* @returns Un objeto que indica si el envío fue exitoso (`success: true`) o no (`success: false` con un mensaje de `error`).
+*/
 export async function sendContactEmailAction(formData: {
   name: string;
   email: string;
@@ -25,6 +33,7 @@ export async function sendContactEmailAction(formData: {
       to: process.env.CONTACT_EMAIL_TO,
       replyTo: email,
       subject: `Nuevo Mensaje: ${subject}`,
+      // El componente de React para el email se renderiza a HTML
       react: ContactEmailTemplate({ name, email, subject, message }) as React.ReactElement,
     });
     return { success: true };

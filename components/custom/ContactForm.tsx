@@ -1,3 +1,4 @@
+// /components/custom/ContactForm.tsx
 'use client';
 
 import { useState } from 'react';
@@ -18,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 
+/** Estructura de los valores del formulario de contacto. */
 interface ContactFormValues {
   name: string;
   email: string;
@@ -26,14 +28,32 @@ interface ContactFormValues {
 }
 
 interface ContactFormProps {
+  /** Controla si el diálogo del formulario está visible. */
   isOpen: boolean;
+  /** Función a llamar para cerrar el diálogo. */
   onClose: () => void;
 }
 
+/**
+* Un formulario de contacto modal que permite a los usuarios enviar un correo electrónico.
+*
+* Responsabilidades:
+* - Se muestra como un diálogo (`Dialog`).
+* - Utiliza `react-hook-form` para la gestión del estado, la validación y el envío del formulario.
+* - Muestra un estado de carga (`isSubmitting`) mientras se envía el correo.
+* - Llama a la Server Action `sendContactEmailAction` para procesar el envío.
+* - Muestra notificaciones de éxito o error al usuario usando `toast`.
+*
+* @param {ContactFormProps} props - Las props del componente.
+*/
 export default function ContactForm({ isOpen, onClose }: ContactFormProps) {
+  
   const { register, handleSubmit, formState: { errors }, reset } = useForm<ContactFormValues>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  /**
+  * Maneja el envío del formulario. Llama a la server action y gestiona la UI.
+  */
   const onSubmit = async (data: ContactFormValues) => {
     setIsSubmitting(true);
     const result = await sendContactEmailAction(data);

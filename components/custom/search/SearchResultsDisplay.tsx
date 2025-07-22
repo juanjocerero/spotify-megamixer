@@ -14,32 +14,53 @@ import type {
 } from '@/types/spotify';
 import SearchResultItem, { SearchResultItemType } from './SearchResultItem';
 
-// PASO 1: Definimos el tipo como una unión discriminada, usando 'data'.
+/** Representa un resultado de búsqueda unificado con un ID y un tipo. */
 type UnifiedSearchResult =
 | { id: string; type: 'track'; data: SpotifyTrack }
 | { id: string; type: 'album'; data: SpotifyAlbum }
 | { id: string; type: 'playlist'; data: SpotifyPlaylist };
 
 interface SearchResultsDisplayProps {
+  /** El objeto con los arrays de resultados de búsqueda (tracks, albums, playlists). */
   results: SearchResults;
+  /** El array de IDs de playlists que el usuario ya sigue. */
   followedPlaylistIds: string[];
-  spotifySortOption:
-  | 'relevance'
-  | 'playlists_first'
-  | 'albums_first'
-  | 'tracks_first';
+  /** La opción de ordenación seleccionada para los resultados. */
+  spotifySortOption: | 'relevance' | 'playlists_first' | 'albums_first' | 'tracks_first';
 }
 
+/**
+ * Componente que renderiza la lista unificada de resultados de búsqueda de Spotify.
+ *
+ * Responsabilidades:
+ * - **Unificar y Ordenar:** Toma los tres arrays de resultados (tracks, albums, playlists)
+ *   y los combina en una única lista (`UnifiedSearchResult[]`). Luego, aplica el orden
+ *   solicitado por `spotifySortOption`.
+ * - **Manejar Acciones de "Añadir":** Define la lógica `handleAdd` que se dispara al
+ *   hacer clic en el botón "+". Esta lógica se ramifica dependiendo del tipo de item:
+ *     - `playlist`: Abre el diálogo para añadir a una Megalista.
+ *     - `track`: Abre el diálogo para añadir la canción a una Megalista.
+ *     - `album`: Llama a `getAlbumTracksAction` para obtener las canciones del álbum y
+ *       luego abre el diálogo para añadirlas.
+ * - **Renderizar Items:** Mapea la lista unificada y renderiza un `SearchResultItem` para cada uno.
+ *
+ * @param {SearchResultsDisplayProps} props - Las props del componente.
+ */
 export default function SearchResultsDisplay({
   results,
   spotifySortOption,
   followedPlaylistIds,
 }: SearchResultsDisplayProps) {
+
   const { openAddToMegalistDialog, openAddTracksDialog } = useActions();
+
+    // Estado para mostrar un spinner en el ítem de álbum mientras se cargan sus tracks
   const [addingItemId, setAddingItemId] = useState<string | null>(null);
   
+   /**
+   * Memoiza la lista de resultados unificada y ordenada.
+   */
   const sortedAndUnifiedResults = useMemo(() => {
-    // TypeScript ahora entiende perfectamente la estructura de este array.
     const unified: UnifiedSearchResult[] = [
       ...results.tracks.map(item => ({ id: item.id, type: 'track' as const, data: item })),
       ...results.albums.map(item => ({ id: item.id, type: 'album' as const, data: item })),
@@ -69,6 +90,9 @@ export default function SearchResultsDisplay({
     return unified;
   }, [results, spotifySortOption]);
   
+  /**
+   * Gestiona la acción de añadir un item desde los resultados de búsqueda.
+   */
   const handleAdd = async (itemData: SearchResultItemType) => {
     const { type, data } = itemData;
     if (type === 'playlist') {

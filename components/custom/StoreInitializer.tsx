@@ -1,3 +1,4 @@
+// /components/custom/StoreInitializer.tsx
 'use client';
 
 import { useRef } from 'react';
@@ -5,16 +6,26 @@ import { usePlaylistStore } from '@/lib/store';
 import { SpotifyPlaylist } from '@/types/spotify';
 
 interface StoreInitializerProps {
+  /** El array de playlists obtenido desde el Server Component en la carga inicial. */
   playlists: SpotifyPlaylist[];
 }
 
 /**
-* Componente "invisible" cuya única función es inicializar el store de Zustand
-* con los datos obtenidos desde un Server Component. Utiliza un `useRef` para
-* asegurar que el estado solo se establece UNA VEZ, en el renderizado inicial,
-* evitando sobrescribir el estado del cliente en re-renders posteriores.
-*/
+ * Componente "invisible" de importancia arquitectónica.
+ *
+ * Su ÚNICA función es tomar los datos obtenidos del lado del servidor (SSR)
+ * y usarlos para hidratar (inicializar) el store de Zustand en el cliente.
+ *
+ * Utiliza un `useRef` para asegurar que el estado solo se establece UNA VEZ,
+ * en el renderizado inicial. Esto es crucial para evitar que el estado del cliente,
+ * que puede haber cambiado por acciones del usuario, sea sobrescrito en
+ * re-renders posteriores (por ejemplo, al navegar entre páginas).
+ *
+ * @param {StoreInitializerProps} props - Las props del componente.
+ * @returns {null} Este componente no renderiza nada en la UI.
+ */
 function StoreInitializer({ playlists }: StoreInitializerProps) {
+
   const initialized = useRef(false);
   
   if (!initialized.current) {

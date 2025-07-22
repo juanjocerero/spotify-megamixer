@@ -21,22 +21,32 @@ import { Textarea } from '@/components/ui/textarea';
 import { useActions } from '@/lib/contexts/ActionProvider';
 
 interface EditPlaylistDialogProps {
+  /** Controla si el diálogo está visible. */
   isOpen: boolean;
+  /** El objeto completo de la playlist a editar. */
   playlist: SpotifyPlaylist;
+  /** Función a llamar cuando el diálogo se cierra. */
   onClose: () => void;
+  /** Función a llamar al confirmar, pasando el nuevo nombre y la nueva descripción. */
   onConfirm: (newName: string, newDescription: string) => void;
 }
 
+/**
+* Un formulario modal para editar el nombre y la descripción de una playlist.
+* Los cambios se reflejarán directamente en Spotify.
+*/
 export default function EditPlaylistDialog({
   isOpen,
   playlist,
   onClose,
   onConfirm,
 }: EditPlaylistDialogProps) {
+  
   const { isProcessing } = useActions();
   const [name, setName] = useState(playlist.name);
   const [description, setDescription] = useState(playlist.description || '');
   
+  // Sincroniza el estado del formulario con la playlist seleccionada cuando el diálogo se abre.
   useEffect(() => {
     if (isOpen) {
       setName(playlist.name);

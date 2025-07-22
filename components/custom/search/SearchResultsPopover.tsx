@@ -19,13 +19,14 @@ import {
   TooltipContent,
 } from '@/components/ui/tooltip';
 
-// Tipos y etiquetas para la ordenación
+/** Define las opciones de ordenación para los resultados de búsqueda. */
 type SpotifySortOption =
 | 'relevance'
 | 'playlists_first'
 | 'albums_first'
 | 'tracks_first';
 
+/** Mapea los identificadores de ordenación a etiquetas legibles. */
 const spotifySortLabels: Record<SpotifySortOption, string> = {
   relevance: 'Relevancia',
   playlists_first: 'Listas primero',
@@ -33,17 +34,27 @@ const spotifySortLabels: Record<SpotifySortOption, string> = {
   tracks_first: 'Canciones primero',
 };
 
-// Interfaz de props
 interface SearchResultsPopoverProps {
+  /** El término de búsqueda actual. El popover se muestra si no está vacío. */
   query: string;
+  /** Los resultados de búsqueda obtenidos de la API, o `null` si no hay búsqueda activa. */
   results: SearchResults | null;
+  /** `true` si una búsqueda está actualmente en curso. */
   isLoading: boolean;
+  /** Callback para actualizar o limpiar el término de búsqueda, controlando la visibilidad del popover. */
   setQuery: (query: string) => void;
+  /** Referencia al elemento que ancla el popover (el contenedor del input de búsqueda). */
   anchorRef: React.RefObject<HTMLDivElement | null>;
+  /** Array de IDs de playlists que el usuario sigue, para marcar los resultados. */
   followedPlaylistIds: string[];
 }
 
-// Hook para detectar clics fuera
+/**
+* Hook personalizado para detectar clics fuera de un elemento (y su ancla).
+* @param popoverRef - Referencia al elemento del popover.
+* @param anchorRef - Referencia al elemento que ancla el popover.
+* @param handler - La función a ejecutar cuando se detecta un clic fuera.
+*/
 function useClickOutside(
   popoverRef: React.RefObject<HTMLElement | null>,
   anchorRef: React.RefObject<HTMLElement | null>,
@@ -51,6 +62,7 @@ function useClickOutside(
 ) {
   useEffect(() => {
     const listener = (event: MouseEvent | TouchEvent) => {
+      // No hacer nada si el clic es dentro del popover o su ancla.
       if (
         !popoverRef.current ||
         popoverRef.current.contains(event.target as Node) ||
@@ -69,6 +81,19 @@ function useClickOutside(
   }, [popoverRef, anchorRef, handler]);
 }
 
+/**
+* Un popover que aparece debajo de la barra de búsqueda global para mostrar
+* los resultados de Spotify (canciones, álbumes, playlists).
+*
+* Responsabilidades:
+* - Se posiciona dinámicamente debajo de la barra de búsqueda.
+* - Se cierra automáticamente al hacer clic fuera de él.
+* - Gestiona su propio estado de ordenación para los resultados.
+* - Muestra un estado de carga o un mensaje de "no se encontraron resultados".
+* - Renderiza el componente `SearchResultsDisplay` para mostrar la lista de resultados.
+*
+* @param {SearchResultsPopoverProps} props - Las props del componente.
+*/
 export default function SearchResultsPopover({
   query,
   results,
@@ -179,7 +204,7 @@ export default function SearchResultsPopover({
       )}
       
       {/* Contenido scrolleable del popover */}
-       <div>
+      <div>
       {isLoading && (
         <div className="flex items-center justify-center p-4">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

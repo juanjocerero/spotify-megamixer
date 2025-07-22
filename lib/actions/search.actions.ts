@@ -10,12 +10,19 @@ import {
   SpotifyTrack,
 } from '@/types/spotify';
 
+/**
+* La estructura de la respuesta de la API de búsqueda de Spotify.
+* @internal
+*/
 interface SpotifySearchResponse {
   playlists: { items: SpotifyPlaylist[] };
   albums: { items: SpotifyAlbum[] };
   tracks: { items: SpotifyTrack[] };
 }
 
+/**
+* La estructura de datos unificada para los resultados de búsqueda que se envían al cliente.
+*/
 export interface SearchResults {
   playlists: SpotifyPlaylist[];
   albums: SpotifyAlbum[];
@@ -23,10 +30,12 @@ export interface SearchResults {
 }
 
 /**
-* Busca en Spotify playlists, álbumes y canciones.
-* Filtra las playlists para excluir las del usuario actual.
-* @param query El término de búsqueda.
-* @returns Un ActionResult con los resultados de la búsqueda.
+* Server Action para buscar en Spotify playlists, álbumes y canciones.
+* Filtra las playlists de los resultados para excluir las que pertenecen al usuario actual.
+*
+* @param query - El término de búsqueda introducido por el usuario.
+* @returns Un `ActionResult` que contiene un objeto `SearchResults` con los resultados de la búsqueda.
+*          Si la `query` está vacía, devuelve un resultado exitoso con arrays vacíos.
 */
 export async function searchSpotifyAction(
   query: string
@@ -48,7 +57,7 @@ export async function searchSpotifyAction(
     const params = new URLSearchParams({
       q: query,
       type: 'playlist,album,track',
-      limit: '10',
+      limit: '10', // Limita los resultados por cada tipo
     });
     
     const response = await fetch(
@@ -67,7 +76,7 @@ export async function searchSpotifyAction(
     }
     
     const results: SpotifySearchResponse = await response.json();
-
+    
     // Filtramos las playlists para excluir las propias del usuario
     // y cualquier item nulo
     const filteredPlaylists = results.playlists.items.filter(

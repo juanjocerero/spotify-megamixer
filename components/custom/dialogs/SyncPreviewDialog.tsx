@@ -6,13 +6,23 @@ import { type ActionPlaylist } from '@/lib/hooks/usePlaylistActions';
 import ConfirmationDialog from '@/components/custom/dialogs/ConfirmationDialog';
 
 interface SyncPreviewDialogProps {
+  /** Controla si el diálogo está visible. */
   isOpen: boolean;
+  /** Las Megalistas que se van a sincronizar. */
   playlists: ActionPlaylist[];
+  /** Un objeto con el número de canciones a añadir y eliminar. */
   syncStats: { added: number; removed: number };
+  /** Función a llamar cuando el diálogo se cierra. */
   onClose: () => void;
+  /** Función a llamar para confirmar y ejecutar la sincronización. */
   onConfirm: () => void;
 }
 
+/**
+* Diálogo que muestra un resumen de los cambios que se aplicarán durante una sincronización.
+* Informa al usuario de cuántas canciones se añadirán y eliminarán.
+* Utiliza el componente genérico `ConfirmationDialog` para la estructura base.
+*/
 export default function SyncPreviewDialog({
   isOpen,
   playlists,
@@ -20,6 +30,7 @@ export default function SyncPreviewDialog({
   onClose,
   onConfirm,
 }: SyncPreviewDialogProps) {
+  
   const { isProcessing } = useActions();
   
   // La lógica de presentación compleja ahora vive aquí.

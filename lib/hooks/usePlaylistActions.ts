@@ -1,3 +1,4 @@
+// lib/hooks/usePlaylistActions.ts
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -25,6 +26,10 @@ import { shuffleArray } from '../utils';
 import { ActionResult, SpotifyPlaylist } from '@/types/spotify';
 import { OpenActionPayload } from './useDialogManager';
 
+/**
+* Define la estructura mínima de una playlist necesaria para realizar una acción.
+* Usado para pasar datos a los diálogos y a los manejadores de acciones.
+*/
 export type ActionPlaylist = { id: string; name: string };
 
 /**
@@ -50,6 +55,18 @@ export function usePlaylistActions(
     playlistCache,
   } = usePlaylistStore();
   
+  /**
+  * Ejecuta una única Server Action, gestionando el estado de carga y las notificaciones.
+  * @template T - El tipo de dato que la acción devuelve en caso de éxito.
+  * @template P - El tipo de los argumentos que la acción recibe.
+  * @param actionFn - La Server Action a ejecutar.
+  * @param params - Los argumentos para la Server Action.
+  * @param options - Configuración para los mensajes de toast y el callback de éxito.
+  * @param options.loading - Mensaje para la notificación de carga.
+  * @param options.success - Mensaje para la notificación de éxito.
+  * @param options.error - Mensaje para la notificación de error.
+  * @param options.onSuccess - Callback opcional que se ejecuta con el resultado si la acción es exitosa.
+  */
   const executeAction = useCallback(
     async <T, P extends unknown[]>(
       actionFn: (...args: P) => Promise<T>,
@@ -80,6 +97,15 @@ export function usePlaylistActions(
     [clearSelection],
   );
   
+  /**
+  * Ejecuta una Server Action en paralelo para un lote de elementos, gestionando el estado y las notificaciones.
+  * @template T - El tipo de dato que la acción devuelve en caso de éxito.
+  * @template P - El tipo de cada elemento en el lote.
+  * @param items - El array de elementos a procesar.
+  * @param actionFn - La Server Action a ejecutar para cada elemento.
+  * @param options - Configuración para los mensajes y el callback de éxito.
+  * @param options.onSuccess - Callback que se ejecuta con los resultados de todas las promesas.
+  */
   const executeBatchAction = useCallback(
     async <T, P>(
       items: P[],
@@ -113,6 +139,10 @@ export function usePlaylistActions(
   
   // Lógica de negocio (Handlers)
   
+  /**
+  * Maneja la creación de una nueva playlist vacía después de que el usuario introduce un nombre.
+  * @param playlistName - El nombre para la nueva playlist.
+  */
   const handleConfirmCreateEmpty = async (playlistName: string) => {
     dispatch({ type: 'CLOSE' });
     await executeAction(createEmptyMegalistAction, [playlistName], {
@@ -125,6 +155,12 @@ export function usePlaylistActions(
     });
   };
   
+  /**
+  * Maneja la actualización de los detalles (nombre, descripción) de una playlist.
+  * @param playlistId - El ID de la playlist a editar.
+  * @param newName - El nuevo nombre.
+  * @param newDescription - La nueva descripción.
+  */
   const handleConfirmEdit = async (
     playlistId: string,
     newName: string,
@@ -148,6 +184,11 @@ export function usePlaylistActions(
     );
   };
   
+  /**
+  * Maneja el cambio de estado de "congelación" de una Megalista.
+  * @param playlistId - El ID de la Megalista.
+  * @param shouldFreeze - `true` para congelar, `false` para descongelar.
+  */
   const handleConfirmFreeze = async (
     playlistId: string,
     shouldFreeze: boolean,
@@ -170,6 +211,10 @@ export function usePlaylistActions(
     });
   };
   
+  /**
+  * Maneja la eliminación (dejar de seguir) de una o varias playlists.
+  * @param playlists - Array de playlists a eliminar.
+  */
   const handleConfirmDelete = async (playlists: ActionPlaylist[]) => {
     dispatch({ type: 'CLOSE' });
     const idsToDelete = playlists.map(p => p.id);
@@ -181,6 +226,10 @@ export function usePlaylistActions(
     });
   };
   
+  /**
+  * Maneja el reordenado aleatorio de las canciones de una o varias playlists.
+  * @param playlists - Array de playlists a reordenar.
+  */
   const handleConfirmShuffle = async (playlists: ActionPlaylist[]) => {
     dispatch({ type: 'CLOSE' });
     const idsToShuffle = playlists.map(p => p.id);
@@ -191,6 +240,11 @@ export function usePlaylistActions(
     });
   };
   
+  /**
+  * Ejecuta la sincronización para un lote de Megalistas.
+  * @param playlists - Las Megalistas a sincronizar.
+  * @param shouldShuffle - Si las canciones deben reordenarse después de sincronizar.
+  */
   const handleExecuteSync = async (
     playlists: ActionPlaylist[],
     shouldShuffle: boolean,
@@ -219,8 +273,12 @@ export function usePlaylistActions(
     );
   };
   
-  // Flujo de Creación/Actualización de Megalistas ---
+  // Flujo de Creación/Actualización de Megalistas
   
+  /**
+  * Maneja la adición de tracks a una Megalista existente.
+  * @internal
+  */
   const _handleUpdateMode = async (props: {
     targetId: string;
     sourceIds: string[];
@@ -264,6 +322,10 @@ export function usePlaylistActions(
     }
   };
   
+  /**
+  * Añade el lote inicial de canciones a una Megalista nueva o reemplazada.
+  * @internal
+  */
   const _populateNewOrReplacedMegalist = async (
     playlistId: string,
     trackUris: string[],
@@ -277,6 +339,10 @@ export function usePlaylistActions(
     updatePlaylistInCache(playlistId, { trackCount: trackUris.length });
   };
   
+  /**
+  * Maneja el flujo de creación de una nueva Megalista desde cero.
+  * @internal
+  */
   const _handleCreationMode = async (props: {
     playlistName: string;
     sourceIds: string[];
@@ -309,6 +375,10 @@ export function usePlaylistActions(
     return { success: true, name: playlistName };
   };
   
+  /**
+  * Maneja el reemplazo completo de una Megalista existente.
+  * @internal
+  */
   const _handleReplaceMode = async (props: {
     targetId: string;
     playlistName: string;
@@ -322,6 +392,16 @@ export function usePlaylistActions(
     return { success: true, name: playlistName };
   };
   
+  /**
+  * Orquesta la creación, actualización o reemplazo de una Megalista.
+  * Es el punto de entrada para flujos complejos que involucran múltiples pasos y diálogos.
+  * @param props - Propiedades que definen la operación.
+  * @param props.mode - 'create', 'update' o 'replace'.
+  * @param props.playlistName - El nombre de la playlist.
+  * @param props.sourceIds - Los IDs de las playlists fuente.
+  * @param props.shouldShuffle - Si las canciones deben mezclarse.
+  * @param props.targetId - (Opcional) El ID de la Megalista a actualizar/reemplazar.
+  */
   const handleCreateOrUpdateMegalist = async (props: {
     sourceIds: string[];
     playlistName: string;
@@ -375,6 +455,14 @@ export function usePlaylistActions(
     }
   };
   
+  /**
+  * Maneja la creación o actualización de una playlist "Sorpresa".
+  * @param props - Propiedades para la creación.
+  * @param props.sourceIds - Playlists de origen para las canciones.
+  * @param props.targetTrackCount - Número de canciones en la lista final.
+  * @param props.playlistName - Nombre de la nueva lista.
+  * @param props.overwriteId - (Opcional) ID de una lista "Sorpresa" a sobrescribir.
+  */
   const handleCreateSurpriseMix = async (props: {
     sourceIds: string[];
     targetTrackCount: number;
@@ -403,6 +491,7 @@ export function usePlaylistActions(
       clearSelection();
     } else {
       const errorMessage = result.error;
+      // Si la playlist ya existe, la app ofrece sobrescribirla
       if (errorMessage.startsWith('PLAYLIST_EXISTS::')) {
         const existingId = errorMessage.split('::')[1];
         toast.dismiss(toastId);
@@ -417,6 +506,11 @@ export function usePlaylistActions(
     setIsProcessing(false);
   };
   
+  /**
+  * Maneja la adición de un conjunto de URIs de tracks a una Megalista específica.
+  * @param targetPlaylistId - La Megalista de destino.
+  * @param trackUris - Las URIs de las canciones a añadir.
+  */
   const handleConfirmAddTracks = async (targetPlaylistId: string, trackUris: string[]) => {
     dispatch({ type: 'CLOSE' });
     await executeAction(
@@ -435,18 +529,41 @@ export function usePlaylistActions(
     );
   };
   
-  // --- FUNCIONES PARA ABRIR DIÁLOGOS ---
+  // Funciones para abrir diálogos (API pública del hook)
   
+  /**
+  * Abre el diálogo para nombrar y crear una nueva Megalista vacía.
+  */
   const openCreateEmptyMegalistDialog = () => dispatch({ type: 'OPEN', payload: { variant: 'createEmpty' } });
+  
+  /**
+  * Abre el diálogo para editar los detalles de una playlist.
+  * @param playlist - El objeto completo de la playlist a editar.
+  */
   const openEditDialog = (playlist: SpotifyPlaylist) => dispatch({ type: 'OPEN', payload: { variant: 'edit', props: { playlist } } });
+  
+  /**
+  * Abre el diálogo de confirmación para eliminar una o varias playlists.
+  * @param playlists - Array de playlists a eliminar.
+  */
   const openDeleteDialog = (playlists: ActionPlaylist[]) => {
     if (playlists.length === 0) return;
     dispatch({ type: 'OPEN', payload: { variant: 'delete', props: { playlists } } });
   };
+  
+  /**
+  * Abre el diálogo de confirmación para reordenar las canciones de una o varias playlists.
+  * @param playlists - Array de playlists a reordenar.
+  */
   const openShuffleDialog = (playlists: ActionPlaylist[]) => {
     if (playlists.length === 0) return;
     dispatch({ type: 'OPEN', payload: { variant: 'shuffle', props: { playlists } } });
   };
+  
+  /**
+  * Abre el diálogo para confirmar la congelación o descongelación de una Megalista.
+  * @param playlist - La Megalista sobre la que se actuará.
+  */
   const openFreezeDialog = (playlist: SpotifyPlaylist) => {
     if (!playlist.isMegalist || playlist.playlistType !== 'MEGALIST') {
       toast.error('Esta acción solo está disponible para Megalistas.');
@@ -454,6 +571,11 @@ export function usePlaylistActions(
     }
     dispatch({ type: 'OPEN', payload: { variant: 'freezeConfirmation', props: { playlist } } });
   };
+  
+  /**
+  * Inicia el flujo de sincronización: calcula los cambios y, si hay, abre el diálogo de previsualización.
+  * @param playlists - Array de Megalistas a sincronizar.
+  */
   const openSyncDialog = async (playlists: ActionPlaylist[]) => {
     if (playlists.length === 0) return;
     setIsProcessing(true);
@@ -475,6 +597,11 @@ export function usePlaylistActions(
       setIsProcessing(false);
     }
   };
+  
+  /**
+  * Abre el diálogo para nombrar una nueva Megalista a partir de una selección.
+  * @param sourceIds - IDs de las playlists fuente.
+  */
   const openCreateMegalistDialog = (sourceIds: string[]) => {
     if (sourceIds.length < 2) {
       toast.info('Selecciona al menos 2 playlists para crear una Megalista.');
@@ -482,6 +609,11 @@ export function usePlaylistActions(
     }
     dispatch({ type: 'OPEN', payload: { variant: 'createName', props: { sourceIds } } });
   };
+  
+  /**
+  * Abre el diálogo para seleccionar una Megalista existente a la cual añadir otras playlists.
+  * @param sourceIds - IDs de las playlists que se añadirán como fuente.
+  */
   const openAddToMegalistDialog = (sourceIds: string[]) => {
     if (sourceIds.length === 0) return;
     const existingMegalists = playlistCache.filter(p => p.playlistType === 'MEGALIST');
@@ -491,6 +623,14 @@ export function usePlaylistActions(
     }
     dispatch({ type: 'OPEN', payload: { variant: 'addToSelect', props: { sourceIds } } });
   };
+  
+  /**
+  * Inicia el flujo para crear una "Lista Sorpresa".
+  * Si no se proporcionan IDs, abre el diálogo global.
+  * Si se proporcionan, calcula las pistas únicas y abre el diálogo específico.
+  * @param sourceIds - (Opcional) IDs de las playlists fuente.
+  */
+  
   const openSurpriseMixDialog = async (sourceIds?: string[]) => {
     setIsProcessing(true);
     const toastId = toast.loading("Preparando el generador de sorpresas...");
@@ -509,6 +649,11 @@ export function usePlaylistActions(
       setIsProcessing(false);
     }
   };
+  
+  /**
+  * Abre el diálogo para seleccionar una Megalista a la que añadir un conjunto de canciones.
+  * @param trackUris - URIs de las canciones a añadir.
+  */
   const openAddTracksDialog = (trackUris: string[]) => {
     const existingMegalists = playlistCache.filter(p => p.playlistType === 'MEGALIST');
     if (existingMegalists.length === 0) {
@@ -520,7 +665,7 @@ export function usePlaylistActions(
   
   return {
     isProcessing,
-    // Handlers de Lógica
+    // Handlers de Lógica (internos al patrón, llamados por ActionProvider)
     handleConfirmCreateEmpty,
     handleConfirmEdit,
     handleConfirmDelete,
@@ -530,7 +675,7 @@ export function usePlaylistActions(
     handleCreateOrUpdateMegalist,
     handleCreateSurpriseMix,
     handleConfirmAddTracks,
-    // Openers de Diálogos
+    // Openers de Diálogos (API pública para los componentes de UI)
     openCreateEmptyMegalistDialog,
     openEditDialog,
     openDeleteDialog,

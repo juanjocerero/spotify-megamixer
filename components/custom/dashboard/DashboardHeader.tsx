@@ -1,3 +1,4 @@
+// /components/custom/DashboardHeader.tsx
 'use client';
 
 import { useRef } from 'react';
@@ -24,32 +25,39 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import SearchResultsPopover from './search/SearchResultsPopover';
+import SearchResultsPopover from '../search/SearchResultsPopover';
 import { SortOption, sortLabels } from './DashboardClient'; // Reutilizamos los tipos
 
 interface DashboardHeaderProps {
+  // Props para el filtro local
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  sortOption: SortOption;
-  setSortOption: (option: SortOption) => void;
-  showOnlySelected: boolean;
-  setShowOnlySelected: (show: boolean) => void;
   filteredIds: string[];
   areAllFilteredSelected: boolean;
   handleSelectAllFiltered: () => void;
+  // Props para la ordenación
+  sortOption: SortOption;
+  setSortOption: (option: SortOption) => void;
+  // Props para el switch de selección
+  showOnlySelected: boolean;
+  setShowOnlySelected: (show: boolean) => void;
+  // Props para la búsqueda global
   followedPlaylistIds: string[];
 }
 
 /**
-* Componente que renderiza la cabecera "sticky" del dashboard.
-* Encapsula todos los controles de usuario para la interacción principal:
-* - Filtro local de playlists.
-* - Menú de ordenación de playlists locales.
-* - Búsqueda global en Spotify (usando `useSpotifySearch`).
-* - Conmutador para mostrar solo las playlists seleccionadas.
-*
-* @param {DashboardHeaderProps} props - El estado y los callbacks gestionados por `DashboardClient`.
-*/
+ * Componente que renderiza la cabecera "sticky" del dashboard.
+ * Encapsula todos los controles de usuario para la interacción principal con la lista de playlists.
+ *
+ * Responsabilidades:
+ * - **Filtro Local:** Proporciona un `Input` para filtrar en tiempo real las playlists del usuario.
+ * - **Ordenación Local:** Ofrece un `DropdownMenu` para cambiar el orden de las playlists mostradas.
+ * - **Búsqueda Global:** Integra el hook `useSpotifySearch` para buscar en todo Spotify. Muestra los resultados en `SearchResultsPopover`.
+ * - **Control de Selección:** Incluye un `Switch` para alternar la vista entre todas las playlists y solo las seleccionadas.
+ * - **Acciones de Búsqueda:** Proporciona botones para limpiar la búsqueda y seleccionar/deseleccionar todos los resultados del filtro.
+ *
+ * @param {DashboardHeaderProps} props - El estado y los callbacks necesarios, gestionados por el componente padre `DashboardClient`.
+ */
 export default function DashboardHeader({
   searchTerm,
   setSearchTerm,
@@ -62,15 +70,19 @@ export default function DashboardHeader({
   handleSelectAllFiltered,
   followedPlaylistIds,
 }: DashboardHeaderProps) {
-  const spotifySearchRef = useRef<HTMLInputElement>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+    // Hook para la lógica de búsqueda global en Spotify
   const {
     query: spotifyQuery,
     setQuery: setSpotifyQuery,
     results,
     isLoading,
   } = useSpotifySearch();
-  
+
+  // Referencias para posicionar el popover de búsqueda
+  const spotifySearchRef = useRef<HTMLInputElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
   return (
     <div className="sticky top-0 z-40 bg-gray-900/80 py-4 backdrop-blur-md">
     <div className="flex flex-col sm:flex-row items-center gap-4">

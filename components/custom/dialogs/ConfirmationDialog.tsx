@@ -1,3 +1,4 @@
+// /components/custom/dialogs/ConfirmationDialog.tsx
 'use client';
 
 import {
@@ -13,34 +14,31 @@ import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
+
 interface ConfirmationDialogProps {
-  // Controla si el diálogo está visible o no.
+  /** Controla si el diálogo está visible. */
   isOpen: boolean;
-  // Función que se llama cuando el diálogo se cierra sin tomar una decisión (ej. clic en Cancelar, fuera o tecla Esc).
+  /** Función a llamar cuando el diálogo se cierra sin confirmar (Cancelar, Esc, clic fuera). */
   onClose: () => void;
-  // Función que se ejecuta cuando el usuario hace clic en el botón de confirmación.
+  /** Función a llamar cuando el usuario hace clic en el botón de confirmación. */
   onConfirm: () => void;
-  // El título principal del diálogo.
+  /** El título principal del diálogo. */
   title: string;
-  // El cuerpo del diálogo. Puede ser un string o JSX para descripciones más ricas.
+  /** El cuerpo del diálogo. Puede ser un string o JSX para contenido más rico. */
   description: React.ReactNode;
-  /**
-  * El texto que se mostrará en el botón de confirmación.
-  * @default "Confirmar"
-  */
+  /** El texto para el botón de confirmación. @default "Confirmar" */
   confirmButtonText?: string;
-  /**
-  * El estilo del botón de confirmación (ej. 'destructive' para rojo, 'default' para el color primario).
-  * @default "default"
-  */
+  /** El estilo del botón de confirmación. @default "default" */
   confirmButtonVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
-  /**
-  * Si es `true`, muestra un spinner en el botón de confirmación y deshabilita ambos botones.
-  * @default false
-  */
+  /** Si es `true`, muestra un spinner y deshabilita los botones. @default false */
   isLoading?: boolean;
 }
 
+/**
+* Un componente de diálogo de confirmación genérico y reutilizable.
+* Se utiliza para acciones que requieren una segunda validación del usuario,
+* como eliminaciones o acciones irreversibles.
+*/
 export default function ConfirmationDialog({
   isOpen,
   onClose,

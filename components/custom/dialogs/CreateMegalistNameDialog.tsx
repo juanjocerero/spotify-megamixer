@@ -13,11 +13,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface CreateMegalistNameDialogProps {
+  /** Controla si el diálogo está visible. */
   isOpen: boolean;
+  /** Función a llamar cuando el diálogo se cierra sin confirmar. */
   onClose: () => void;
+  /** Función a llamar al confirmar, pasando el nombre introducido por el usuario. */
   onConfirm: (playlistName: string) => void;
 }
 
+/**
+* Diálogo simple que solicita al usuario un nombre para una nueva playlist que se va a crear.
+* Gestiona su propio estado interno para el campo de texto.
+*/
 export default function CreateMegalistNameDialog({
   isOpen,
   onClose,

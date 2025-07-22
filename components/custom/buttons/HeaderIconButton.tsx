@@ -9,9 +9,17 @@ import {
 import React from 'react';
 
 interface HeaderIconButtonProps extends React.ComponentProps<typeof Button> {
+  /** El texto o nodo React que se mostrará dentro del tooltip. */
   tooltipText: React.ReactNode;
 }
 
+/**
+* Un componente de botón de icono reutilizable diseñado para la cabecera principal de la página.
+* Combina un `Button` (con estilos predefinidos `variant="ghost"` y `size="icon"`)
+* con un `Tooltip` para una UI limpia y accesible.
+*
+* @param {HeaderIconButtonProps} props - Las props del componente.
+*/
 export default function HeaderIconButton({
   tooltipText,
   children,

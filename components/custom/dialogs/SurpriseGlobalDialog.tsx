@@ -14,11 +14,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 interface SurpriseGlobalDialogProps {
+  /** Controla si el diálogo está visible. */
   isOpen: boolean;
+  /** Función a llamar cuando el diálogo se cierra. */
   onClose: () => void;
+  /** Función a llamar al confirmar, pasando el número de playlists a usar. */
   onConfirm: (count: number) => void;
 }
 
+/**
+* Diálogo para el flujo de "Megalista Sorpresa Global".
+* Pregunta al usuario de cuántas de sus playlists (elegidas al azar)
+* quiere tomar las canciones para la mezcla.
+*/
 export default function SurpriseGlobalDialog({
   isOpen,
   onClose,

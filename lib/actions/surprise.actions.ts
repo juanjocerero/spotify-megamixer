@@ -1,4 +1,4 @@
-// lib/actions/surprise.actions.ts (NUEVO FICHERO)
+// lib/actions/surprise.actions.ts
 
 'use server';
 import { auth } from '@/auth';
@@ -9,13 +9,22 @@ import { findUserPlaylistByName, replacePlaylistTracks, createNewPlaylist, getPl
 import { getTrackUris } from './spotify.actions';
 
 /**
-* Crea o sobrescribe una playlist "Sorpresa".
-* - Si no se provee `playlistIdToOverwrite`, crea una nueva playlist.
-* - Si se provee, sobrescribe la playlist existente con ese ID.
-* @param sourcePlaylistIds - IDs de las playlists de las que obtener canciones.
-* @param targetTrackCount - Número de canciones que tendrá la playlist final.
-* @param newPlaylistName - Nombre para la nueva playlist (o para renombrar la existente, aunque la API de Spotify no lo soporte en una sola llamada).
-* @param playlistIdToOverwrite - (Opcional) El ID de la playlist a sobrescribir.
+* Server Action para crear o sobrescribir una playlist "Sorpresa".
+*
+* Esta función orquesta todo el proceso:
+* 1. Obtiene un conjunto de canciones únicas de las `sourcePlaylistIds`.
+* 2. Selecciona aleatoriamente un número `targetTrackCount` de esas canciones.
+* 3. Si no se provee `playlistIdToOverwrite`, crea una nueva playlist con esas canciones.
+*    - Antes de crear, comprueba si ya existe una playlist con el mismo nombre. Si es así,
+*      retorna un error específico `PLAYLIST_EXISTS::id` para que la UI pueda ofrecer sobrescribirla.
+* 4. Si se provee `playlistIdToOverwrite`, reemplaza completamente las canciones de esa playlist.
+* 5. Utiliza `upsert` para crear o actualizar el registro en la base de datos local, marcándolo con el tipo `SURPRISE`.
+*
+* @param sourcePlaylistIds - IDs de las playlists de las que se obtendrán las canciones.
+* @param targetTrackCount - El número de canciones aleatorias que tendrá la playlist final.
+* @param newPlaylistName - El nombre para la playlist.
+* @param playlistIdToOverwrite - (Opcional) El ID de la playlist "Sorpresa" a sobrescribir. Si se omite, se crea una nueva.
+* @returns Un `ActionResult` con el objeto de la playlist creada o actualizada y enriquecida para la caché del cliente.
 */
 export async function createOrUpdateSurpriseMixAction(
   sourcePlaylistIds: string[],

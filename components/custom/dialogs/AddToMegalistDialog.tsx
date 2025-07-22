@@ -24,18 +24,29 @@ import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AddToMegalistDialogProps {
+  /** Controla si el diálogo está visible. */
   isOpen: boolean;
+  /** Función a llamar cuando el diálogo se cierra (ej. clic fuera, Esc). */
   onClose: () => void;
+  /** Función a llamar cuando el usuario confirma la selección, pasando el ID de la Megalista de destino. */
   onConfirm: (targetId: string) => void;
+  /** Si es `true`, el diálogo se adapta para el flujo de añadir pistas sueltas, mostrando validaciones adicionales. */
   isAddingTracks?: boolean;
 }
 
+/**
+* Diálogo que permite al usuario seleccionar una Megalista existente de una lista desplegable.
+* Se utiliza en dos flujos:
+* 1.  Para añadir playlists completas como nuevas fuentes a una Megalista.
+* 2.  Para añadir canciones sueltas (desde la búsqueda) a una Megalista (`isAddingTracks = true`).
+*/
 export default function AddToMegalistDialog({
   isOpen,
   onClose,
   onConfirm, 
   isAddingTracks = false,
 }: AddToMegalistDialogProps) {
+  
   // Obtenemos las Megalistas directamente desde el store
   const { playlistCache } = usePlaylistStore();
   
@@ -50,6 +61,7 @@ export default function AddToMegalistDialog({
     setSelectedId(id);
     setError(null); // Limpiar error al cambiar la selección
     
+    // Validaciones específicas para cuando se añaden pistas sueltas
     if (isAddingTracks) {
       const selectedPlaylist = megalists.find(p => p.id === id);
       if (selectedPlaylist?.isFrozen) {

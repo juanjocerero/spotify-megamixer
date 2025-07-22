@@ -14,12 +14,21 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 
 interface SurpriseTargetedDialogProps {
+  /** Controla si el diálogo está visible. */
   isOpen: boolean;
+  /** El número total de canciones únicas disponibles en la selección. */
   uniqueTrackCount: number;
+  /** Función a llamar cuando el diálogo se cierra. */
   onClose: () => void;
+  /** Función a llamar al confirmar, pasando el número de canciones elegidas. */
   onConfirm: (trackCount: number) => void;
 }
 
+/**
+* Diálogo para el flujo de "Lista Sorpresa" a partir de una selección de playlists.
+* Permite al usuario elegir cuántas canciones aleatorias (de entre las disponibles)
+* quiere que tenga la nueva lista, utilizando un slider.
+*/
 export default function SurpriseTargetedDialog({
   isOpen,
   uniqueTrackCount,

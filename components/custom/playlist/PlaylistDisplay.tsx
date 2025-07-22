@@ -5,12 +5,12 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 
-import { ListFooterLoader } from './skeletons/ListFooterLoader';
+import { ListFooterLoader } from '../skeletons/ListFooterLoader';
 
 import { SpotifyPlaylist } from '@/types/spotify';
 import { usePlaylistStore } from '@/lib/store';
 import { usePlaylistKeyboardNavigation } from '@/lib/hooks/usePlaylistKeyboardNavigation';
-import TrackDetailView from './TrackDetailView';
+import TrackDetailView from '../TrackDetailView';
 import PlaylistItem from './PlaylistItem';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
@@ -27,6 +27,26 @@ interface PlaylistDisplayProps {
   sortOption: SortOption;
 }
 
+
+/**
+* Componente encargado de renderizar la lista de playlists del usuario.
+*
+* Responsabilidades:
+* - **Filtrado y Ordenación:** Aplica la lógica de ordenación (`sortOption`) y
+*   filtrado (`searchTerm`, `showOnlySelected`) sobre la caché de playlists de Zustand.
+*   Utiliza `Fuse.js` para una búsqueda "fuzzy" eficiente.
+* - **Virtualización:** Emplea `@tanstack/react-virtual` (`useVirtualizer`) para renderizar
+*   solo los elementos visibles en la pantalla, garantizando un alto rendimiento incluso
+*   con miles de playlists.
+* - **Scroll Infinito:** Detecta cuándo el usuario se acerca al final de la lista y llama
+*   a la función `onLoadMore` para cargar la siguiente página de resultados.
+* - **Navegación por Teclado:** Integra `usePlaylistKeyboardNavigation` para permitir
+*   la navegación y selección de playlists con las flechas y la barra espaciadora.
+* - **Vista de Canciones:** Gestiona la apertura de un `Sheet` para mostrar los
+*   detalles de las canciones de una playlist en el componente `TrackDetailView`.
+*
+* @param {PlaylistDisplayProps} props - El estado y los callbacks del `DashboardClient`.
+*/
 export default function PlaylistDisplay({
   isLoadingMore, 
   nextUrl,
@@ -63,7 +83,10 @@ export default function PlaylistDisplay({
     []
   );
   
-  // El filtrado depende de los parámetros de ordenación primero y luego con el filtrado y la búsqueda
+  /**
+  * Memoiza la lista final de playlists a renderizar, aplicando la ordenación
+  * y los filtros correspondientes.
+  */
   const filteredPlaylists = useMemo(() => {
     // Hacemos una copia para no mutar la caché original
     const sortedItems = [...playlistCache];

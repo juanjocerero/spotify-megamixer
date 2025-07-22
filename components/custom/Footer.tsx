@@ -1,3 +1,4 @@
+// /components/custom/Footer.tsx
 'use client';
 
 import { useState } from 'react';
@@ -7,6 +8,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Mail, Code } from 'lucide-react';
 import ContactForm from './ContactForm';
 
+
+/**
+ * Componente que renderiza el pie de página de la aplicación.
+ *
+ * Responsabilidades:
+ * - Mostrar información de autoría.
+ * - Proporcionar enlaces al repositorio de GitHub y un botón para abrir el formulario de contacto.
+ * - Gestionar el estado de visibilidad (`isContactOpen`) del modal del formulario de contacto.
+ */
 export default function Footer() {
   const [isContactOpen, setIsContactOpen] = useState(false);
   

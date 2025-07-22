@@ -21,9 +21,10 @@ import { MegalistClientData } from '@/types/spotify';
 import { Megalist } from '@prisma/client';
 
 /**
-* Encapsula la lógica de carga inicial de datos
-* Su objetivo es mostrar el skeleton UI
-* @returns Un ActionResult con una lista de playlists
+* Server Action para obtener los datos iniciales necesarios para el dashboard.
+* Recupera las primeras 50 playlists del usuario desde Spotify y las enriquece
+* con metadatos de la base de datos local (ej. si es una Megalista).
+* @returns Un `ActionResult` que contiene un objeto con las playlists iniciales y la URL para la siguiente página de resultados.
 */
 export async function getInitialDashboardDataAction(): Promise<
 ActionResult<{
@@ -37,6 +38,7 @@ ActionResult<{
   }
   
   try {
+    // Obtener megalistas de la DB para este usuario
     const userMegalists = await db.megalist.findMany({
       where: { spotifyUserId: session.user.id },
     });
@@ -53,9 +55,11 @@ ActionResult<{
       ])
     );
     
+    // Obtener la primera página de playlists de Spotify
     const initialData = await getUserPlaylists(session.accessToken);
     const initialPlaylists = initialData.items;
     
+    // Enriquecer los datos de Spotify con los de la DB
     const finalPlaylists: SpotifyPlaylist[] = initialPlaylists.map(p => {
       const megalistData = megalistDataMap.get(p.id);
       if (megalistData) {
@@ -84,12 +88,13 @@ ActionResult<{
 
 
 /**
-* Encuentra o crea la playlist de destino.
-* Puede forzar la creación sin metadatos de sincronización si la descripción es muy larga.
-* @param name - El nombre de la playlist.
-* @param sourcePlaylistIds - Los IDs de las playlists de origen.
-* @param forceNoSync - Si es true, la playlist se creará sin los metadatos de las fuentes.
-* @returns Un objeto con el ID de la playlist y un booleano 'exists'.
+* Busca una playlist del usuario por su nombre. Si no la encuentra, crea una nueva.
+* Si la crea, también la registra en la base de datos como una Megalista.
+* @param name - El nombre de la playlist a buscar o crear.
+* @param sourcePlaylistIds - Los IDs de las playlists fuente, para almacenar en la DB si se crea una nueva.
+* @param initialTrackCount - El número inicial de canciones que tendrá la playlist.
+* @returns Un objeto que contiene el objeto de la playlist (creada o encontrada) y un booleano `exists`.
+* @throws Si el usuario no está autenticado.
 */
 export async function findOrCreatePlaylist(
   name: string,
@@ -156,6 +161,12 @@ export async function findOrCreatePlaylist(
   }
 }
 
+/**
+* Calcula el número de canciones únicas a partir de un array de IDs de playlists.
+* @param playlistIds - Un array de IDs de playlists de las cuales extraer las canciones.
+* @returns El número total de canciones únicas.
+* @throws Si ocurre un error durante la obtención de las URIs.
+*/
 export async function getUniqueTrackCountFromPlaylistsAction(
   playlistIds: string[],
 ): Promise<number> {
@@ -175,12 +186,10 @@ export async function getUniqueTrackCountFromPlaylistsAction(
 /**
 * Añade un conjunto de URIs de canciones a una playlist específica y actualiza
 * el recuento de pistas en la base de datos si es una Megalista registrada.
-* Esta acción NO modifica las 'sourcePlaylistIds'.
-*
-* @param {object} params - Los parámetros para la acción.
-* @param {string} params.playlistId - El ID de la playlist a la que se añadirán las canciones.
-* @param {string[]} params.trackUris - Un array de URIs de las canciones a añadir.
-* @returns Un ActionResult con el nuevo recuento total de canciones.
+* @param params - Los parámetros para la acción.
+* @param params.playlistId - El ID de la playlist a la que se añadirán las canciones.
+* @param params.trackUris - Un array de URIs de las canciones a añadir.
+* @returns Un `ActionResult` con el nuevo recuento total de canciones.
 */
 export async function addTracksToPlaylistAction({
   playlistId,
@@ -229,7 +238,10 @@ export async function addTracksToPlaylistAction({
 }
 
 /**
-* Añade un lote de canciones a una playlist.
+* Añade un lote de canciones a una playlist en Spotify. Es un helper interno.
+* @param playlistId - El ID de la playlist de destino.
+* @param trackUrisBatch - Un array de URIs de canciones para añadir.
+* @throws Si el usuario no está autenticado o si la API de Spotify falla.
 */
 export async function addTracksBatch(
   playlistId: string,
@@ -250,6 +262,14 @@ export async function addTracksBatch(
   }
 }
 
+/**
+* Actualiza una Megalista existente añadiendo canciones de nuevas playlists fuente.
+* Evita añadir duplicados y puede reordenar la lista final si se solicita.
+* @param targetPlaylistId - El ID de la Megalista a actualizar.
+* @param newSourceIds - Los IDs de las playlists fuente que se van a añadir.
+* @param shouldShuffle - Si se debe reordenar la playlist después de añadir las canciones.
+* @returns Un `ActionResult` con el recuento final y el número de canciones añadidas.
+*/
 export async function addTracksToMegalistAction(
   targetPlaylistId: string,
   newSourceIds: string[], 
@@ -323,8 +343,10 @@ export async function addTracksToMegalistAction(
 }
 
 /**
-* Deja de seguir (elimina de la librería del usuario) una playlist.
-* @param playlistId - El ID de la playlist a dejar de seguir.
+* Deja de seguir (elimina de la librería) una playlist en Spotify
+* y elimina sus registros correspondientes de la base de datos local.
+* @param playlistIds - Un array de IDs de playlists a dejar de seguir.
+* @throws Si el usuario no está autenticado.
 */
 export async function unfollowPlaylist(playlistId: string): Promise<void> {
   try {
@@ -368,7 +390,10 @@ export async function unfollowPlaylist(playlistId: string): Promise<void> {
 }
 
 /**
-* Deja de seguir (elimina) un lote de playlists de la librería del usuario.
+* Deja de seguir (elimina de la librería) un lote de playlists en Spotify
+* y elimina sus registros correspondientes de la base de datos local.
+* @param playlistIds - Un array de IDs de playlists a dejar de seguir.
+* @throws Si el usuario no está autenticado.
 */
 export async function unfollowPlaylistsBatch(playlistIds: string[]): Promise<void> {
   try {
@@ -400,6 +425,11 @@ export async function unfollowPlaylistsBatch(playlistIds: string[]): Promise<voi
   }
 }
 
+/**
+* Reordena aleatoriamente las canciones dentro de una o varias playlists.
+* @param playlistIds - Un array de IDs de las playlists a reordenar.
+* @throws Si el usuario no está autenticado o si la API de Spotify falla.
+*/
 export async function shufflePlaylistsAction(playlistIds: string[]): Promise<void> {
   console.log(`[ACTION:shufflePlaylistsAction] Iniciando reordenado para ${playlistIds.length} playlist(s).`);
   try {
@@ -436,7 +466,11 @@ export async function shufflePlaylistsAction(playlistIds: string[]): Promise<voi
 }
 
 /**
-* Actualiza los detalles de una playlist (nombre/descripción) en Spotify.
+* Actualiza los detalles (nombre y/o descripción) de una playlist en Spotify.
+* @param playlistId - El ID de la playlist a actualizar.
+* @param newName - El nuevo nombre para la playlist.
+* @param newDescription - La nueva descripción para la playlist.
+* @throws Si el usuario no está autenticado.
 */
 export async function updatePlaylistDetailsAction(
   playlistId: string,
@@ -465,6 +499,7 @@ export async function updatePlaylistDetailsAction(
 
 /**
 * Acción para vaciar una playlist.
+* @throws Si el usuario no está autenticado.
 */
 export async function clearPlaylist(playlistId: string) {
   try {
@@ -479,7 +514,13 @@ export async function clearPlaylist(playlistId: string) {
   }
 }
 
-// Maneja el estado de 'congelación' (no sincronizable) de una megalista
+/**
+* Cambia el estado de "congelación" de una Megalista en la base de datos.
+* Una Megalista congelada no es elegible para la sincronización.
+* @param playlistId - El ID de la Megalista a modificar.
+* @param freeze - `true` para congelar, `false` para descongelar.
+* @returns Un `ActionResult` con el ID y el nuevo estado `isFrozen`.
+*/
 export async function toggleFreezeStateAction(
   playlistId: string,
   freeze: boolean
@@ -518,9 +559,9 @@ export async function toggleFreezeStateAction(
 
 /**
 * Crea una nueva playlist vacía en Spotify y la registra en la base de datos
-* como una Megalista no sincronizable (congelada por defecto).
-* @param name El nombre de la nueva playlist.
-* @returns Un ActionResult con el objeto de la playlist creada y enriquecida.
+* como una Megalista congelada y sin fuentes.
+* @param name - El nombre para la nueva playlist.
+* @returns Un `ActionResult` con el objeto de la playlist creada y enriquecida.
 */
 export async function createEmptyMegalistAction(
   name: string

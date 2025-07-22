@@ -1,3 +1,4 @@
+// /components/custom/dialogs/ShuffleChoiceDialog.tsx
 'use client';
 
 import {
@@ -11,19 +12,23 @@ import {
 import { Button } from '@/components/ui/button';
 
 interface ShuffleChoiceDialogProps {
-  // Controla si el diálogo está visible o no.
+  /** Controla si el diálogo está visible. */
   isOpen: boolean;
-  // Función que se llama cuando el diálogo se cierra sin tomar una decisión (ej. clic fuera o tecla Esc).
+  /** Función a llamar cuando el diálogo se cierra sin tomar una decisión. */
   onClose: () => void;
-  // Función callback que se ejecuta cuando el usuario elige una opción.
-  // Recibe `true` si elige "Reordenar" y `false` si elige "Mantener Orden".
+  /** Callback que se ejecuta al elegir una opción. Recibe `true` para "Reordenar" y `false` para "Mantener Orden". */
   onConfirm: (shouldShuffle: boolean) => void;
-  // Título opcional para el diálogo.
+  /** Título opcional para el diálogo. */
   title?: string;
-  // Descripción opcional para el diálogo. Puede ser un string o un componente React.
+  /** Descripción opcional para el diálogo. */
   description?: React.ReactNode;
 }
 
+
+/**
+* Diálogo que presenta al usuario la opción de mantener el orden original de las canciones
+* o reordenarlas aleatoriamente. Se reutiliza en varios flujos (creación, actualización, sincronización).
+*/
 export default function ShuffleChoiceDialog({
   isOpen,
   onClose,

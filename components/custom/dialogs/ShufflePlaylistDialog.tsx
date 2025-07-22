@@ -6,12 +6,20 @@ import { type ActionPlaylist } from '@/lib/hooks/usePlaylistActions';
 import ConfirmationDialog from '@/components/custom/dialogs/ConfirmationDialog';
 
 interface ShufflePlaylistDialogProps {
+  /** Controla si el diálogo está visible. */
   isOpen: boolean;
+  /** Las playlists cuyas canciones se van a reordenar. */
   playlists: ActionPlaylist[];
+  /** Función a llamar cuando el diálogo se cierra. */
   onClose: () => void;
+  /** Función a llamar para confirmar la acción de reordenado. */
   onConfirm: () => void;
 }
 
+/**
+* Diálogo de confirmación para la acción de reordenar las canciones de una o más playlists.
+* Utiliza el componente genérico `ConfirmationDialog` con textos y estilos específicos.
+*/
 export default function ShufflePlaylistDialog({
   isOpen,
   playlists,

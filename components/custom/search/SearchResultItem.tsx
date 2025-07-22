@@ -18,26 +18,39 @@ import {
   SpotifyTrack,
 } from '@/types/spotify';
 
-// La estructura ahora usa 'data', igual que en el componente padre.
+/**
+* Define la estructura de un único resultado de búsqueda usando una unión discriminada.
+* La propiedad `type` determina la forma de `data`.
+*/
 export type SearchResultItemType =
 | { type: 'track'; data: SpotifyTrack }
 | { type: 'album'; data: SpotifyAlbum }
 | { type: 'playlist'; data: SpotifyPlaylist };
 
 interface SearchResultItemProps {
-  // El prop se llama ahora `itemData` para mayor claridad.
+  /** El objeto de datos del resultado de búsqueda a renderizar. */
   itemData: SearchResultItemType;
+  /** Callback que se invoca cuando el usuario hace clic en el botón de añadir (+). */
   onAdd: (itemData: SearchResultItemType) => void;
+  /** `true` si se está procesando una acción sobre este item (ej. obteniendo tracks de un álbum). */
   isAdding: boolean;
+  /** Un array de IDs de las playlists que el usuario ya sigue, para mostrar el indicador de "check". */
   followedPlaylistIds: string[];
 }
 
+/**
+* Componente que renderiza una única fila en el popover de resultados de la búsqueda global.
+* Es capaz de mostrar diferentes tipos de contenido (canción, álbum, playlist) de forma unificada.
+*
+* @param {SearchResultItemProps} props - Las props del componente.
+*/
 export default function SearchResultItem({
   itemData,
   onAdd,
   isAdding,
   followedPlaylistIds,
 }: SearchResultItemProps) {
+  
   // Desestructuramos `itemData` y usamos `data` internamente.
   const { type, data } = itemData;
   const isFollowed = type === 'playlist' && followedPlaylistIds.includes(data.id);
@@ -47,6 +60,7 @@ export default function SearchResultItem({
   let fallbackIcon: React.ReactNode;
   let typeIcon: React.ReactNode;
   
+  // Adapta la UI según el tipo de resultado
   switch (type) {
     case 'track':
     imageUrl = data.album.images?.[0]?.url;

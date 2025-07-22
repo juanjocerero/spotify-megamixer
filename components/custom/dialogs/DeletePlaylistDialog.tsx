@@ -6,12 +6,21 @@ import { type ActionPlaylist } from '@/lib/hooks/usePlaylistActions';
 import ConfirmationDialog from '@/components/custom/dialogs/ConfirmationDialog';
 
 interface DeletePlaylistDialogProps {
+  /** Controla si el diálogo está visible. */
   isOpen: boolean;
+  /** Las playlists que van a ser eliminadas. */
   playlists: ActionPlaylist[];
+  /** Función a llamar cuando el diálogo se cierra. */
   onClose: () => void;
+  /** Función a llamar para confirmar la eliminación. */
   onConfirm: () => void;
 }
 
+/**
+* Diálogo de confirmación específico para la acción de eliminar (dejar de seguir) playlists.
+* Utiliza el componente genérico `ConfirmationDialog` para renderizar la UI,
+* proporcionándole un título, descripción y estilo de botón apropiados.
+*/
 export default function DeletePlaylistDialog({
   isOpen,
   playlists,

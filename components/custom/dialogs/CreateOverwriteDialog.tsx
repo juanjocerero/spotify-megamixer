@@ -12,12 +12,21 @@ import {
 import { Button } from '@/components/ui/button';
 
 interface CreateOverwriteDialogProps {
+  /** Controla si el diálogo está visible. */
   isOpen: boolean;
+  /** El nombre de la playlist que ya existe. */
   playlistName: string;
+  /** Función a llamar cuando el diálogo se cierra. */
   onClose: () => void;
+  /** Función a llamar al confirmar, pasando el modo elegido ('update' o 'replace'). */
   onConfirm: (mode: 'update' | 'replace') => void;
 }
 
+/**
+* Diálogo que se muestra cuando un usuario intenta crear una Megalista con un nombre
+* que ya existe. Le ofrece dos opciones: añadir las canciones a la existente ('update')
+* o reemplazarla por completo ('replace').
+*/
 export default function CreateOverwriteDialog({
   isOpen,
   playlistName,

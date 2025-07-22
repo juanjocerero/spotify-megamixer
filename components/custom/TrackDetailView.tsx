@@ -1,3 +1,4 @@
+// /components/custom/TrackDetailView.tsx
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
@@ -5,16 +6,36 @@ import { Loader2, Music } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getPlaylistTracksDetailsAction } from '@/lib/actions/spotify.actions';
 
+/**
+* La estructura simplificada de un track, optimizada para la visualización.
+*/
 interface Track {
   name: string;
   artists: string;
 }
 
 interface TrackDetailViewProps {
+  /** El ID de la playlist de la que se mostrarán las canciones. */
   playlistId: string;
+  /** El nombre de la playlist, usado para los mensajes de carga y error. */
   playlistName: string;
 }
 
+/**
+* Componente que muestra una lista completa de las canciones de una playlist específica.
+* Se renderiza dentro de un `Sheet` (panel lateral).
+*
+* Responsabilidades:
+* - **Carga de Datos Paginada:** Llama a `getPlaylistTracksDetailsAction` para obtener las
+*   canciones en lotes, evitando cargar listas muy largas de una sola vez.
+* - **Scroll Infinito:** Utiliza un `IntersectionObserver` para detectar cuándo el usuario
+*   llega al final de la lista y cargar automáticamente la siguiente página de canciones.
+* - **Gestión de Estados:** Maneja y muestra diferentes estados de la UI: carga inicial,
+*   carga de más elementos, error al cargar y estado de lista vacía.
+* - **Re-inicialización:** Se resetea y vuelve a cargar los datos si el `playlistId` cambia.
+*
+* @param {TrackDetailViewProps} props - Las props del componente.
+*/
 export default function TrackDetailView({ playlistId, playlistName }: TrackDetailViewProps) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
@@ -22,6 +43,10 @@ export default function TrackDetailView({ playlistId, playlistName }: TrackDetai
   const [error, setError] = useState<string | null>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
   
+  /**
+  * Obtiene una página de canciones y actualiza el estado.
+  * Si `url` es `null`, es la carga inicial y reemplaza los tracks; si no, los añade.
+  */
   const fetchPage = useCallback(async (url: string | null) => {
     setIsLoading(true);
     try {

@@ -9,8 +9,12 @@ import { shufflePlaylistsAction } from './playlist.actions';
 
 /**
 * [HELPER INTERNO] Calcula los cambios que ocurrirían durante una sincronización
-* sin ejecutar ninguna acción de escritura.
-* @returns Un objeto con los datos calculados para la previsualización y ejecución.
+* sin ejecutar ninguna acción de escritura. Es el núcleo de la lógica de previsualización.
+* @internal
+* @param playlistId - El ID de la Megalista a analizar.
+* @param accessToken - El token de acceso de Spotify.
+* @returns Un objeto con los datos calculados para la previsualización y la posterior ejecución.
+* @throws Si la Megalista no se encuentra en la base de datos.
 */
 async function _calculateSyncChanges(playlistId: string, accessToken: string) {
   const megalist = await db.megalist.findUnique({
@@ -20,6 +24,7 @@ async function _calculateSyncChanges(playlistId: string, accessToken: string) {
     throw new Error("Esta Megalista no es sincronizable o no fue creada por la aplicación.");
   }
   
+  // 1. Obtener estado actual y estado deseado
   const initialTracks = await getAllPlaylistTracks(accessToken, playlistId);
   const initialTrackUris = initialTracks.map(t => t.uri);
   const sourceIds = megalist.sourcePlaylistIds;
@@ -29,6 +34,7 @@ async function _calculateSyncChanges(playlistId: string, accessToken: string) {
     .then(tracks => tracks.map(t => t.uri))
     .catch(error => {
       console.warn(`[SYNC_WARN] No se pudo obtener la playlist fuente ${id}. Será omitida.`, error);
+      // Marcamos la fuente como inválida para poder actualizarla en la db
       return { id, error: true };
     })
   );
@@ -43,7 +49,7 @@ async function _calculateSyncChanges(playlistId: string, accessToken: string) {
     }
   });
   
-  // Se elimina el reordenado para preservar el orden original de las canciones.
+  // 2. Calcular las diferencias
   const uniqueFinalTracks = [...new Set(finalTrackUris)];
   const initialTracksSet = new Set(initialTrackUris);
   const finalTracksSet = new Set(uniqueFinalTracks);
@@ -73,10 +79,11 @@ async function _calculateSyncChanges(playlistId: string, accessToken: string) {
 }
 
 /**
-* Previsualiza los cambios de una sincronización de Megalista.
+* Server Action para previsualizar los cambios de una sincronización para una única Megalista.
 * No modifica ni la playlist en Spotify ni la base de datos.
-* @param playlistId El ID de la Megalista a previsualizar.
+* @param playlistId - El ID de la Megalista a previsualizar.
 * @returns Un informe con las canciones a añadir, eliminar y el conteo final.
+* @throws Si ocurre un error durante el cálculo.
 */
 export async function previewMegalistSync(playlistId: string) {
   console.log(`[ACTION:previewMegalistSync] Iniciando previsualización para ${playlistId}`);
@@ -106,9 +113,11 @@ export async function previewMegalistSync(playlistId: string) {
 }
 
 /**
-* Previsualiza los cambios para un lote de Megalistas.
-* @param playlistIds Los IDs de las Megalistas a previsualizar.
+* Server Action para previsualizar los cambios para un lote de Megalistas.
+* Agrega los totales de canciones a añadir y eliminar para todas las listas.
+* @param playlistIds - Los IDs de las Megalistas a previsualizar.
 * @returns Un informe agregado con el total de canciones a añadir y eliminar.
+* @throws Si ocurre un error durante el cálculo en alguna de las playlists.
 */
 export async function previewBatchSync(playlistIds: string[]) {
   console.log(`[ACTION:previewBatchSync] Iniciando previsualización para un lote de ${playlistIds.length} playlists.`);
@@ -140,10 +149,12 @@ export async function previewBatchSync(playlistIds: string[]) {
 }
 
 /**
-* Ejecuta la sincronización de una Megalista.
-* Reemplaza el contenido en Spotify y actualiza la base de datos.
-* @param playlistId El ID de la Megalista a sincronizar.
-* @returns Un informe del resultado de la sincronización.
+* Server Action para ejecutar la sincronización de una Megalista.
+* Realiza una sincronización incremental, eliminando y añadiendo solo las canciones necesarias.
+* Actualiza la playlist en Spotify y el registro en la base de datos.
+* @param playlistId - El ID de la Megalista a sincronizar.
+* @param shouldShuffle - Si `true`, reordena aleatoriamente la playlist después de la sincronización.
+* @returns Un `ActionResult` con el ID de la playlist y el recuento final de canciones.
 */
 export async function executeMegalistSync(
   playlistId: string,

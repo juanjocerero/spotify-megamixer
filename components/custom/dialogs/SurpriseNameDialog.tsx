@@ -14,13 +14,23 @@ import { Input } from '@/components/ui/input';
 import { usePlaylistStore } from '@/lib/store';
 
 interface SurpriseNameDialogProps {
+  /** Controla si el diálogo está visible. */
   isOpen: boolean;
+  /** Indica si estamos actualizando una lista existente. */
   isOverwrite: boolean;
+  /** El ID de la playlist a sobrescribir, si aplica. */
   overwriteId?: string;
+  /** Función a llamar cuando el diálogo se cierra. */
   onClose: () => void;
+  /** Función a llamar al confirmar, pasando el nombre final de la playlist. */
   onConfirm: (playlistName: string) => void;
 }
 
+/**
+* El último paso en el flujo de creación de una Lista Sorpresa.
+* Pide al usuario que nombre la nueva playlist. También se reutiliza para el
+* flujo de sobrescritura, pre-rellenando el nombre de la lista existente.
+*/
 export default function SurpriseNameDialog({
   isOpen,
   isOverwrite,

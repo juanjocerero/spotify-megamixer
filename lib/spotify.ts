@@ -1,8 +1,15 @@
 // /lib/spotify.ts
 import { SpotifyPlaylist, SpotifyTrack } from "@/types/spotify.d";
 
+/**
+* Este fichero actúa como una capa de bajo nivel para interactuar con la API Web de Spotify.
+* Abstrae las llamadas `fetch` y maneja la paginación y la lógica específica de cada endpoint,
+* proporcionando funciones más simples y reutilizables para las Server Actions.
+*/
+
 const SPOTIFY_API_BASE = "https://api.spotify.com/v1";
 
+/** @internal */
 // Definimos la estructura de la respuesta de la API para las playlists
 interface PlaylistsApiResponse {
   items: SpotifyPlaylist[];
@@ -10,12 +17,14 @@ interface PlaylistsApiResponse {
   // ... y otros campos que no usaremos por ahora
 }
 
+/** @internal */
 // Definimos la estructura que esperamos de la API de tracks
 interface PlaylistTracksApiResponse {
   items: { track: SpotifyTrack | null }[];
   next: string | null;
 }
 
+/** @internal */
 interface UserPlaylistsApiResponse {
   items: SpotifyPlaylist[];
   next: string | null;
@@ -23,11 +32,11 @@ interface UserPlaylistsApiResponse {
 }
 
 /**
-* Obtiene todas las canciones de una playlist, incluyendo su URI, nombre y artistas.
-* Filtra los elementos que no son canciones (ej. podcasts) y las pistas locales.
-* @param accessToken Token de acceso de Spotify.
-* @param playlistId El ID de la playlist.
-* @returns Un array de objetos con el URI, nombre y artistas de cada canción.
+* Obtiene TODAS las canciones de una playlist, manejando automáticamente la paginación.
+* Filtra pistas locales o que no sean canciones (ej. podcasts).
+* @param accessToken - Token de acceso de Spotify.
+* @param playlistId - El ID de la playlist.
+* @returns Una promesa que se resuelve a un array de objetos con detalles de cada canción.
 */
 export async function getAllPlaylistTracks(
   accessToken: string,
@@ -65,10 +74,17 @@ export async function getAllPlaylistTracks(
   return allTracksDetails;
 }
 
+/**
+* Obtiene una ÚNICA PÁGINA de canciones de una playlist desde una URL específica.
+* @param accessToken - Token de acceso de Spotify.
+* @param url - La URL completa para la página de tracks a obtener.
+* @returns Una promesa que se resuelve a un objeto con los tracks de esa página y la URL de la siguiente.
+*/
 export async function getPlaylistTracksPage(
   accessToken: string,
   url: string
 ): Promise<{ tracks: { uri: string; name: string; artists: string }[]; next: string | null }> {
+  
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -96,7 +112,7 @@ export async function getPlaylistTracksPage(
 * Obtiene el objeto completo de una playlist por su ID.
 * @param accessToken - El token de acceso del usuario.
 * @param playlistId - El ID de la playlist a obtener.
-* @returns Una promesa que se resuelve al objeto completo de la playlist.
+* @returns El objeto completo de la playlist.
 */
 export async function getPlaylistDetails(
   accessToken: string,
@@ -118,6 +134,11 @@ export async function getPlaylistDetails(
   return response.json();
 }
 
+/**
+* Obtiene la primera página de playlists del usuario actual (máximo 50).
+* @param accessToken - El token de acceso del usuario.
+* @returns La respuesta de la API con el primer lote de playlists y la URL para la siguiente página.
+*/
 export async function getUserPlaylists(accessToken: string): Promise<PlaylistsApiResponse> {
   const fields = "items(id,name,description,images,owner,tracks(total)),next";
   const url = `${SPOTIFY_API_BASE}/me/playlists?limit=50&fields=${encodeURIComponent(fields)}`;
@@ -136,13 +157,12 @@ export async function getUserPlaylists(accessToken: string): Promise<PlaylistsAp
   return response.json();
 }
 
-
-
-
 /**
-* Busca una playlist de un usuario por su nombre.
-* La búsqueda es insensible a mayúsculas y minúsculas.
-* @returns El objeto de la playlist si se encuentra, si no, null.
+* Busca una playlist de un usuario por su nombre exacto (insensible a mayúsculas/minúsculas).
+* Pagina a través de todas las playlists del usuario hasta encontrarla.
+* @param accessToken - El token de acceso del usuario.
+* @param name - El nombre de la playlist a buscar.
+* @returns El objeto de la playlist si se encuentra; de lo contrario, `null`.
 */
 export async function findUserPlaylistByName(
   accessToken: string,
@@ -161,7 +181,6 @@ export async function findUserPlaylistByName(
       throw new Error("Fallo al obtener las playlists del usuario.");
     }
     
-    // <<<<<<< PASO CLAVE >>>>>>>
     // Tipamos explícitamente el resultado de response.json() al asignarlo a 'data'.
     // Esto informa a TypeScript de la "forma" exacta de los datos.
     const data: UserPlaylistsApiResponse = await response.json();
@@ -187,7 +206,10 @@ export async function findUserPlaylistByName(
 }
 
 /**
-* Crea una nueva playlist vacía para un usuario.
+* Crea una nueva playlist vacía, privada y no colaborativa para el usuario.
+* @param accessToken - El token de acceso del usuario.
+* @param userId - El ID del usuario de Spotify.
+* @param name - El nombre para la nueva playlist.
 * @returns El objeto de la playlist recién creada.
 */
 export async function createNewPlaylist(
@@ -243,10 +265,10 @@ export async function clearPlaylistTracks(
 }
 
 /**
-* Añade canciones a una playlist en lotes de 100.
+* Añade canciones a una playlist, manejando la división en lotes de 100 y reintentos básicos de rate-limiting.
 * @param accessToken - El token de acceso del usuario.
-* @param playlistId - El ID de la playlist a la que se añadirán las canciones.
-* @param trackUris - Un array de URIs de las canciones a añadir.
+* @param playlistId - El ID de la playlist de destino.
+* @param trackUris - Un array con todas las URIs de canciones a añadir.
 */
 export async function addTracksToPlaylist(
   accessToken: string,
@@ -365,11 +387,11 @@ export async function removeTracksFromPlaylist(
 }
 
 /**
-* Reemplaza todas las canciones de una playlist con un nuevo conjunto de URIs.
-* Esta función primero vacía la playlist y luego añade las nuevas canciones en lotes.
+* Reemplaza TODAS las canciones de una playlist con un nuevo conjunto de canciones.
+* Lo hace en dos pasos: primero vacía la playlist y luego añade las nuevas.
 * @param accessToken - El token de acceso del usuario.
 * @param playlistId - El ID de la playlist a modificar.
-* @param trackUris - El array completo de las nuevas URIs para la playlist.
+* @param trackUris - El nuevo conjunto de URIs de canciones para la playlist.
 */
 export async function replacePlaylistTracks(
   accessToken: string,

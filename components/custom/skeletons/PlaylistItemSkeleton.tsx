@@ -1,5 +1,11 @@
+// /components/custom/skeletons/PlaylistItemSkeleton.tsx
 import { cn } from '@/lib/utils';
 
+/**
+* Un esqueleto de carga ("skeleton screen") que imita la apariencia y el layout
+* de un `PlaylistItem`. Se utiliza para proporcionar feedback visual al usuario
+* mientras se cargan los datos iniciales de las playlists.
+*/
 export function PlaylistItemSkeleton() {
   return (
     <div

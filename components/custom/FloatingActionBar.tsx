@@ -17,6 +17,19 @@ import {
   PlusSquare,
 } from 'lucide-react';
 
+/**
+* Una barra de acciones contextual que aparece en la parte inferior de la pantalla
+* cuando una o más playlists están seleccionadas.
+*
+* Responsabilidades:
+* - Se muestra solo si hay al menos una playlist en `selectedPlaylistIds` (del store de Zustand).
+* - Extrae las funciones de acción (`open...Dialog`) del contexto `useActions`.
+* - Calcula qué botones de acción mostrar basándose en las propiedades de las playlists seleccionadas
+*   (ej. el botón "Sincronizar" solo aparece si se seleccionan Megalistas sincronizables).
+* - Renderiza los botones de acción (Eliminar, Reordenar, Sincronizar, etc.) que
+*   disparan los flujos de trabajo correspondientes al hacer clic.
+* - Muestra un estado de carga en botones de larga duración como "Sincronizar".
+*/
 export default function FloatingActionBar() {
   const {
     selectedPlaylistIds,

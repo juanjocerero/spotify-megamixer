@@ -31,14 +31,34 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 interface PlaylistItemProps {
+  /** El objeto de datos completo de la playlist a renderizar. */
   playlist: SpotifyPlaylist;
+  /** `true` si la playlist está actualmente seleccionada por el usuario. */
   isSelected: boolean;
+  /** `true` si la playlist tiene el foco de la navegación por teclado. */
   isFocused: boolean;
+  /** Objeto de estilos CSS aplicado por el virtualizador para posicionar el elemento correctamente. */
   style: React.CSSProperties;
+  /** Callback para cambiar el estado de selección de la playlist. */
   onToggleSelect: (id: string) => void;
+  /** Callback para solicitar la apertura de la vista de detalle de canciones. */
   onShowTracks: (playlist: SpotifyPlaylist) => void;
 }
 
+
+/**
+* Componente que representa una única fila en la lista de playlists.
+* Es un componente "tonto" optimizado para ser usado en una lista virtualizada.
+*
+* Responsabilidades:
+* - Renderizar la información clave de la playlist (imagen, nombre, propietario, total de canciones).
+* - Aplicar estilos visuales para indicar si está seleccionada (`isSelected`) o enfocada (`isFocused`).
+* - Mostrar badges condicionales para identificar tipos de playlist (Megalista, Congelada, Sorpresa, etc.).
+* - Proporcionar un menú de acciones (`DropdownMenu`) con todas las operaciones disponibles para esa playlist específica.
+* - Invocar los callbacks `onToggleSelect` y `onShowTracks` según la interacción del usuario.
+*
+* @param {PlaylistItemProps} props - Las props del componente.
+*/
 function PlaylistItem({
   playlist,
   isSelected,
@@ -47,6 +67,7 @@ function PlaylistItem({
   onToggleSelect,
   onShowTracks,
 }: PlaylistItemProps) {
+  
   const { 
     isProcessing, 
     openAddToMegalistDialog,
@@ -194,4 +215,6 @@ function PlaylistItem({
     );
   }
   
+  // Se usa memo para optimizar el rendimiento, evitando re-renders innecesarios
+  // cuando las props no han cambiado, lo cual es crucial en una lista virtualizada.
   export default memo(PlaylistItem);

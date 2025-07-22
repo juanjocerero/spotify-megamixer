@@ -1,13 +1,17 @@
+// /components/custom/DashboardClient.tsx
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { usePlaylistStore } from '@/lib/store';
 import { fetchMorePlaylists } from '@/lib/actions/spotify.actions';
-import PlaylistDisplay from './PlaylistDisplay';
-import FloatingActionBar from './FloatingActionBar';
+import PlaylistDisplay from '../playlist/PlaylistDisplay';
+import FloatingActionBar from '../FloatingActionBar';
 import DashboardHeader from './DashboardHeader';
 
+/**
+* Define las opciones de ordenación disponibles para la lista de playlists.
+*/
 export type SortOption =
 | 'custom'
 | 'megalist_first'
@@ -17,6 +21,9 @@ export type SortOption =
 | 'tracks_asc'
 | 'owner_asc';
 
+/**
+* Mapea los identificadores de las opciones de ordenación a etiquetas legibles por humanos.
+*/
 export const sortLabels: Record<SortOption, string> = {
   custom: 'Orden por defecto',
   megalist_first: 'Megalistas Primero',
@@ -28,18 +35,31 @@ export const sortLabels: Record<SortOption, string> = {
 };
 
 interface DashboardClientProps {
+  /**
+  * La URL para la siguiente página de playlists, obtenida del servidor durante el SSR.
+  * Si es `null`, significa que no hay más páginas para cargar.
+  */
   initialNextUrl: string | null;
 }
 
 /**
 * Componente orquestador principal de la vista del dashboard.
-* - Es el propietario del estado compartido entre la cabecera y la lista (término de búsqueda, ordenación, etc.).
-* - Gestiona la carga paginada (scroll infinito) de las playlists.
-* - Renderiza los componentes `DashboardHeader` y `PlaylistDisplay`, pasándoles el estado y los callbacks necesarios.
-* @param {object} props
-* @param {string | null} props.initialNextUrl - La URL para la siguiente página de playlists, obtenida del servidor.
+* Es el "cerebro" de la UI del cliente.
+*
+* Responsabilidades:
+* - **Propietario del Estado Compartido:** Gestiona el estado que debe ser compartido entre
+*   `DashboardHeader` y `PlaylistDisplay`, como el término de búsqueda (`searchTerm`),
+*   la opción de ordenación (`sortOption`) y el filtro de "solo seleccionadas".
+* - **Gestión de Carga Paginada:** Maneja la lógica del scroll infinito. Mantiene la URL
+*   de la siguiente página y ejecuta `handleLoadMorePlaylists` cuando es necesario.
+* - **Renderizado de Componentes:** Renderiza los componentes `DashboardHeader` y `PlaylistDisplay`,
+*   pasándoles el estado y los callbacks necesarios para que funcionen de forma coordinada.
+*
+* @param {DashboardClientProps} props - Las props del componente.
 */
 export default function DashboardClient({ initialNextUrl }: DashboardClientProps) {
+  
+  // Estado del store de Zustand
   const {
     selectedPlaylistIds,
     addMultipleToSelection,
@@ -50,9 +70,13 @@ export default function DashboardClient({ initialNextUrl }: DashboardClientProps
     addMoreToCache,
   } = usePlaylistStore();
   
+  // Estado para la paginación
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
+  /**
+  * Carga la siguiente página de playlists desde la API de Spotify y la añade a la caché.
+  */
   const handleLoadMorePlaylists = useCallback(async () => {
     if (isLoadingMore || !nextUrl) return;
     setIsLoadingMore(true);
@@ -73,9 +97,13 @@ export default function DashboardClient({ initialNextUrl }: DashboardClientProps
     [playlistCache],
   );
   
+  // Estado para la interacción del usuario
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredIds, setFilteredIds] = useState<string[]>([]);
+  
   const [sortOption, setSortOption] = useState<SortOption>('custom');
+  
+  // Estado para la comunicación entre componentes hijos
+  const [filteredIds, setFilteredIds] = useState<string[]>([]);
   
   const handleFilteredChange = useCallback((ids: string[]) => {
     setFilteredIds(ids);
