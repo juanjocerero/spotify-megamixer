@@ -15,7 +15,17 @@ import TrackDetailView from '../TrackDetailView';
 import PlaylistItem from './PlaylistItem';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
-type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
+type SortOption = 
+'custom' 
+| 'megalist_first' 
+| 'frozen_first'
+| 'empty_first'
+| 'name_asc' 
+| 'name_desc' 
+| 'tracks_desc' 
+| 'tracks_asc' 
+| 'owner_asc' 
+| 'owner_desc';
 
 interface PlaylistDisplayProps {
   isLoadingMore: boolean; 
@@ -111,8 +121,21 @@ export default function PlaylistDisplay({
       case 'owner_asc':
       sortedItems.sort((a, b) => a.owner.display_name.localeCompare(b.owner.display_name));
       break;
+      case 'owner_desc':
+      sortedItems.sort((a, b) => b.owner.display_name.localeCompare(a.owner.display_name));
+      break;
       case 'megalist_first':
       sortedItems.sort((a, b) => Number(b.isMegalist ?? false) - Number(a.isMegalist ?? false));
+      break;
+      case 'frozen_first':
+      sortedItems.sort((a, b) => Number(b.isFrozen ?? false) - Number(a.isFrozen ?? false));
+      break;
+      case 'empty_first':
+      sortedItems.sort((a, b) => {
+        const aIsEmpty = a.playlistType === 'MEGALIST' && a.tracks.total === 0;
+        const bIsEmpty = b.playlistType === 'MEGALIST' && b.tracks.total === 0;
+        return Number(bIsEmpty) - Number(aIsEmpty);
+      });
       break;
       case 'custom':
       default:

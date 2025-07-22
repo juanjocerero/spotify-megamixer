@@ -14,25 +14,31 @@ import DashboardHeader from './DashboardHeader';
 * Define las opciones de ordenación disponibles para la lista de playlists.
 */
 export type SortOption =
-| 'custom'
-| 'megalist_first'
-| 'name_asc'
-| 'name_desc'
-| 'tracks_desc'
-| 'tracks_asc'
-| 'owner_asc';
+  | 'custom'
+  | 'megalist_first'
+  | 'frozen_first'
+  | 'empty_first'
+  | 'name_asc'
+  | 'name_desc'
+  | 'tracks_desc'
+  | 'tracks_asc'
+  | 'owner_asc'
+  | 'owner_desc';
 
 /**
 * Mapea los identificadores de las opciones de ordenación a etiquetas legibles por humanos.
 */
 export const sortLabels: Record<SortOption, string> = {
   custom: 'Orden por defecto',
-  megalist_first: 'Megalistas Primero',
+  megalist_first: 'Megalistas primero',
+  frozen_first: 'Congeladas primero',
+  empty_first: 'Vacías primero',
   name_asc: 'Nombre (A-Z)',
   name_desc: 'Nombre (Z-A)',
-  tracks_desc: 'Canciones (Más a Menos)',
-  tracks_asc: 'Canciones (Menos a Más)',
+  tracks_desc: 'Canciones (más a menos)',
+  tracks_asc: 'Canciones (menos a más)',
   owner_asc: 'Propietario (A-Z)',
+  owner_desc: 'Propietario (Z-A)',
 };
 
 interface DashboardClientProps {

@@ -19,6 +19,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import {
   Tooltip,
@@ -46,18 +47,18 @@ interface DashboardHeaderProps {
 }
 
 /**
- * Componente que renderiza la cabecera "sticky" del dashboard.
- * Encapsula todos los controles de usuario para la interacción principal con la lista de playlists.
- *
- * Responsabilidades:
- * - **Filtro Local:** Proporciona un `Input` para filtrar en tiempo real las playlists del usuario.
- * - **Ordenación Local:** Ofrece un `DropdownMenu` para cambiar el orden de las playlists mostradas.
- * - **Búsqueda Global:** Integra el hook `useSpotifySearch` para buscar en todo Spotify. Muestra los resultados en `SearchResultsPopover`.
- * - **Control de Selección:** Incluye un `Switch` para alternar la vista entre todas las playlists y solo las seleccionadas.
- * - **Acciones de Búsqueda:** Proporciona botones para limpiar la búsqueda y seleccionar/deseleccionar todos los resultados del filtro.
- *
- * @param {DashboardHeaderProps} props - El estado y los callbacks necesarios, gestionados por el componente padre `DashboardClient`.
- */
+* Componente que renderiza la cabecera "sticky" del dashboard.
+* Encapsula todos los controles de usuario para la interacción principal con la lista de playlists.
+*
+* Responsabilidades:
+* - **Filtro Local:** Proporciona un `Input` para filtrar en tiempo real las playlists del usuario.
+* - **Ordenación Local:** Ofrece un `DropdownMenu` para cambiar el orden de las playlists mostradas.
+* - **Búsqueda Global:** Integra el hook `useSpotifySearch` para buscar en todo Spotify. Muestra los resultados en `SearchResultsPopover`.
+* - **Control de Selección:** Incluye un `Switch` para alternar la vista entre todas las playlists y solo las seleccionadas.
+* - **Acciones de Búsqueda:** Proporciona botones para limpiar la búsqueda y seleccionar/deseleccionar todos los resultados del filtro.
+*
+* @param {DashboardHeaderProps} props - El estado y los callbacks necesarios, gestionados por el componente padre `DashboardClient`.
+*/
 export default function DashboardHeader({
   searchTerm,
   setSearchTerm,
@@ -70,19 +71,19 @@ export default function DashboardHeader({
   handleSelectAllFiltered,
   followedPlaylistIds,
 }: DashboardHeaderProps) {
-
-    // Hook para la lógica de búsqueda global en Spotify
+  
+  // Hook para la lógica de búsqueda global en Spotify
   const {
     query: spotifyQuery,
     setQuery: setSpotifyQuery,
     results,
     isLoading,
   } = useSpotifySearch();
-
+  
   // Referencias para posicionar el popover de búsqueda
   const spotifySearchRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-
+  
   return (
     <div className="sticky top-0 z-40 bg-gray-900/80 py-4 backdrop-blur-md">
     <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -138,20 +139,44 @@ export default function DashboardHeader({
     <p>Ordenar por: {sortLabels[sortOption]}</p>
     </TooltipContent>
     </Tooltip>
+    
     <DropdownMenuContent align="end">
     <DropdownMenuItem onSelect={() => setSortOption('custom')}>
     Orden por defecto
     </DropdownMenuItem>
-    <DropdownMenuItem
-    onSelect={() => setSortOption('megalist_first')}
-    >
+    <DropdownMenuSeparator />
+    <DropdownMenuItem onSelect={() => setSortOption('megalist_first')}>
     Megalistas Primero
     </DropdownMenuItem>
+    <DropdownMenuItem onSelect={() => setSortOption('frozen_first')}>
+    Congeladas Primero
+    </DropdownMenuItem>
+    <DropdownMenuItem onSelect={() => setSortOption('empty_first')}>
+    Vacías Primero
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
     <DropdownMenuItem onSelect={() => setSortOption('name_asc')}>
     Nombre (A-Z)
     </DropdownMenuItem>
-    {/* ... resto de opciones de ordenación ... */}
+    <DropdownMenuItem onSelect={() => setSortOption('name_desc')}>
+    Nombre (Z-A)
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem onSelect={() => setSortOption('tracks_desc')}>
+    Canciones (Más a Menos)
+    </DropdownMenuItem>
+    <DropdownMenuItem onSelect={() => setSortOption('tracks_asc')}>
+    Canciones (Menos a Más)
+    </DropdownMenuItem>
+    <DropdownMenuSeparator />
+    <DropdownMenuItem onSelect={() => setSortOption('owner_asc')}>
+    Propietario (A-Z)
+    </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => setSortOption('owner_desc')}>
+    Propietario (Z-A)
+    </DropdownMenuItem>
     </DropdownMenuContent>
+    
     </DropdownMenu>
     </div>
     </div>
