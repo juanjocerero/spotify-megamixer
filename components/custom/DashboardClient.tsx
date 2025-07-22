@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { SpotifyPlaylist } from '@/types/spotify';
 import { usePlaylistStore } from '@/lib/store';
 import { useSpotifySearch } from '@/lib/hooks/useSpotifySearch';
 import { getInitialDashboardDataAction } from '@/lib/actions/playlist.actions';
