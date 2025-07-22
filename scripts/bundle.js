@@ -72,7 +72,7 @@ files.forEach(f => {
   const noImports = removeImports(raw);
   const noCommentsNoImports = removeImports(noComments);
 
-  const min = noImports
+  const min = noCommentsNoImports
     .split(/\r?\n/)
     .map(l => l.trim())
     .filter(l => l.length)
