@@ -120,3 +120,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Añadir esto al final del fichero */
+/* Estilos de Scrollbar para Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #52525b #18181b; /* thumb(zinc-600) y track(zinc-900) */
+}

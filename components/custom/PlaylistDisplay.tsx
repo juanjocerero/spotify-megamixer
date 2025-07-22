@@ -205,7 +205,7 @@ export default function PlaylistDisplay({
     </div>
     
     <div ref={parentRef} 
-    className="h-[65vh] overflow-auto relative pr-[10px] scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-zinc-800 hover:scrollbar-thumb-zinc-500"
+    className="h-[65vh] overflow-auto relative scrollbar-thin scrollbar-thumb-zinc-600 hover:scrollbar-thumb-zinc-500 scrollbar-track-transparent"
     >
     <div className="h-[--size] w-full" style={{ '--size': `${rowVirtualizer.getTotalSize()}px` } as React.CSSProperties} />
     
