@@ -217,9 +217,6 @@ export default function PlaylistDisplay({
     <div className="w-full">
     <div className="flex items-center bg-gray-900 text-sm font-semibold text-white">
     <div className="w-[60px] sm:w-[80px] flex-shrink-0"></div>
-    <div className="flex-grow min-w-0 px-4 py-3">Nombre</div>
-    <div className="hidden sm:block w-[120px] flex-shrink-0 px-4 py-3">Propietario</div>
-    <div className="w-[80px] sm:w-[100px] flex-shrink-0 px-4 py-3 text-right">Canciones</div>
     <div className="w-[50px] flex-shrink-0"></div>
     </div>
     

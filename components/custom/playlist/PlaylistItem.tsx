@@ -16,6 +16,7 @@ import {
 import {
   MoreHorizontal,
   Music,
+  Music2,
   Eye,
   Pencil,
   Shuffle,
@@ -25,6 +26,8 @@ import {
   Snowflake,
   Sun,
   ListPlus,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 interface PlaylistItemProps {
@@ -83,7 +86,7 @@ function PlaylistItem({
     <div
     style={style}
     className={cn(
-      'absolute top-0 left-0 flex w-full items-center p-2 border-b border-gray-800 transition-colors cursor-pointer',
+      'group absolute top-0 left-0 flex w-full items-center p-2 border-b border-gray-800 transition-colors duration-200 cursor-pointer',
       {
         'bg-green-900/40 hover:bg-green-900/60': isSelected,
         'hover:bg-white/5': !isSelected,
@@ -92,32 +95,52 @@ function PlaylistItem({
     )}
     onClick={() => onToggleSelect(playlist.id)}
     >
-    <div className="pl-2 pr-4 flex-shrink-0">
-    <Avatar className="h-14 w-14 rounded-md">
+    {/* SECCIÓN IZQUIERDA: AVATAR Y CHECKBOX */}
+    <div className="flex items-center flex-shrink-0 pr-3 sm:pr-4">
+    <div className={cn(
+      'hidden sm:block transition-opacity duration-200',
+      isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+    )}>
+    {isSelected ? <CheckSquare className="h-5 w-5 text-green-400 mr-3" /> : <Square className="h-5 w-5 text-gray-500 mr-3" />}
+    </div>
+    <Avatar className="h-12 w-12 rounded-md">
     <AvatarImage src={playlist.images?.[0]?.url} alt={playlist.name} />
     <AvatarFallback className="rounded-md"><Music /></AvatarFallback>
     </Avatar>
     </div>
     
-    <div className="flex-grow min-w-0 pr-4">
-    <div className="flex items-center gap-x-2">
-    <span className="font-semibold text-white truncate">{playlist.name}</span>
+    {/* SECCIÓN CENTRAL: NOMBRE, BADGE Y PROPIETARIO */}
+    <div className="flex-grow min-w-0 pr-2">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:gap-x-2">
     {badgeText && badgeVariant && (
-      <Badge variant="outline" className={`whitespace-nowrap h-5 ${badgeVariant}`}>
+      <Badge variant="outline" className={cn(
+        'whitespace-nowrap h-5 w-fit mb-1 sm:mb-0 text-xs',
+        badgeVariant
+      )}>
       {badgeText}
       </Badge>
     )}
+    {/* CAMBIO: Reducida la tipografía para móvil (xs) y escritorio (sm) */}
+    <span className="text-xs sm:text-sm font-medium text-white truncate">{playlist.name}</span>
     </div>
-    <p className="text-sm text-muted-foreground truncate">
+    {/* CAMBIO: Reducida la tipografía para móvil ([11px]) y escritorio (xs) */}
+    <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
     de {playlist.owner.display_name}
     </p>
     </div>
     
-    <div className="flex items-center gap-x-4 flex-shrink-0 px-4">
-    <div className="text-right">
-    <p className="font-medium text-sm">{playlist.tracks.total}</p>
-    <p className="text-xs text-muted-foreground">canciones</p>
+    {/* SECCIÓN DERECHA: CONTEO Y MENÚ */}
+    <div className="flex items-center gap-x-2 sm:gap-x-4 flex-shrink-0 pl-2">
+    {/* CAMBIO: Reducida la tipografía para móvil (xs) y escritorio (sm) */}
+    <div className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground">
+    <Music2 className="h-4 w-4" />
+    <span>{playlist.tracks.total}</span>
     </div>
+    
+    <div className={cn(
+      'transition-opacity duration-200',
+      isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+    )}>
     <DropdownMenu>
     <DropdownMenuTrigger asChild>
     <Button variant="ghost" size="icon" className="h-9 w-9" onClick={(e) => e.stopPropagation()}>
@@ -156,6 +179,7 @@ function PlaylistItem({
     </DropdownMenuItem>
     </DropdownMenuContent>
     </DropdownMenu>
+    </div>
     </div>
     </div>
   );
