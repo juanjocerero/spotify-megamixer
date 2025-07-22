@@ -4,10 +4,9 @@
 module.exports = {
   darkMode: ["class"],
   content: [
-    './pages/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
+    './lib/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
   ],
   prefix: "",
   theme: {
@@ -19,9 +18,6 @@ module.exports = {
       },
     },
     extend: {
-      // Aquí puedes extender con tus propios colores, fuentes, etc. si lo necesitas
-      // Por ejemplo:
-      // colors: { ... },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -39,7 +35,7 @@ module.exports = {
     },
   },
   plugins: [
-    require("tailwindcss-animate"), 
-    require("tailwind-scrollbar") // Tu plugin está aquí, en el lugar correcto.
+    require("tailwindcss-animate"),
+    require("tailwind-scrollbar")
   ],
 }
