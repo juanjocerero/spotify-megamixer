@@ -204,7 +204,9 @@ export default function PlaylistDisplay({
     <div className="w-[50px] flex-shrink-0"></div>
     </div>
     
-    <div ref={parentRef} className="h-[65vh] overflow-auto relative pr-[10px]">
+    <div ref={parentRef} 
+    className="h-[65vh] overflow-auto relative pr-[10px] scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-zinc-800 hover:scrollbar-thumb-zinc-500"
+    >
     <div className="h-[--size] w-full" style={{ '--size': `${rowVirtualizer.getTotalSize()}px` } as React.CSSProperties} />
     
     {rowVirtualizer.getVirtualItems().map((virtualRow) => {
