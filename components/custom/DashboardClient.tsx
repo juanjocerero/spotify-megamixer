@@ -4,7 +4,6 @@ import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { usePlaylistStore } from '@/lib/store';
 import { fetchMorePlaylists } from '@/lib/actions/spotify.actions';
-// LÍNEA CORREGIDA: Importación por defecto sin llaves
 import PlaylistDisplay from './PlaylistDisplay';
 import FloatingActionBar from './FloatingActionBar';
 import DashboardHeader from './DashboardHeader';

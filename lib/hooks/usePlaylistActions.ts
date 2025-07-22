@@ -28,11 +28,11 @@ import { OpenActionPayload } from './useDialogManager';
 export type ActionPlaylist = { id: string; name: string };
 
 /**
- * Hook que encapsula TODA la lógica de negocio de las acciones sobre playlists.
- * NO gestiona el estado de los diálogos, solo ejecuta las operaciones y
- * actualiza el estado global (Zustand) y notifica al usuario.
- * @param dispatch - La función dispatch del gestor de diálogos para abrirlos.
- */
+* Hook que encapsula TODA la lógica de negocio de las acciones sobre playlists.
+* NO gestiona el estado de los diálogos, solo ejecuta las operaciones y
+* actualiza el estado global (Zustand) y notifica al usuario.
+* @param dispatch - La función dispatch del gestor de diálogos para abrirlos.
+*/
 export function usePlaylistActions(
   dispatch: React.Dispatch<{ type: 'OPEN'; payload: OpenActionPayload } | { type: 'CLOSE' }>,
 ) {
@@ -44,7 +44,7 @@ export function usePlaylistActions(
     clearSelection,
     playlistCache,
   } = usePlaylistStore();
-
+  
   const executeAction = useCallback(
     async <T, P extends unknown[]>(
       actionFn: (...args: P) => Promise<T>,
@@ -74,7 +74,7 @@ export function usePlaylistActions(
     },
     [clearSelection],
   );
-
+  
   const executeBatchAction = useCallback(
     async <T, P>(
       items: P[],
@@ -105,9 +105,9 @@ export function usePlaylistActions(
     },
     [clearSelection],
   );
-
-  // --- LÓGICA DE NEGOCIO (HANDLERS) ---
-
+  
+  // Lógica de negocio (Handlers)
+  
   const handleConfirmCreateEmpty = async (playlistName: string) => {
     dispatch({ type: 'CLOSE' });
     await executeAction(createEmptyMegalistAction, [playlistName], {
@@ -119,7 +119,7 @@ export function usePlaylistActions(
       },
     });
   };
-
+  
   const handleConfirmEdit = async (
     playlistId: string,
     newName: string,
@@ -142,7 +142,7 @@ export function usePlaylistActions(
       },
     );
   };
-
+  
   const handleConfirmFreeze = async (
     playlistId: string,
     shouldFreeze: boolean,
@@ -164,7 +164,7 @@ export function usePlaylistActions(
       },
     });
   };
-
+  
   const handleConfirmDelete = async (playlists: ActionPlaylist[]) => {
     dispatch({ type: 'CLOSE' });
     const idsToDelete = playlists.map(p => p.id);
@@ -175,7 +175,7 @@ export function usePlaylistActions(
       onSuccess: () => removeMultipleFromCache(idsToDelete),
     });
   };
-
+  
   const handleConfirmShuffle = async (playlists: ActionPlaylist[]) => {
     dispatch({ type: 'CLOSE' });
     const idsToShuffle = playlists.map(p => p.id);
@@ -185,7 +185,7 @@ export function usePlaylistActions(
       error: 'No se pudieron reordenar.',
     });
   };
-
+  
   const handleExecuteSync = async (
     playlists: ActionPlaylist[],
     shouldShuffle: boolean,
@@ -213,82 +213,154 @@ export function usePlaylistActions(
       },
     );
   };
-
-  const handleCreateOrUpdateMegalist = async (
-    props: {
-      sourceIds: string[];
-      playlistName: string;
-      shouldShuffle: boolean;
-      mode: 'create' | 'update' | 'replace';
-      targetId?: string;
-    },
+  
+  // Flujo de Creación/Actualización de Megalistas ---
+  
+  const _handleUpdateMode = async (props: {
+    targetId: string;
+    sourceIds: string[];
+    shouldShuffle: boolean;
+    toastId: string | number;
+  }) => {
+    const { targetId, sourceIds, shouldShuffle, toastId } = props;
+    const targetPlaylist = playlistCache.find(p => p.id === targetId);
+    const wasEmptyAndFrozen =
+    targetPlaylist?.isFrozen && targetPlaylist.tracks.total === 0;
+    
+    const result = await addTracksToMegalistAction(
+      targetId,
+      sourceIds,
+      shouldShuffle,
+    );
+    
+    if (result.success) {
+      const { finalCount, addedCount } = result.data;
+      const cacheUpdates: Parameters<typeof updatePlaylistInCache>[1] = {
+        trackCount: finalCount,
+        playlistType: 'MEGALIST',
+      };
+      if (wasEmptyAndFrozen) {
+        cacheUpdates.isFrozen = false;
+        cacheUpdates.isSyncable = true;
+      }
+      updatePlaylistInCache(targetId, cacheUpdates);
+      if (addedCount > 0) {
+        toast.success(
+          `¡Megalista actualizada! Se añadieron ${addedCount} canciones nuevas.`,
+          { id: toastId },
+        );
+      } else {
+        toast.info('La Megalista ya contenía todas las canciones.', {
+          id: toastId,
+        });
+      }
+    } else {
+      toast.error(result.error, { id: toastId });
+    }
+  };
+  
+  const _populateNewOrReplacedMegalist = async (
+    playlistId: string,
+    trackUris: string[],
+    playlistName: string,
+    toastId: string | number,
   ) => {
+    toast.loading(`Añadiendo ${trackUris.length} canciones a "${playlistName}"...`, {
+      id: toastId,
+    });
+    await addTracksBatch(playlistId, trackUris);
+    updatePlaylistInCache(playlistId, { trackCount: trackUris.length });
+  };
+  
+  const _handleCreationMode = async (props: {
+    playlistName: string;
+    sourceIds: string[];
+    tracksToMix: string[];
+    toastId: string | number;
+  }) => {
+    const { playlistName, sourceIds, tracksToMix, toastId } = props;
+    
+    const { playlist, exists } = await findOrCreatePlaylist(
+      playlistName,
+      sourceIds,
+      tracksToMix.length,
+    );
+    
+    if (exists) {
+      toast.dismiss(toastId);
+      dispatch({
+        type: 'OPEN',
+        payload: {
+          variant: 'createOverwrite',
+          props: { playlistName, sourceIds, overwriteId: playlist.id },
+        },
+      });
+      // Detenemos la ejecución porque se abrirá un nuevo diálogo
+      return { success: false };
+    }
+    
+    addPlaylistToCache(playlist);
+    await _populateNewOrReplacedMegalist(playlist.id, tracksToMix, playlistName, toastId);
+    return { success: true, name: playlistName };
+  };
+  
+  const _handleReplaceMode = async (props: {
+    targetId: string;
+    playlistName: string;
+    tracksToMix: string[];
+    toastId: string | number;
+  }) => {
+    const { targetId, playlistName, tracksToMix, toastId } = props;
+    await addTracksBatch(targetId, []); // Vacía la lista
+    await _populateNewOrReplacedMegalist(targetId, tracksToMix, playlistName, toastId);
+    updatePlaylistInCache(targetId, { playlistType: 'MEGALIST' });
+    return { success: true, name: playlistName };
+  };
+
+  const handleCreateOrUpdateMegalist = async (props: {
+    sourceIds: string[];
+    playlistName: string;
+    shouldShuffle: boolean;
+    mode: 'create' | 'update' | 'replace';
+    targetId?: string;
+  }) => {
     const { sourceIds, playlistName, shouldShuffle, mode, targetId } = props;
     setIsProcessing(true);
     dispatch({ type: 'CLOSE' });
-
+    
     const toastId = toast.loading(
-      mode === 'replace'
-        ? 'Reemplazando playlist...'
-        : mode === 'update'
-        ? 'Actualizando playlist...'
-        : 'Creando Megalista...',
+      mode === 'replace' ? `Reemplazando "${playlistName}"...`
+      : mode === 'update' ? `Actualizando "${playlistName}"...`
+      : `Creando "${playlistName}"...`,
     );
-
+    
     try {
       if (mode === 'update' && targetId) {
-        // ... Lógica de actualización (addTracksToMegalistAction) ...
-        const targetPlaylist = playlistCache.find(p => p.id === targetId);
-        const wasEmptyAndFrozen = targetPlaylist?.isFrozen && targetPlaylist.tracks.total === 0;
-        const result = await addTracksToMegalistAction(targetId, sourceIds, shouldShuffle);
-        if (result.success) {
-            const { finalCount, addedCount } = result.data;
-            const cacheUpdates: Parameters<typeof updatePlaylistInCache>[1] = { 
-                trackCount: finalCount, 
-                playlistType: 'MEGALIST',
-            };
-            if (wasEmptyAndFrozen) {
-                cacheUpdates.isFrozen = false;
-                cacheUpdates.isSyncable = true;
-            }
-            updatePlaylistInCache(targetId, cacheUpdates);
-            if (addedCount > 0) {
-                toast.success(`¡Megalista actualizada! Se añadieron ${addedCount} canciones nuevas.`, { id: toastId });
-            } else {
-                toast.info('La Megalista ya contenía todas las canciones.', { id: toastId });
-            }
-        } else {
-            toast.error(result.error, { id: toastId });
-        }
+        await _handleUpdateMode({ targetId, sourceIds, shouldShuffle, toastId });
       } else {
         const trackUris = await getTrackUris(sourceIds);
         if (trackUris.length === 0) {
-            toast.error('No se encontraron canciones en las playlists seleccionadas.', { id: toastId });
-            setIsProcessing(false);
-            return;
+          toast.error('No se encontraron canciones en las playlists seleccionadas.', { id: toastId });
+          setIsProcessing(false);
+          return;
         }
         const tracksToMix = shouldShuffle ? shuffleArray(trackUris) : trackUris;
-
+        
+        let result: { success: boolean, name?: string };
         if (mode === 'create') {
-            const { playlist, exists } = await findOrCreatePlaylist(playlistName, sourceIds, tracksToMix.length);
-            if (exists) {
-                setIsProcessing(false);
-                toast.dismiss(toastId);
-                dispatch({ type: 'OPEN', payload: { variant: 'createOverwrite', props: { playlistName, sourceIds, overwriteId: playlist.id } } });
-                return;
-            }
-            addPlaylistToCache(playlist);
-            toast.loading(`Añadiendo ${tracksToMix.length} canciones a "${playlistName}"...`, { id: toastId });
-            await addTracksBatch(playlist.id, tracksToMix);
-            updatePlaylistInCache(playlist.id, { trackCount: tracksToMix.length });
-
+          result = await _handleCreationMode({ playlistName, sourceIds, tracksToMix, toastId });
         } else if (mode === 'replace' && targetId) {
-            await addTracksBatch(targetId, []); // Vacía la lista
-            await addTracksBatch(targetId, tracksToMix);
-            updatePlaylistInCache(targetId, { trackCount: tracksToMix.length, playlistType: 'MEGALIST' });
+          result = await _handleReplaceMode({ targetId, playlistName, tracksToMix, toastId });
+        } else {
+          // Si no es ni create ni replace (con targetId), es un error de lógica.
+          throw new Error("Parámetros inválidos para la operación de Megalista.");
         }
-        toast.success(`¡Megalista "${playlistName}" ${mode === 'replace' ? 'reemplazada' : 'creada'} con éxito!`, { id: toastId });
+        
+        if (result.success) {
+          toast.success(`¡Megalista "${result.name}" ${mode === 'replace' ? 'reemplazada' : 'creada'} con éxito!`, { id: toastId });
+        }
       }
+      
       clearSelection();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Ocurrió un error inesperado.';
@@ -306,40 +378,40 @@ export function usePlaylistActions(
   }) => {
     const { sourceIds, targetTrackCount, playlistName, overwriteId } = props;
     if (playlistName.trim() === '') {
-        toast.error("El nombre de la playlist no puede estar vacío.");
-        return;
+      toast.error("El nombre de la playlist no puede estar vacío.");
+      return;
     }
     setIsProcessing(true);
     dispatch({ type: 'CLOSE' });
     const toastId = toast.loading(`Creando tu Lista Sorpresa "${playlistName}"...`);
     const result = await createOrUpdateSurpriseMixAction(sourceIds, targetTrackCount, playlistName, overwriteId);
-
+    
     if (result.success) {
-        const newPlaylist = result.data;
-        if (overwriteId) {
-            updatePlaylistInCache(overwriteId, { trackCount: newPlaylist.tracks.total, playlistType: 'SURPRISE' });
-            toast.success(`Lista Sorpresa "${newPlaylist.name}" actualizada.`, { id: toastId });
-        } else {
-            addPlaylistToCache(newPlaylist);
-            toast.success(`Lista Sorpresa "${newPlaylist.name}" creada con éxito.`, { id: toastId });
-        }
-        clearSelection();
+      const newPlaylist = result.data;
+      if (overwriteId) {
+        updatePlaylistInCache(overwriteId, { trackCount: newPlaylist.tracks.total, playlistType: 'SURPRISE' });
+        toast.success(`Lista Sorpresa "${newPlaylist.name}" actualizada.`, { id: toastId });
+      } else {
+        addPlaylistToCache(newPlaylist);
+        toast.success(`Lista Sorpresa "${newPlaylist.name}" creada con éxito.`, { id: toastId });
+      }
+      clearSelection();
     } else {
-        const errorMessage = result.error;
-        if (errorMessage.startsWith('PLAYLIST_EXISTS::')) {
-            const existingId = errorMessage.split('::')[1];
-            toast.dismiss(toastId);
-            dispatch({ type: 'OPEN', payload: { 
-                variant: 'surpriseName', 
-                props: { sourceIds, targetTrackCount, isOverwrite: true, overwriteId: existingId },
-            }});
-        } else {
-            toast.error(errorMessage, { id: toastId });
-        }
+      const errorMessage = result.error;
+      if (errorMessage.startsWith('PLAYLIST_EXISTS::')) {
+        const existingId = errorMessage.split('::')[1];
+        toast.dismiss(toastId);
+        dispatch({ type: 'OPEN', payload: { 
+          variant: 'surpriseName', 
+          props: { sourceIds, targetTrackCount, isOverwrite: true, overwriteId: existingId },
+        }});
+      } else {
+        toast.error(errorMessage, { id: toastId });
+      }
     }
     setIsProcessing(false);
   };
-
+  
   const handleConfirmAddTracks = async (targetPlaylistId: string, trackUris: string[]) => {
     dispatch({ type: 'CLOSE' });
     await executeAction(
@@ -357,9 +429,9 @@ export function usePlaylistActions(
       },
     );
   };
-
+  
   // --- FUNCIONES PARA ABRIR DIÁLOGOS ---
-
+  
   const openCreateEmptyMegalistDialog = () => dispatch({ type: 'OPEN', payload: { variant: 'createEmpty' } });
   const openEditDialog = (playlist: SpotifyPlaylist) => dispatch({ type: 'OPEN', payload: { variant: 'edit', props: { playlist } } });
   const openDeleteDialog = (playlists: ActionPlaylist[]) => {
@@ -370,7 +442,7 @@ export function usePlaylistActions(
     if (playlists.length === 0) return;
     dispatch({ type: 'OPEN', payload: { variant: 'shuffle', props: { playlists } } });
   };
-   const openFreezeDialog = (playlist: SpotifyPlaylist) => {
+  const openFreezeDialog = (playlist: SpotifyPlaylist) => {
     if (!playlist.isMegalist || playlist.playlistType !== 'MEGALIST') {
       toast.error('Esta acción solo está disponible para Megalistas.');
       return;
@@ -414,7 +486,7 @@ export function usePlaylistActions(
     }
     dispatch({ type: 'OPEN', payload: { variant: 'addToSelect', props: { sourceIds } } });
   };
-   const openSurpriseMixDialog = async (sourceIds?: string[]) => {
+  const openSurpriseMixDialog = async (sourceIds?: string[]) => {
     setIsProcessing(true);
     const toastId = toast.loading("Preparando el generador de sorpresas...");
     try {
@@ -440,7 +512,7 @@ export function usePlaylistActions(
     }
     dispatch({ type: 'OPEN', payload: { variant: 'addTracksToMegalist', props: { trackUris } } });
   };
-
+  
   return {
     isProcessing,
     // Handlers de Lógica
