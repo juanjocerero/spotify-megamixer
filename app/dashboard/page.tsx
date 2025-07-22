@@ -2,9 +2,9 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { ActionProvider } from '@/lib/contexts/ActionProvider';
-import { getInitialDashboardDataAction } from '@/lib/actions/playlist.actions';
+import { PlaylistStoreProvider } from '@/lib/contexts/PlaylistStoreProvider';
 
-import StoreInitializer from '@/components/custom/StoreInitializer';
+import { getInitialDashboardDataAction } from '@/lib/actions/playlist.actions';
 import DashboardClient from '@/components/custom/dashboard/DashboardClient';
 import Footer from '@/components/custom/Footer';
 import HelpButton from '@/components/custom/buttons/HelpButton';
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
   
   return (
     <ActionProvider>
-    <StoreInitializer playlists={initialPlaylists} />
+     <PlaylistStoreProvider initialPlaylists={initialPlaylists}>
     <TooltipProvider delayDuration={100}>
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
     <div className="max-w-3xl mx-auto">
@@ -70,6 +70,7 @@ export default async function DashboardPage() {
     </div>
     </div>
     </TooltipProvider>
+    </PlaylistStoreProvider>
     </ActionProvider>
   );
 }

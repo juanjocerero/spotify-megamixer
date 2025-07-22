@@ -5,23 +5,46 @@ import { type ReactNode, createContext, useRef, useContext } from 'react';
 import { type StoreApi } from 'zustand';
 
 import { type PlaylistStore, createPlaylistStore } from '@/lib/store';
+import type { SpotifyPlaylist } from '@/types/spotify';
 
-// El tipado del contexto ahora sabe que puede ser `undefined`
+
+/**
+ * Context de React para mantener y proveer la instancia del store de Zustand.
+ * Su valor será la API completa del store, o `undefined` si se usa fuera del Provider.
+ */
 export const PlaylistStoreContext = createContext<StoreApi<PlaylistStore> | undefined>(
   undefined,
 );
 
+
+/**
+ * Define las props que el componente `PlaylistStoreProvider` aceptará.
+ */
 export interface PlaylistStoreProviderProps {
+  initialPlaylists: SpotifyPlaylist[];
   children: ReactNode;
 }
 
+/**
+ * Componente Provider que crea y provee la instancia del store de playlists.
+ * Este es el componente clave para el patrón de estado con SSR.
+ * 1. Se renderiza en el servidor y en el cliente.
+ * 2. En el primer render del cliente, crea la instancia del store usando `createPlaylistStore`.
+ * 3. Usa la prop `initialPlaylists` para hidratar el store con los datos del servidor.
+ * 4. Almacena la instancia en un `useRef` para que persista durante todo el ciclo de vida del cliente.
+ * 5. Pone la instancia del store a disposición de todos sus componentes hijos a través del `PlaylistStoreContext`.
+ */
 export const PlaylistStoreProvider = ({
+  initialPlaylists,
   children,
 }: PlaylistStoreProviderProps) => {
   const storeRef = useRef<StoreApi<PlaylistStore> | null>(null);
   
   if (!storeRef.current) {
-    storeRef.current = createPlaylistStore();
+    // Crea el store con el estado inicial que viene del servidor
+    storeRef.current = createPlaylistStore({
+      playlistCache: initialPlaylists,
+    });
   }
   
   return (
