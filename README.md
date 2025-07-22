@@ -1,103 +1,153 @@
+¡Por supuesto! Un buen `README.md` es la tarjeta de presentación de cualquier proyecto. Es fundamental que refleje la calidad y la arquitectura del código que contiene.
+
+He preparado una versión actualizada, completa y profesional del `README.md` para "Spotify Megamixer", incorporando todos los cambios y mejoras de nuestra refactorización. Está pensado tanto para usuarios que quieran entender la aplicación como para desarrolladores que quieran colaborar o analizar el código.
+
+---
+
 # Spotify Megamixer
 
-[![Deploy with Vercel](https://vercel.com/button)](https://spotify-megamixer.vercel.app/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Lleva la gestión de tus playlists de Spotify al siguiente nivel. **Spotify Megamixer** es una herramienta web avanzada, construida con las últimas tecnologías, que te permite combinar, sincronizar y descubrir música de formas que la aplicación oficial no permite.
 
-Una potente herramienta web para mezclar, sincronizar y gestionar tus playlists de Spotify como nunca antes. Crea **"Megalistas"** inteligentes que se actualizan con sus fuentes, **congélalas** para preservar una mezcla perfecta, o genera **"Listas Sorpresa"** aleatorias con un solo clic.
-
-Construida sobre una arquitectura robusta, con persistencia de datos y una lógica de **sincronización incremental** para una experiencia de usuario rápida y fiable.
-
-<br/>
-
-[**➡️ Visita la Aplicación Desplegada ⬅️**](https://spotify-megamixer.vercel.app/)
-
-<br/>
+**[➡️ Ver la aplicación en vivo](https://spotify-megamixer.vercel.app/)**
 
 ---
 
 ## ✨ Características Principales
 
-### 🚀 Sincronización Inteligente
-La función estrella de la aplicación, diseñada para **Megalistas no congeladas (verdes)** para ser increíblemente rápida y respetuosa con tus playlists.
+*   **Creación y Sincronización de Megalistas:** Combina múltiples playlists en una única "Megalista". La aplicación realiza una sincronización incremental inteligente (*diff sync*), añadiendo solo las canciones nuevas y eliminando las que ya no están en las listas de origen, preservando tus metadatos.
+*   **Congelar y Proteger Playlists:** ¿Tienes una Megalista perfecta que no quieres que cambie? "Congélala" para protegerla de futuras sincronizaciones. Esta acción es totalmente reversible.
+*   **Listas Sorpresa Inteligentes:** Crea mezclas aleatorias a partir de tus playlists seleccionadas o de una selección al azar de toda tu librería. Ideal para descubrir joyas olvidadas.
+*   **Búsqueda Dual Avanzada:**
+    *   **Filtro Local:** Filtra y ordena instantáneamente tu propia librería de playlists por nombre, número de canciones o propietario.
+    *   **Búsqueda Global:** Busca canciones, álbumes y playlists públicas en todo el catálogo de Spotify, con resultados unificados y fáciles de añadir.
+*   **Interfaz de Alto Rendimiento:**
+    *   **Carga Inicial Instantánea:** Gracias al Renderizado en Servidor (SSR), tus playlists se cargan de inmediato.
+    *   **Scroll Infinito y Virtualización:** Navega por miles de playlists sin ninguna degradación del rendimiento.
+*   **Gestión Completa de Playlists:** Edita los detalles de cualquier playlist, reordena sus canciones, previsualiza su contenido o elimínala, todo desde una interfaz centralizada.
 
-*   **Rendimiento Drástico:** En lugar de borrar y reescribir todo, la app solo añade las canciones nuevas y elimina las obsoletas (un "diff sync").
-*   **Conserva tus Metadatos:** ¡La mejora más importante! Las canciones que no cambian **conservan su fecha de adición original y su posición** por defecto.
-*   **Previsualización y Confirmación:** Antes de ejecutar una sincronización, la app te muestra un resumen exacto de los cambios. Tú siempre tienes el control.
-*   **Reordenado Opcional:** Tras confirmar una sincronización con cambios, la app te da a elegir si quieres reordenar la mezcla resultante.
-*   **Autocuración:** Si una de las playlists de origen fue eliminada, la aplicación la excluye de futuras sincronizaciones para evitar errores.
+## 🚀 Stack Tecnológico
 
-### 🔀 Creación y Gestión Inteligente
-La aplicación distingue entre varios tipos y estados de playlists inteligentes:
+Este proyecto utiliza un stack moderno, eficiente y escalable, enfocado en el rendimiento y la experiencia de desarrollo.
 
-#### 🟢 Megalistas (Uniones Sincronizables)
-*   **Mezcla Estándar:** Selecciona dos o más playlists y combínalas en una nueva "Megalista". Son las únicas que se pueden sincronizar.
-*   **Añade Fuentes:** Enriquece una Megalista existente añadiendo más playlists como fuente.
-*   **Inyecta Canciones:** Añade canciones o álbumes sueltos desde la búsqueda global de Spotify directamente a una Megalista.
+*   **Framework:** **Next.js 14+** (App Router)
+*   **Lenguaje:** **TypeScript**
+*   **Backend:** **Next.js Server Actions**
+*   **Base de Datos:** **Vercel Postgres** (proveído por Neon)
+*   **ORM:** **Prisma**
+*   **Autenticación:** **Auth.js** (NextAuth v5)
+*   **UI y Estilos:** **Tailwind CSS** y **Shadcn/ui**
+*   **Gestión de Estado (Cliente):** **Zustand** (para el caché global) y React Hooks
+*   **Virtualización de Listas:** **TanStack Virtual**
+*   **Notificaciones:** **Sonner**
 
-#### 🔵 Megalistas Congeladas (Uniones Protegidas)
-*   **Congela y Protege:** Marca cualquier Megalista como "congelada" para evitar que se pueda sincronizar. Perfecto para conservar una mezcla específica. Es una acción reversible.
+## 🏛️ Arquitectura del Software
 
-#### 🔴 Megalistas Vacías
-*   **Empieza desde Cero:** Crea una playlist vacía y añádele fuentes más tarde. Se activa y se vuelve sincronizable automáticamente al añadirle la primera playlist.
+La aplicación ha sido refactorizada siguiendo un patrón de **separación estricta de responsabilidades**, lo que hace que el código sea altamente modular, mantenible y fácil de testear.
 
-#### 🟣 Listas Sorpresa (Mezclas Aleatorias)
-*   **Sorpresa desde Selección:** Crea una playlist con un número específico de canciones aleatorias a partir de una o varias playlists que hayas seleccionado.
-*   **Sorpresa Totalmente Aleatoria:** Genera una playlist aleatoria con un número de canciones a tu elección, usando hasta 50 playlists de tu librería escogidas al azar como fuente.
+El núcleo de la arquitectura se basa en el concepto de **"Cerebros" (Hooks de Lógica) vs. "Renderizadores" (Componentes de UI)**.
 
-### 🛠️ Herramientas de Descubrimiento y Gestión
-*   **Búsqueda Dual Optimizada:** La interfaz presenta dos barras de búsqueda: una para filtrar rápidamente tu biblioteca y otra para buscar en todo Spotify.
-*   **Resultados de Búsqueda Avanzados:** La búsqueda global muestra los resultados en un popover inteligente con:
-    *   **Lista Única:** Canciones, álbumes y playlists se muestran en una sola lista unificada.
-    *   **Ordenación Interna:** Puedes ordenar los resultados por relevancia o agruparlos por tipo.
-    *   **Identificación Visual:** Cada resultado muestra un icono de su tipo, y las playlists que ya sigues se marcan con un "check" en su carátula.
-*   **Vista de Canciones Optimizada:** Accede a una vista detallada de las canciones de CUALQUIER playlist. La vista está **optimizada para playlists enormes**, cargando las canciones de forma incremental.
-*   **Control Total Sobre el Orden:** Reordena cualquier playlist creada por la app cuando quieras, de forma individual o en lote.
-*   **Edición Directa y Eliminación Múltiple:** Edita el nombre/descripción o deja de seguir una o varias playlists a la vez de forma segura.
+#### Los Cerebros (Hooks Especializados)
 
-### 💻 Interfaz y Experiencia de Usuario
-*   **Carga Infinita y Virtualización:** Navega por miles de playlists sin esfuerzo gracias a `@tanstack/react-virtual`.
-*   **Controles Integrados:** Los controles de ordenación están integrados directamente en las barras de búsqueda para una interfaz más limpia.
-*   **Interacción Avanzada:** Búsqueda difusa que perdona errores, ordenación flexible y navegación completa por teclado.
-*   **Manejo de Errores:** La aplicación gestiona el *rate limiting* de la API y proporciona feedback claro al usuario en todo momento.
+1.  🧠 **`usePlaylistActions` (Cerebro de Lógica):** Encapsula toda la lógica de negocio. Ejecuta las Server Actions, actualiza el estado global en Zustand y gestiona el estado de carga (`isProcessing`). No sabe nada sobre la UI de los diálogos, solo solicita que se abran.
+2.  🧠 **`useDialogManager` (Cerebro de Diálogos):** Funciona como una máquina de estados para la UI modal. Es el único responsable de saber QUÉ diálogo debe mostrarse en cada momento.
+3.  🧠 **`useSpotifySearch` (Cerebro de Búsqueda):** Gestiona de forma autónoma toda la lógica de la búsqueda global en Spotify, incluyendo el *debouncing* y los resultados.
+
+#### El Flujo de Datos
+
+El flujo es unidireccional y orquestado por el componente `ActionProvider`, que actúa como el **compositor principal de la arquitectura**:
+
+1.  **Carga Inicial (SSR):** El Server Component `page.tsx` obtiene los datos iniciales.
+2.  **Disparo de Acción:** Un componente de UI (ej: un botón) llama a una función del contexto `useActions` (ej: `openDeleteDialog`).
+3.  **Comunicación entre Cerebros:**
+    *   `usePlaylistActions` recibe la llamada y pide a `useDialogManager` que abra el diálogo de confirmación.
+    *   `useDialogManager` actualiza su estado y se renderiza el diálogo correspondiente.
+4.  **Confirmación:** Cuando el usuario confirma, el `ActionProvider` invoca el *callback* de lógica correspondiente en `usePlaylistActions`, pasándole los datos necesarios que obtiene del estado del diálogo.
+5.  **Ejecución:** `usePlaylistActions` ejecuta la Server Action, y al finalizar, actualiza el store de Zustand, lo que provoca que la UI se actualice de forma reactiva.
+
+## ⚙️ Cómo Ejecutar el Proyecto Localmente
+
+Para clonar y ejecutar este proyecto en tu máquina local, sigue estos pasos:
+
+#### 1. Prerrequisitos
+*   Node.js (v18 o superior)
+*   `pnpm`, `npm` o `yarn`
+*   Una cuenta de Spotify
+
+#### 2. Clonar el Repositorio
+```bash
+git clone https://github.com/tu-usuario/spotify-megamixer.git
+cd spotify-megamixer
+```
+
+#### 3. Instalar Dependencias
+```bash
+npm install
+```
+
+#### 4. Configurar Variables de Entorno
+
+Crea un fichero `.env.local` en la raíz del proyecto. Necesitarás obtener credenciales de la **API de Spotify** y una base de datos de **Vercel Postgres**.
+
+1.  **Spotify:** Ve al [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), crea una nueva aplicación y obtén tu `Client ID` y `Client Secret`. Asegúrate de añadir `http://localhost:3000/api/auth/callback/spotify` a las *Redirect URIs* en la configuración de tu app de Spotify.
+2.  **Base de Datos:** Crea un nuevo proyecto en [Vercel](https://vercel.com) y añade un almacenamiento de Vercel Postgres (proveído por Neon). Obtén las cadenas de conexión (pooling y non-pooling).
+
+Copia el siguiente contenido en tu `.env.local` y rellénalo con tus credenciales:
+
+```env
+# Autenticación con Auth.js y Spotify
+AUTH_SECRET="GENERATED_SECRET" # Genera un secreto con `openssl rand -base64 32`
+AUTH_SPOTIFY_ID="TU_CLIENT_ID_DE_SPOTIFY"
+AUTH_SPOTIFY_SECRET="TU_CLIENT_SECRET_DE_SPOTIFY"
+
+# Base de Datos (Vercel/Neon)
+POSTGRES_PRISMA_URL="TU_URL_DE_CONEXION_CON_POOLING"
+POSTGRES_URL_NON_POOLING="TU_URL_DE_CONEXION_SIN_POOLING"
+
+# Email de Contacto (Opcional, con Resend)
+RESEND_API_KEY="TU_API_KEY_DE_RESEND"
+CONTACT_EMAIL_TO="email_destino@dominio.com"
+```
+
+#### 5. Sincronizar la Base de Datos
+
+Ejecuta los siguientes comandos de Prisma para generar el cliente y sincronizar el esquema con tu base de datos:
+
+```bash
+npx prisma generate
+npx prisma db push
+```
+
+#### 6. Ejecutar la Aplicación
+```bash
+npm run dev
+```
+
+Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la aplicación funcionando.
+
+## 🗂️ Estructura del Proyecto
+
+```
+/
+├── app/                  # Rutas de la aplicación (App Router)
+│   └── dashboard/
+│       └── page.tsx      # Server Component para la carga inicial (SSR)
+├── components/           # Componentes de React
+│   ├── custom/           # Componentes específicos de la aplicación
+│   │   ├── DashboardClient.tsx
+│   │   ├── DashboardHeader.tsx
+│   │   └── ...
+│   └── ui/               # Componentes de Shadcn/ui
+├── lib/                  # Lógica central, utilidades y hooks
+│   ├── actions/          # Server Actions (backend)
+│   ├── contexts/         # React Contexts (ActionProvider)
+│   ├── hooks/            # Hooks de cliente ("Los Cerebros")
+│   ├── store.ts          # Store de Zustand
+│   └── ...
+├── prisma/               # Configuración de Prisma
+│   └── schema.prisma     # Esquema de la base de datos
+├── types/                # Definiciones de TypeScript
+└── ...```
 
 ---
 
-## 🛠️ Stack Tecnológico
-
-*   **Framework:** [Next.js](https://nextjs.org/) (App Router)
-*   **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)
-*   **Backend:** [Next.js Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations)
-*   **Base de Datos:** [Vercel Postgres](https://vercel.com/postgres) (provisto por Neon)
-*   **ORM:** [Prisma](https://www.prisma.io/)
-*   **Autenticación:** [NextAuth.js (Auth.js v5)](https://next-auth.js.org/)
-*   **UI y Estilos:** [Tailwind CSS](https://tailwindcss.com/), [Shadcn/ui](https://ui.shadcn.com/)
-*   **Gestión de Estado:**
-    *   **Caché de Datos:** [Zustand](https://github.com/pmndrs/zustand). Uso de selectores optimizados con **`useShallow`** para prevenir re-renderizados innecesarios.
-    *   **Estado de UI/Acciones:** [React `useReducer` & `Context`](https://react.dev/) para una gestión de estado centralizada y predecible de los flujos de usuario.
-*   **Notificaciones:** [Sonner](https://sonner.emilkowal.ski/)
-*   **Despliegue:** [Vercel](https://vercel.com/)
-
----
-
-## 🏛️ Arquitectura Refinada: "Cerebro vs. Renderizadores"
-
-La arquitectura sigue un patrón estricto que centraliza la lógica y simplifica los componentes.
-
-1.  **Capa de Datos Inicial (`/app/dashboard/page.tsx`):**
-    *   Un **Server Component** se encarga de la carga de datos inicial. Obtiene las playlists de Spotify y las cruza con la base de datos propia para enriquecerlas con metadatos (`isMegalist`, `playlistType`, `isFrozen`).
-
-2.  **Los "Cerebros" de la UI (`/lib/hooks/*.ts`):**
-    *   **`usePlaylistActions`:** Es la **Única Fuente de Verdad** para todo el estado interactivo de la biblioteca del usuario. Utiliza un `useReducer` con uniones discriminadas de TypeScript para un manejo de estado de diálogos 100% seguro y predecible.
-    *   **`useSpotifySearch`:** Un hook especializado que gestiona de forma autónoma la lógica de la búsqueda global en Spotify (input, debouncing, resultados).
-
-3.  **El Puente y los Renderizadores (`/lib/contexts/ActionProvider.tsx`):**
-    *   Este componente conecta el "cerebro" `usePlaylistActions` con la UI.
-    *   Expone las funciones para iniciar acciones a través del hook `useActions`.
-    *   Su `DialogRenderer` actúa como un **simple enrutador**: basándose en el estado del cerebro, renderiza el componente de diálogo apropiado.
-
-4.  **Consumidores de UI (`/components/custom/*`):**
-    *   Componentes como `DashboardClient.tsx` orquestan la UI, integrando los "cerebros" y pasando los datos a los componentes de visualización.
-    *   Componentes como `SearchResultsPopover.tsx` son ahora más inteligentes, gestionando su propio estado de UI (como la ordenación) para una mayor encapsulación.
-
-5.  **Backend (`/lib/actions/*.ts`):**
-    *   Las **Server Actions** son el corazón del backend. Devuelven un objeto **`ActionResult`** estandarizado (`{ success, data }` o `{ success, error }`), haciendo la comunicación cliente-servidor robusta y predecible.
+Creado con 💚 por **Juanjo Cerero**.
