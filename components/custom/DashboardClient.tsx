@@ -26,6 +26,10 @@ import {
 import { Search, ListChecks, XCircle, ListX, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface DashboardClientProps {
+  initialNextUrl: string | null;
+}
+
 // Tipos para la ordenación de playlists locales
 type SortOption =
 | 'custom'
@@ -47,7 +51,7 @@ const sortLabels: Record<SortOption, string> = {
   owner_asc: 'Propietario (A-Z)',
 };
 
-export default function DashboardClient() {
+export default function DashboardClient({ initialNextUrl }: DashboardClientProps) {
   
   const {
     selectedPlaylistIds,
@@ -60,30 +64,14 @@ export default function DashboardClient() {
     addMoreToCache, 
   } = usePlaylistStore();
   
-  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   
-  // El componente ahora gestiona su propio estado de carga inicial
-  useEffect(() => {
-    const loadInitialData = async () => {
-      const result = await getInitialDashboardDataAction();
-      if (result.success) {
-        setPlaylistCache(result.data.playlists);
-        setNextUrl(result.data.nextUrl);
-      } else {
-        toast.error('Error al cargar tus playlists', {
-          description: result.error,
-        });
-      }
-      setIsLoadingInitial(false);
-    };
-    loadInitialData();
-  }, [setPlaylistCache]);
+  
   
   const handleLoadMorePlaylists = useCallback(async () => {
     // Verificar que no haya ya una carga en curso y que haya a dónde ir.
-    if (isLoadingInitial || isLoadingMore || !nextUrl) {
+    if (isLoadingMore || !nextUrl) {
       return;
     }
     // Establecer el estado de carga.
@@ -115,7 +103,7 @@ export default function DashboardClient() {
       // (por ejemplo, haciendo scroll de nuevo).
       setIsLoadingMore(false);
     }
-  }, [isLoadingInitial, isLoadingMore, nextUrl, addMoreToCache]);
+  }, [isLoadingMore, nextUrl, addMoreToCache]);
   
   const followedPlaylistIds = useMemo(
     () => playlistCache.map(p => p.id),
@@ -306,8 +294,7 @@ export default function DashboardClient() {
     {/* Contenedor de la lista principal de playlists */}
     <div className="pt-6">
     <PlaylistDisplay
-    isLoadingInitial={isLoadingInitial} 
-    isLoadingMore={isLoadingMore} 
+    isLoadingMore={isLoadingMore}
     nextUrl={nextUrl}
     searchTerm={searchTerm}
     showOnlySelected={showOnlySelected}

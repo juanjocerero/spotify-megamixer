@@ -18,7 +18,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
 
 interface PlaylistDisplayProps {
-  isLoadingInitial: boolean;
   isLoadingMore: boolean; 
   nextUrl: string | null;
   searchTerm: string;
@@ -30,7 +29,6 @@ interface PlaylistDisplayProps {
 }
 
 export default function PlaylistDisplay({
-  isLoadingInitial, 
   isLoadingMore, 
   nextUrl,
   searchTerm,           
@@ -163,33 +161,6 @@ export default function PlaylistDisplay({
   const handleShowTracks = useCallback((playlist: SpotifyPlaylist) => {
     setTrackSheetState({ open: true, playlist });
   }, []);
-  
-  if (isLoadingInitial) {
-    return (
-      <div className="rounded-md border border-gray-700 overflow-hidden">
-      <div className="w-full">
-      {/* Mantenemos la cabecera visible para dar contexto */}
-      <div className="flex items-center bg-gray-900 text-sm font-semibold text-white">
-      <div className="w-[60px] sm:w-[80px] flex-shrink-0"></div>
-      <div className="flex-grow min-w-0 px-4 py-3">Nombre</div>
-      <div className="hidden sm:block w-[120px] flex-shrink-0 px-4 py-3">
-      Propietario
-      </div>
-      <div className="w-[80px] sm:w-[100px] flex-shrink-0 px-4 py-3 text-right">
-      Canciones
-      </div>
-      <div className="w-[50px] flex-shrink-0"></div>
-      </div>
-      <div className="h-[65vh] overflow-auto relative">
-      {/* Renderizamos un array de esqueletos */}
-      {Array.from({ length: 10 }).map((_, index) => (
-        <PlaylistItemSkeleton key={index} />
-      ))}
-      </div>
-      </div>
-      </div>
-    );
-  }
   
   // Si no, renderizamos la lista normal.
   return (
