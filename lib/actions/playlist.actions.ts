@@ -14,8 +14,74 @@ import {
   replacePlaylistTracks,
   getPlaylistDetails,
   updatePlaylistDetails,
+  getUserPlaylists
 } from '../spotify';
 import { getTrackUris } from './spotify.actions';
+import { MegalistClientData } from '@/types/spotify';
+import { Megalist } from '@prisma/client';
+
+/**
+* Encapsula la lógica de carga inicial de datos
+* Su objetivo es mostrar el skeleton UI
+* @returns Un ActionResult con una lista de playlists
+*/
+export async function getInitialDashboardDataAction(): Promise<
+ActionResult<{
+  playlists: SpotifyPlaylist[];
+  nextUrl: string | null;
+}>
+> {
+  const session = await auth();
+  if (!session?.accessToken || !session.user?.id) {
+    return { success: false, error: 'Not authenticated' };
+  }
+  
+  try {
+    const userMegalists = await db.megalist.findMany({
+      where: { spotifyUserId: session.user.id },
+    });
+    
+    const megalistDataMap = new Map<string, MegalistClientData>(
+      userMegalists.map((m: Megalist) => [
+        m.id,
+        {
+          isMegalist: true,
+          isSyncable: m.type === 'MEGALIST' && !m.isFrozen,
+          type: m.type,
+          isFrozen: m.isFrozen,
+        },
+      ])
+    );
+    
+    const initialData = await getUserPlaylists(session.accessToken);
+    const initialPlaylists = initialData.items;
+    
+    const finalPlaylists: SpotifyPlaylist[] = initialPlaylists.map(p => {
+      const megalistData = megalistDataMap.get(p.id);
+      if (megalistData) {
+        return {
+          ...p,
+          isMegalist: megalistData.isMegalist,
+          isSyncable: megalistData.isSyncable,
+          playlistType: megalistData.type,
+          isFrozen: megalistData.isFrozen,
+        };
+      }
+      return p;
+    });
+    
+    return {
+      success: true,
+      data: { playlists: finalPlaylists, nextUrl: initialData.next },
+    };
+  } catch (error) {
+    console.error('[ACTION_ERROR:getInitialDashboardData]', error);
+    const message =
+    error instanceof Error ? error.message : 'Failed to load initial data.';
+    return { success: false, error: message };
+  }
+}
+
 
 /**
 * Encuentra o crea la playlist de destino.

@@ -5,8 +5,10 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import Fuse, { type IFuseOptions } from 'fuse.js';
 
+import { PlaylistItemSkeleton } from './skeletons/PlaylistItemSkeleton';
+import { ListFooterLoader } from './skeletons/ListFooterLoader';
+
 import { SpotifyPlaylist } from '@/types/spotify';
-import { fetchMorePlaylists, } from '@/lib/actions/spotify.actions';
 import { usePlaylistStore } from '@/lib/store';
 import { usePlaylistKeyboardNavigation } from '@/lib/hooks/usePlaylistKeyboardNavigation';
 import TrackDetailView from './TrackDetailView';
@@ -16,20 +18,26 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 type SortOption = 'custom' | 'megalist_first' | 'name_asc' | 'name_desc' | 'tracks_desc' | 'tracks_asc' | 'owner_asc';
 
 interface PlaylistDisplayProps {
-  initialNextUrl: string | null;
+  isLoadingInitial: boolean;
+  isLoadingMore: boolean; 
+  nextUrl: string | null;
   searchTerm: string;
   showOnlySelected: boolean;
   onClearSearch: () => void;
   onFilteredChange: (ids: string[]) => void;
+  onLoadMore: () => void; 
   sortOption: SortOption;
 }
 
-export default function PlaylistDisplay({ 
-  initialNextUrl, 
+export default function PlaylistDisplay({
+  isLoadingInitial, 
+  isLoadingMore, 
+  nextUrl,
   searchTerm,           
   showOnlySelected,
   onClearSearch, 
   onFilteredChange, 
+  onLoadMore, 
   sortOption 
 }: PlaylistDisplayProps) {
   
@@ -38,31 +46,15 @@ export default function PlaylistDisplay({
     isSelected, 
     selectedPlaylistIds, 
     playlistCache,
-    addMoreToCache,
   } = usePlaylistStore();
   
-  const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const [trackSheetState, setTrackSheetState] = useState<{ open: boolean; playlist: SpotifyPlaylist | null }>({ open: false, playlist: null });
+  const [trackSheetState, setTrackSheetState] = useState<{
+    open: boolean;
+    playlist: SpotifyPlaylist | null;
+  }>({ open: false, playlist: null });
   
   // Referencia para el contenedor de scroll
   const parentRef = useRef<HTMLDivElement>(null);
-  
-  const loadMorePlaylists = useCallback(async () => {
-    if (isLoading || !nextUrl || showOnlySelected) return;
-    
-    setIsLoading(true);
-    try {
-      const { items: newPlaylists, next: newNextUrl } = await fetchMorePlaylists(nextUrl);
-      addMoreToCache(newPlaylists);
-      setNextUrl(newNextUrl);
-    } catch {
-      // Manejo de errores
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isLoading, nextUrl, showOnlySelected, addMoreToCache]);
   
   const fuseOptions: IFuseOptions<SpotifyPlaylist> = useMemo(
     () => ({
@@ -152,26 +144,54 @@ export default function PlaylistDisplay({
   const virtualItems = rowVirtualizer.getVirtualItems();
   const lastItemIndex = virtualItems.length > 0 ? virtualItems[virtualItems.length - 1].index : 0;
   
+  
   useEffect(() => {
-    if (
-      lastItemIndex >= filteredPlaylists.length - 1 &&
-      nextUrl &&
-      !isLoading
-    ) {
-      loadMorePlaylists();
+    // La condición no cambia: se activa cuando el último elemento visible
+    // está cerca del final de la lista de datos cargados.
+    if (lastItemIndex >= filteredPlaylists.length - 1 && nextUrl && !isLoadingMore) {
+      // En lugar de tener su propia lógica, ahora solo notifica al padre.
+      onLoadMore(); 
     }
   }, [
     lastItemIndex,
     filteredPlaylists.length,
     nextUrl,
-    isLoading,
-    loadMorePlaylists,
+    isLoadingMore,
+    onLoadMore, // <-- Se añade la dependencia al callback.
   ]);
   
   const handleShowTracks = useCallback((playlist: SpotifyPlaylist) => {
     setTrackSheetState({ open: true, playlist });
   }, []);
   
+  if (isLoadingInitial) {
+    return (
+      <div className="rounded-md border border-gray-700 overflow-hidden">
+      <div className="w-full">
+      {/* Mantenemos la cabecera visible para dar contexto */}
+      <div className="flex items-center bg-gray-900 text-sm font-semibold text-white">
+      <div className="w-[60px] sm:w-[80px] flex-shrink-0"></div>
+      <div className="flex-grow min-w-0 px-4 py-3">Nombre</div>
+      <div className="hidden sm:block w-[120px] flex-shrink-0 px-4 py-3">
+      Propietario
+      </div>
+      <div className="w-[80px] sm:w-[100px] flex-shrink-0 px-4 py-3 text-right">
+      Canciones
+      </div>
+      <div className="w-[50px] flex-shrink-0"></div>
+      </div>
+      <div className="h-[65vh] overflow-auto relative">
+      {/* Renderizamos un array de esqueletos */}
+      {Array.from({ length: 10 }).map((_, index) => (
+        <PlaylistItemSkeleton key={index} />
+      ))}
+      </div>
+      </div>
+      </div>
+    );
+  }
+  
+  // Si no, renderizamos la lista normal.
   return (
     <div>
     <div className="rounded-md border border-gray-700 overflow-hidden">
@@ -206,6 +226,28 @@ export default function PlaylistDisplay({
         />
       );
     })}
+    
+    {isLoadingMore && (
+      <div
+      style={{
+        height: '60px',
+        transform: `translateY(${rowVirtualizer.getTotalSize()}px)`,
+      }}
+      >
+      <ListFooterLoader />
+      </div>
+    )}
+    
+    {isLoadingMore ? (
+      <ListFooterLoader />
+    ) : !nextUrl && playlistCache.length > 0 ? (
+      <div className="flex justify-center items-center py-4">
+      <p className="text-sm text-muted-foreground">
+      Has llegado al final de tus playlists.
+      </p>
+      </div>
+    ) : null}
+    
     </div>
     </div>
     </div>

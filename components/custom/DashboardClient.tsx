@@ -1,15 +1,17 @@
 // /components/custom/DashboardClient.tsx
 'use client';
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { SpotifyPlaylist } from '@/types/spotify';
 import { usePlaylistStore } from '@/lib/store';
 import { useSpotifySearch } from '@/lib/hooks/useSpotifySearch';
-import SearchResultsPopover from './search/SearchResultsPopover';
+import { getInitialDashboardDataAction } from '@/lib/actions/playlist.actions';
+import { fetchMorePlaylists } from '@/lib/actions/spotify.actions';
 
 // Importamos los componentes que va a orquestar
 import PlaylistDisplay from './PlaylistDisplay';
 import FloatingActionBar from './FloatingActionBar';
+import SearchResultsPopover from './search/SearchResultsPopover';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,17 +54,76 @@ interface DashboardClientProps {
   initialNextUrl: string | null;
 }
 
-export default function DashboardClient({ initialNextUrl }: DashboardClientProps) {
+export default function DashboardClient() {
   
-  const { 
-    selectedPlaylistIds, 
-    addMultipleToSelection, 
-    removeMultipleFromSelection, 
-    showOnlySelected, 
-    setShowOnlySelected 
+  const {
+    selectedPlaylistIds,
+    addMultipleToSelection,
+    removeMultipleFromSelection,
+    showOnlySelected,
+    setShowOnlySelected,
+    playlistCache,
+    setPlaylistCache,
+    addMoreToCache, 
   } = usePlaylistStore();
   
-  const { playlistCache } = usePlaylistStore();
+  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+  const [nextUrl, setNextUrl] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
+  // El componente ahora gestiona su propio estado de carga inicial
+  useEffect(() => {
+    const loadInitialData = async () => {
+      const result = await getInitialDashboardDataAction();
+      if (result.success) {
+        setPlaylistCache(result.data.playlists);
+        setNextUrl(result.data.nextUrl);
+      } else {
+        toast.error('Error al cargar tus playlists', {
+          description: result.error,
+        });
+      }
+      setIsLoadingInitial(false);
+    };
+    loadInitialData();
+  }, [setPlaylistCache]);
+  
+  const handleLoadMorePlaylists = useCallback(async () => {
+    // Verificar que no haya ya una carga en curso y que haya a dónde ir.
+    if (isLoadingInitial || isLoadingMore || !nextUrl) {
+      return;
+    }
+    // Establecer el estado de carga.
+    setIsLoadingMore(true);
+    
+    try {
+      // Llamar a la Server Action.
+      const result = await fetchMorePlaylists(nextUrl);
+      
+      // Actualizar el estado con los nuevos datos.
+      addMoreToCache(result.items);
+      setNextUrl(result.next);
+    } catch (error) {
+      // Registrar el error en la consola para depuración.
+      console.error('Failed to load more playlists:', error);
+      
+      // Mostrar una notificación clara y útil al usuario.
+      toast.error('Error al cargar más playlists', {
+        description:
+        error instanceof Error
+        ? error.message
+        : 'Ha ocurrido un problema de red. Por favor, inténtalo de nuevo en unos segundos.',
+      });
+      // Es importante NO modificar `nextUrl` aquí. Si lo pusiéramos a `null`,
+      // la aplicación pensaría que hemos llegado al final y no permitiría reintentos.
+    } finally {
+      // Asegurarse de que el estado de carga se desactive siempre.
+      // Esto es fundamental para que el usuario pueda volver a intentarlo
+      // (por ejemplo, haciendo scroll de nuevo).
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingInitial, isLoadingMore, nextUrl, addMoreToCache]);
+  
   const followedPlaylistIds = useMemo(
     () => playlistCache.map(p => p.id),
     [playlistCache]
@@ -245,18 +306,21 @@ export default function DashboardClient({ initialNextUrl }: DashboardClientProps
     results={results}
     isLoading={isLoading}
     setQuery={setSpotifyQuery}
-    anchorRef={searchContainerRef} 
+    anchorRef={searchContainerRef}
     followedPlaylistIds={followedPlaylistIds}
     />
     
     {/* Contenedor de la lista principal de playlists */}
     <div className="pt-6">
     <PlaylistDisplay
-    initialNextUrl={initialNextUrl}
+    isLoadingInitial={isLoadingInitial} 
+    isLoadingMore={isLoadingMore} 
+    nextUrl={nextUrl}
     searchTerm={searchTerm}
     showOnlySelected={showOnlySelected}
     onClearSearch={handleClearSearch}
     onFilteredChange={handleFilteredChange}
+    onLoadMore={handleLoadMorePlaylists}
     sortOption={sortOption}
     />
     </div>
