@@ -142,8 +142,8 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la 
 ├── prisma/               # Configuración de Prisma
 │   └── schema.prisma     # Esquema de la base de datos
 ├── types/                # Definiciones de TypeScript
-└── ...```
-
+└── ...
+```
 ---
 
 Creado con 💚 por **Juanjo Cerero**.
