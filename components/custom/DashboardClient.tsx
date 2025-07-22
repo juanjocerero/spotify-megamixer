@@ -22,7 +22,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import { Search, ListChecks, XCircle, ListX, ArrowUpDown, ListFilter } from 'lucide-react';
+import { Search, ListChecks, XCircle, ListX, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Tipos para la ordenación de playlists locales

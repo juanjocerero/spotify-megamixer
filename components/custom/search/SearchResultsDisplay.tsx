@@ -1,23 +1,25 @@
+// components/custom/search/SearchResultsDisplay.tsx
+
 'use client';
 
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { useActions } from '@/lib/contexts/ActionProvider';
 import { getAlbumTracksAction } from '@/lib/actions/spotify.actions';
 import { SearchResults } from '@/lib/actions/search.actions';
-import { SpotifyAlbum, SpotifyPlaylist, SpotifyTrack } from '@/types/spotify';
+import type {
+  SpotifyAlbum,
+  SpotifyPlaylist,
+  SpotifyTrack,
+} from '@/types/spotify';
 import SearchResultItem, { SearchResultItemType } from './SearchResultItem';
 
-import { toast } from 'sonner';
+// PASO 1: Definimos el tipo como una unión discriminada, usando 'data'.
+type UnifiedSearchResult =
+| { id: string; type: 'track'; data: SpotifyTrack }
+| { id: string; type: 'album'; data: SpotifyAlbum }
+| { id: string; type: 'playlist'; data: SpotifyPlaylist };
 
-// Tipo para el nuevo array unificado
-type UnifiedSearchResult = {
-  id: string;
-  type: 'track' | 'album' | 'playlist';
-  // El tipo de `data` debe ser la unión de los posibles objetos
-  data: SpotifyTrack | SpotifyAlbum | SpotifyPlaylist;
-};
-
-// Props actualizadas para aceptar la opción de ordenación
 interface SearchResultsDisplayProps {
   results: SearchResults;
   followedPlaylistIds: string[];
@@ -30,20 +32,20 @@ interface SearchResultsDisplayProps {
 
 export default function SearchResultsDisplay({
   results,
-  spotifySortOption, 
+  spotifySortOption,
   followedPlaylistIds,
 }: SearchResultsDisplayProps) {
-  
   const { openAddToMegalistDialog, openAddTracksDialog } = useActions();
   const [addingItemId, setAddingItemId] = useState<string | null>(null);
   
   const sortedAndUnifiedResults = useMemo(() => {
+    // TypeScript ahora entiende perfectamente la estructura de este array.
     const unified: UnifiedSearchResult[] = [
       ...results.tracks.map(item => ({ id: item.id, type: 'track' as const, data: item })),
       ...results.albums.map(item => ({ id: item.id, type: 'album' as const, data: item })),
       ...results.playlists.map(item => ({ id: item.id, type: 'playlist' as const, data: item })),
     ];
-    // Nueva lógica de ordenación con switch
+    
     switch (spotifySortOption) {
       case 'playlists_first': {
         const typeOrder = { playlist: 1, album: 2, track: 3 };
@@ -62,34 +64,30 @@ export default function SearchResultsDisplay({
       }
       case 'relevance':
       default:
-      // No hacer nada, mantener el orden de la API
       break;
     }
-    
     return unified;
   }, [results, spotifySortOption]);
   
-  // Acción de añadir
-  const handleAdd = async (itemProps: SearchResultItemType) => {
-    const { type, item } = itemProps;
-    
+  const handleAdd = async (itemData: SearchResultItemType) => {
+    const { type, data } = itemData;
     if (type === 'playlist') {
-      openAddToMegalistDialog([item.id]);
+      openAddToMegalistDialog([data.id]);
       return;
     }
-    
     if (type === 'track') {
-      openAddTracksDialog([item.uri]);
+      openAddTracksDialog([data.uri]);
       return;
     }
-    
     if (type === 'album') {
-      setAddingItemId(item.id);
-      const result = await getAlbumTracksAction(item.id);
+      setAddingItemId(data.id);
+      const result = await getAlbumTracksAction(data.id);
       if (result.success) {
         openAddTracksDialog(result.data);
       } else {
-        toast.error('Error al procesar el álbum', { description: result.error });
+        toast.error('Error al procesar el álbum', {
+          description: result.error,
+        });
       }
       setAddingItemId(null);
     }
@@ -105,12 +103,13 @@ export default function SearchResultsDisplay({
   return (
     <div className="p-2">
     {sortedAndUnifiedResults.map(item => (
+      // PASO 2: La llamada al componente ahora es simple y segura.
+      // No hay error porque el tipo de 'item' coincide con lo que 'itemData' espera.
       <SearchResultItem
       isAdding={addingItemId === item.id}
-      key={`${item.type}-${item.id}`} // Clave más robusta para evitar colisiones
-      // Pasamos los datos en el formato que SearchResultItem espera
-      itemProps={{ type: item.type, item: item.data as any }}
-      onAdd={handleAdd} 
+      key={`${item.type}-${item.id}`}
+      itemData={item}
+      onAdd={handleAdd}
       followedPlaylistIds={followedPlaylistIds}
       />
     ))}
