@@ -8,16 +8,6 @@ import { ActionResult, SpotifyPlaylist } from '@/types/spotify';
 import { findUserPlaylistByName, replacePlaylistTracks, createNewPlaylist, getPlaylistDetails } from '../spotify';
 import { getTrackUris } from './spotify.actions';
 
-export async function getUniqueTrackCountFromPlaylistsAction(playlistIds: string[]): Promise<number> {
-  try {
-    const uniqueTrackUris = await getTrackUris(playlistIds);
-    return uniqueTrackUris.length;
-  } catch (error) {
-    console.error('[ACTION_ERROR:getUniqueTrackCount]', error);
-    throw error;
-  }
-}
-
 /**
 * Crea o sobrescribe una playlist "Sorpresa".
 * - Si no se provee `playlistIdToOverwrite`, crea una nueva playlist.

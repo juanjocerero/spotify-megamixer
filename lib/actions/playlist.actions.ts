@@ -156,20 +156,18 @@ export async function findOrCreatePlaylist(
   }
 }
 
-export async function getUniqueTrackCountFromPlaylistsAction(playlistIds: string[]): Promise<number> {
+export async function getUniqueTrackCountFromPlaylistsAction(
+  playlistIds: string[],
+): Promise<number> {
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
-      throw new Error('No autenticado o token no disponible.');
-    }
-    const { accessToken } = session;
-    const trackPromises = playlistIds.map((id) =>
-      getAllPlaylistTracks(accessToken, id).then(tracks => tracks.map(t => t.uri)));
-    const tracksPerPlaylist = await Promise.all(trackPromises);
-    const uniqueTrackUris = [...new Set(tracksPerPlaylist.flat())];
+    // Lógica simplificada para reutilizar la acción existente
+    const uniqueTrackUris = await getTrackUris(playlistIds);
     return uniqueTrackUris.length;
   } catch (error) {
-    console.error('[ACTION_ERROR:getUniqueTrackCountFromPlaylistsAction]', error);
+    console.error(
+      '[ACTION_ERROR:getUniqueTrackCountFromPlaylistsAction]',
+      error,
+    );
     throw error;
   }
 }
