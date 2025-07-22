@@ -1,25 +1,31 @@
+// /components/custom/buttons/ShuffleAllButton.tsx
 'use client';
 
-import { usePlaylistStore, selectAllMegalists } from '@/lib/store';
-import { useActions } from '@/lib/contexts/ActionProvider';
-import { useShallow } from 'zustand/react/shallow';
-
-import HeaderIconButton from './HeaderIconButton';
-
+import { useMemo } from 'react';
 import { Shuffle } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { useActions } from '@/lib/contexts/ActionProvider';
+import HeaderIconButton from './HeaderIconButton';
+import { usePlaylistStore } from '@/lib/store';
 
 export default function ShuffleAllButton() {
-  const allMegalists = usePlaylistStore(useShallow(selectAllMegalists));
-  
+  // Obtenemos toda la caché de playlists
+  const playlistCache = usePlaylistStore((state) => state.playlistCache);
   const { openShuffleDialog, isProcessing } = useActions();
+  
+  // Calculamos las megalistas usando useMemo para optimizar
+  const allMegalists = useMemo(
+    () => playlistCache.filter(p => p.isMegalist),
+    [playlistCache]
+  );
   
   const handleShuffleAll = () => {
     if (allMegalists.length === 0) {
       toast.info('No se encontraron Megalistas para reordenar.');
       return;
     }
+    // Pasamos un objeto simplificado a la acción
     openShuffleDialog(allMegalists.map((p) => ({ id: p.id, name: p.name })));
   };
   

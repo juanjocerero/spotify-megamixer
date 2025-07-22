@@ -4,6 +4,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import Fuse, { type IFuseOptions } from 'fuse.js';
+import { useShallow } from 'zustand/react/shallow';
 
 import { ListFooterLoader } from '../skeletons/ListFooterLoader';
 
@@ -58,12 +59,14 @@ export default function PlaylistDisplay({
   sortOption 
 }: PlaylistDisplayProps) {
   
-  const { 
-    togglePlaylist, 
-    isSelected, 
-    selectedPlaylistIds, 
-    playlistCache,
-  } = usePlaylistStore();
+  const { togglePlaylist, isSelected, selectedPlaylistIds, playlistCache } = usePlaylistStore(
+    useShallow((state) => ({
+      togglePlaylist: state.togglePlaylist,
+      isSelected: state.isSelected,
+      selectedPlaylistIds: state.selectedPlaylistIds,
+      playlistCache: state.playlistCache,
+    })),
+  );
   
   const [trackSheetState, setTrackSheetState] = useState<{
     open: boolean;

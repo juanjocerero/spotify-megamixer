@@ -48,7 +48,7 @@ export default function AddToMegalistDialog({
 }: AddToMegalistDialogProps) {
   
   // Obtenemos las Megalistas directamente desde el store
-  const { playlistCache } = usePlaylistStore();
+  const playlistCache = usePlaylistStore((state) => state.playlistCache);
   
   // Gestionamos el ID de la playlist seleccionada con nuestro propio estado
   const [selectedId, setSelectedId] = useState<string>('');

@@ -2,6 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { usePlaylistStore } from '@/lib/store';
 import { useActions } from '@/lib/contexts/ActionProvider';
 import ActionBarButton from '@/components/custom/buttons/ActionBarButton';
@@ -31,11 +32,15 @@ import {
 * - Muestra un estado de carga en botones de larga duración como "Sincronizar".
 */
 export default function FloatingActionBar() {
-  const {
-    selectedPlaylistIds,
-    clearSelection,
-    playlistCache,
-  } = usePlaylistStore();
+  
+  const { selectedPlaylistIds, clearSelection, playlistCache } = usePlaylistStore(
+    useShallow((state) => ({
+      selectedPlaylistIds: state.selectedPlaylistIds,
+      clearSelection: state.clearSelection,
+      playlistCache: state.playlistCache,
+    })),
+  );
+  
   const {
     isProcessing,
     openCreateMegalistDialog,

@@ -1,18 +1,23 @@
-// components/custom/SyncAllButton.tsx
-
+// /components/custom/buttons/SyncAllButton.tsx
 'use client';
 
-import { RefreshCw, Loader2 } from 'lucide-react';
-import { useShallow } from 'zustand/react/shallow';
+import { useMemo } from 'react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { usePlaylistStore, selectSyncableMegalists } from '@/lib/store';
+
 import { useActions } from '@/lib/contexts/ActionProvider';
-import HeaderIconButton from '../buttons/HeaderIconButton';
+import { usePlaylistStore } from '@/lib/store';
+import HeaderIconButton from './HeaderIconButton';
 
 export default function SyncAllButton() {
-  const syncableMegalists = usePlaylistStore(useShallow(selectSyncableMegalists));
-  
+  const playlistCache = usePlaylistStore((state) => state.playlistCache);
   const { openSyncDialog, isProcessing } = useActions();
+  
+  // Calculamos las megalistas sincronizables con useMemo
+  const syncableMegalists = useMemo(
+    () => playlistCache.filter(p => p.isSyncable),
+    [playlistCache]
+  );
   
   const handleSyncAll = () => {
     if (syncableMegalists.length === 0) {

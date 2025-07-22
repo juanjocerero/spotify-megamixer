@@ -3,6 +3,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
+import { useShallow } from 'zustand/react/shallow';
 import { usePlaylistStore } from '@/lib/store';
 import { fetchMorePlaylists } from '@/lib/actions/spotify.actions';
 import PlaylistDisplay from '../playlist/PlaylistDisplay';
@@ -60,7 +61,7 @@ interface DashboardClientProps {
 export default function DashboardClient({ initialNextUrl }: DashboardClientProps) {
   
   // Estado del store de Zustand
-  const {
+const {
     selectedPlaylistIds,
     addMultipleToSelection,
     removeMultipleFromSelection,
@@ -68,7 +69,15 @@ export default function DashboardClient({ initialNextUrl }: DashboardClientProps
     setShowOnlySelected,
     playlistCache,
     addMoreToCache,
-  } = usePlaylistStore();
+} = usePlaylistStore(useShallow((state) => ({
+    selectedPlaylistIds: state.selectedPlaylistIds,
+    addMultipleToSelection: state.addMultipleToSelection,
+    removeMultipleFromSelection: state.removeMultipleFromSelection,
+    showOnlySelected: state.showOnlySelected,
+    setShowOnlySelected: state.setShowOnlySelected,
+    playlistCache: state.playlistCache,
+    addMoreToCache: state.addMoreToCache,
+})));
   
   // Estado para la paginación
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);

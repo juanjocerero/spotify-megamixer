@@ -4,6 +4,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { usePlaylistStore } from '@/lib/store';
+import { useShallow } from 'zustand/react/shallow';
 import {
   unfollowPlaylistsBatch,
   shufflePlaylistsAction,
@@ -47,13 +48,23 @@ export function usePlaylistActions(
   dispatch: React.Dispatch<{ type: 'OPEN'; payload: OpenActionPayload } | { type: 'CLOSE' }>,
 ) {
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Usamos un selector con `useShallow` para optimizar re-renderizados.
   const {
     addPlaylistToCache,
     updatePlaylistInCache,
     removeMultipleFromCache,
     clearSelection,
     playlistCache,
-  } = usePlaylistStore();
+  } = usePlaylistStore(
+    useShallow((state) => ({
+      addPlaylistToCache: state.addPlaylistToCache,
+      updatePlaylistInCache: state.updatePlaylistInCache,
+      removeMultipleFromCache: state.removeMultipleFromCache,
+      clearSelection: state.clearSelection,
+      playlistCache: state.playlistCache,
+    })),
+  );
   
   /**
   * Ejecuta una única Server Action, gestionando el estado de carga y las notificaciones.

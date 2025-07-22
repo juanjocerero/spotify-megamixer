@@ -38,7 +38,8 @@ export default function SurpriseNameDialog({
   onClose,
   onConfirm,
 }: SurpriseNameDialogProps) {
-  const { playlistCache } = usePlaylistStore();
+  
+  const playlistCache = usePlaylistStore((state) => state.playlistCache);
   const [name, setName] = useState('');
   
   // Sincronizamos el nombre por defecto si estamos en modo de sobrescritura
