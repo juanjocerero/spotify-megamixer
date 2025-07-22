@@ -53,7 +53,7 @@ export default function AddToMegalistDialog({
     if (isAddingTracks) {
       const selectedPlaylist = megalists.find(p => p.id === id);
       if (selectedPlaylist?.isFrozen) {
-        setError('No se pueden añadir pistas a una Megalista congelada.');
+        setError('No se pueden añadir pistas a una Megalista congelada o vacía.');
       } else if (selectedPlaylist?.tracks.total === 0) {
         setError('No se pueden añadir pistas a una Megalista vacía. Añade primero una lista completa como fuente.');
       }

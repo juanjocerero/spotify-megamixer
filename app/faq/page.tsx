@@ -15,6 +15,8 @@ import {
   ListPlus,
   Snowflake,
   Sun,
+  ArrowUpDown,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function FaqPage() {
@@ -23,7 +25,10 @@ export default function FaqPage() {
     <div className="max-w-4xl mx-auto space-y-10">
     {/* Botón volver */}
     <Link href="/dashboard" passHref>
-    <Button variant="ghost" className="mb-2 text-green-400 hover:text-green-300">
+    <Button
+    variant="ghost"
+    className="mb-2 text-green-400 hover:text-green-300"
+    >
     <ArrowLeft className="mr-2 h-4 w-4" />
     Volver al Dashboard
     </Button>
@@ -46,56 +51,55 @@ export default function FaqPage() {
     title="1. Conceptos Clave: Tipos de Playlist"
     >
     <p>
-    Spotify Megamixer introduce dos tipos de playlists inteligentes que
-    puedes crear y gestionar, además de un estado especial:
+    Spotify Megamixer introduce varios tipos de playlists inteligentes que
+    puedes crear y gestionar:
     </p>
     <ul className="list-disc list-inside space-y-3 text-slate-300 pt-2">
     <li>
     <strong className="text-green-400">Megalista:</strong> Es la{' '}
-    <strong>unión</strong> de las canciones de dos o más playlists. Su propósito es
-    mantenerse sincronizada con los cambios de sus fuentes. Se
-    identifica con una insignia <strong className="text-green-400">verde</strong>.
+    <strong>unión</strong> de las canciones de dos o más playlists. Su
+    propósito es mantenerse sincronizada con los cambios de sus
+    fuentes. Se identifica con una insignia <strong className="text-green-400">verde</strong>.
     </li>
     <li>
-    <strong className="text-blue-400">Megalista Congelada:</strong> Es una Megalista que has marcado como no sincronizable. Es ideal para preservar una mezcla específica que te ha gustado, protegiéndola de cambios automáticos. Se identifica con una insignia <strong className="text-blue-400">azul</strong>.
+    <strong className="text-blue-400">Megalista Congelada:</strong> Es una Megalista que has marcado como no sincronizable. Es ideal para preservar una mezcla específica, protegiéndola de cambios automáticos. Se identifica con una insignia <strong className="text-blue-400">azul</strong>.
     </li>
     <li>
-    <strong className="text-purple-400">Lista Sorpresa:</strong> Es una{' '}
-    <strong>selección aleatoria</strong> de
-    canciones. Su propósito es crear una mezcla única y no se sincroniza. Se
-    identifican con una insignia <strong className="text-purple-400">morada</strong>.
+    <strong className="text-red-500">Megalista Vacía:</strong> Es una Megalista recién creada que aún no tiene fuentes. Está marcada como congelada por defecto y se &quot;activa&quot; (se vuelve sincronizable) cuando le añades su primera playlist. Se identifica con una insignia <strong className="text-red-500">roja</strong>.
+    </li>
+    <li>
+    <strong className="text-purple-400">Lista Sorpresa:</strong> Es
+    una <strong>selección aleatoria</strong> de canciones. Su
+    propósito es crear una mezcla única y no se sincroniza. Se
+    identifica con una insignia <strong className="text-purple-400">morada</strong>.
     </li>
     </ul>
     </SectionCard>
     
-    {/* Búsqueda y Ordenación */}
+    {/* Búsqueda y Descubrimiento */}
     <SectionCard
-    icon={<ListFilter className="h-6 w-6 text-sky-400" />}
-    title="2. Búsqueda, Ordenación y Navegación"
+    icon={<Search className="h-6 w-6 text-sky-400" />}
+    title="2. Búsqueda y Descubrimiento Avanzados"
     >
-    <ul className="list-disc list-inside space-y-3 text-slate-300">
+    <p>
+    La interfaz cuenta con dos potentes barras de búsqueda, cada una con sus propios controles:
+    </p>
+    <ul className="list-disc list-inside space-y-4 text-slate-300 pt-2">
     <li>
-    <strong>Búsqueda Inteligente:</strong> Usa el campo{' '}
-    <Search className="inline h-4 w-4" /> para filtrar en tiempo real.
-    La búsqueda perdona errores tipográficos.
+    <strong className="text-sky-300">Filtrar tus playlists:</strong> La primera barra te permite buscar entre tus playlists.
+    <ul className="list-decimal list-inside space-y-2 pl-6 pt-2">
+    <li>Usa el icono <ArrowUpDown className="inline h-4 w-4" /> para <strong>ordenar tu lista</strong> por nombre, número de canciones, etc.</li>
+    <li>Usa las teclas <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">↑</kbd> <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">↓</kbd> para navegar y la <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">barra espaciadora</kbd> para seleccionar.</li>
+    </ul>
     </li>
     <li>
-    <strong>Ordenación Flexible:</strong> Organiza tu lista por
-    defecto, nombre, número de canciones, propietario o mostrando las
-    Megalistas y Sorpresas primero.
-    </li>
-    <li>
-    <strong>Selección Rápida (Interruptor):</strong> Un botón aparece en la barra de búsqueda para seleccionar todos los resultados filtrados. Si vuelves a pulsarlo, los deselecciona, respetando el resto de tus selecciones manuales.
-    </li>
-    <li>
-    <strong>Atajos de Teclado:</strong> Usa{' '}
-    <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">↑</kbd>{' '}
-    <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">↓</kbd> para
-    navegar por la lista y la{' '}
-    <kbd className="px-2 py-1 rounded bg-slate-700 text-xs">
-    barra espaciadora
-    </kbd>{' '}
-    para seleccionar.
+    <strong className="text-sky-300">Buscar en todo Spotify:</strong> La segunda barra te permite descubrir nuevo contenido.
+    <ul className="list-decimal list-inside space-y-2 pl-6 pt-2">
+    <li>Los resultados aparecen en una ventana emergente (popover).</li>
+    <li>Usa el filtro <ListFilter className="inline h-4 w-4" /> <strong>dentro de la ventana de resultados</strong> para ordenarlos por relevancia, o priorizando canciones, álbumes o listas.</li>
+    <li>Cada resultado tiene un icono que identifica su tipo.</li>
+    <li>Si un resultado de búsqueda es una playlist que ya sigues, aparecerá marcada con un discreto icono <CheckCircle2 className="inline h-4 w-4 text-green-500" /> sobre su carátula.</li>
+    </ul>
     </li>
     </ul>
     </SectionCard>
@@ -122,11 +126,16 @@ export default function FaqPage() {
     Añadir a una Megalista Existente
     </h3>
     <p>
-    Selecciona playlists → pulsa el botón{' '}
-    <ListPlus className="inline h-4 w-4" />{' '}
-    <strong>&quot;Añadir&quot;</strong> → elige la Megalista de
-    destino. Se te preguntará si quieres <strong className="text-orange-400">reordenar</strong> el resultado.
+    Puedes enriquecer una Megalista de dos maneras:
     </p>
+    <ul className="list-decimal list-inside space-y-2 pl-4 pt-2">
+    <li>
+    <strong>Añadir playlists enteras:</strong> Selecciona una o más playlists y usa la opción <ListPlus className="inline h-4 w-4" /> <strong>&quot;Añadir a Megalista&quot;</strong>. Las canciones que ya existían no se duplicarán.
+    </li>
+    <li>
+    <strong>Añadir canciones/álbumes sueltos:</strong> Desde los resultados de la búsqueda de Spotify, pulsa el botón <Plus className="inline h-4 w-4" /> en cualquier canción o álbum para inyectarlo directamente en una Megalista de tu elección.
+    </li>
+    </ul>
     </div>
     <div>
     <h3 className="font-semibold text-purple-300 flex items-center gap-2">
@@ -166,20 +175,23 @@ export default function FaqPage() {
     </p>
     <ul className="list-disc list-inside space-y-3 text-slate-300 pt-2">
     <li>
-    <strong>Previsualiza Antes de Actuar:</strong> La app te mostrará un resumen claro de cuántas
-    canciones se van a añadir y eliminar.
+    <strong>Previsualiza Antes de Actuar:</strong> La app te mostrará
+    un resumen claro de cuántas canciones se van a añadir y eliminar.
     </li>
     <li>
-    <strong>Conserva Fecha y Orden:</strong> La sincronización solo añade y quita lo necesario, por lo que las
-    canciones que ya estaban conservan su fecha de adición y su orden original.
+    <strong>Conserva Fecha y Orden:</strong> La sincronización solo
+    añade y quita lo necesario, por lo que las canciones que ya
+    estaban conservan su fecha de adición y su orden original.
     </li>
     <li>
-    <strong>Reordenado Post-Sincro:</strong> Después de confirmar, podrás
-    elegir si quieres reordenar aleatoriamente la playlist resultante.
+    <strong>Reordenado Post-Sincro:</strong> Después de confirmar,
+    podrás elegir si quieres reordenar aleatoriamente la playlist
+    resultante.
     </li>
     <li>
-    <strong>Autocuración:</strong> Si borras una de las playlists de origen en
-    Spotify, la app lo detecta y la limpia de la configuración.
+    <strong>Autocuración:</strong> Si borras una de las playlists de
+    origen en Spotify, la app lo detecta y la limpia de la
+    configuración.
     </li>
     </ul>
     </SectionCard>
@@ -190,23 +202,38 @@ export default function FaqPage() {
     title="5. Gestión y Acciones Universales"
     >
     <p>
-    Puedes realizar estas acciones sobre cualquier playlist, sea creada por la app o no (salvo donde se indique).
+    Puedes realizar estas acciones sobre cualquier playlist, sea creada
+    por la app o no (salvo donde se indique).
     </p>
-    <ul className="list-disc list-inside space-y-3 text-slate-300">
+    <ul className="list-disc list-inside space-y-3 text-slate-300 pt-2">
     <li>
-    <strong>Congelar / Descongelar:</strong> Desde el menú <code className="bg-slate-700 px-1 rounded">⋯</code> de una Megalista, puedes elegir <Snowflake className="inline h-4 w-4 text-blue-400" /> <strong>Congelar</strong> para que deje de ser sincronizable o <Sun className="inline h-4 w-4 text-yellow-400" /> <strong>Descongelar</strong> para que vuelva a serlo. Esta acción es reversible.
+    <strong>Congelar / Descongelar:</strong> Desde el menú{' '}
+    <code className="bg-slate-700 px-1 rounded">⋯</code> de una
+    Megalista, puedes elegir <Snowflake className="inline h-4 w-4 text-blue-400" />{' '}
+    <strong>Congelar</strong> para que deje de ser sincronizable o{' '}
+    <Sun className="inline h-4 w-4 text-yellow-400" />{' '}
+    <strong>Descongelar</strong> para que vuelva a serlo. Esta acción
+    es reversible.
     </li>
     <li>
-    <strong>Reordenado (Shuffle):</strong> Reordena aleatoriamente las canciones de cualquier playlist creada por la app, ya sea individualmente o en lote.
+    <strong>Reordenado (Shuffle):</strong> Reordena aleatoriamente
+    las canciones de cualquier playlist creada por la app, ya sea
+    individualmente o en lote.
     </li>
     <li>
-    <strong>Ver Canciones:</strong> Usa la opción <Eye className="inline h-4 w-4" /> en el menú. La carga está optimizada para playlists grandes, mostrándote las primeras canciones al instante mientras el resto carga en segundo plano.
+    <strong>Ver Canciones:</strong> Usa la opción{' '}
+    <Eye className="inline h-4 w-4" /> en el menú. La carga está
+    optimizada para playlists grandes.
     </li>
     <li>
-    <strong>Editar Nombre/Descripción:</strong> Funciona para CUALQUIER playlist de tu propiedad desde el menú <code className="bg-slate-700 px-1 rounded">⋯</code>.
+    <strong>Editar Nombre/Descripción:</strong> Funciona para
+    CUALQUIER playlist de tu propiedad desde el menú{' '}
+    <code className="bg-slate-700 px-1 rounded">⋯</code>.
     </li>
     <li>
-    <strong>Eliminar Playlists:</strong> Individualmente desde el menú o en lote con el botón <Trash2 className="inline h-4 w-4 text-rose-500" />. Esta acción deja de seguir la playlist.
+    <strong>Eliminar Playlists:</strong> Individualmente desde el menú
+    o en lote con el botón <Trash2 className="inline h-4 w-4 text-rose-500" />.
+    Esta acción deja de seguir la playlist.
     </li>
     </ul>
     </SectionCard>
@@ -236,9 +263,7 @@ function SectionCard({
     {icon}
     {title}
     </h2>
-    <div className="text-slate-300 leading-relaxed space-y-2">
-    {children}
-    </div>
+    <div className="text-slate-300 leading-relaxed space-y-2">{children}</div>
     </section>
   );
 }

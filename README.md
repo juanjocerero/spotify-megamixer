@@ -31,24 +31,33 @@ La aplicación distingue entre varios tipos y estados de playlists inteligentes:
 
 #### 🟢 Megalistas (Uniones Sincronizables)
 *   **Mezcla Estándar:** Selecciona dos o más playlists y combínalas en una nueva "Megalista". Son las únicas que se pueden sincronizar.
+*   **Añade Fuentes:** Enriquece una Megalista existente añadiendo más playlists como fuente.
+*   **Inyecta Canciones:** Añade canciones o álbumes sueltos desde la búsqueda global de Spotify directamente a una Megalista.
 
 #### 🔵 Megalistas Congeladas (Uniones Protegidas)
-*   **Congela y Protege:** Marca cualquier Megalista como "congelada" para evitar que se pueda sincronizar. Perfecto para conservar una mezcla específica que has modificado manualmente. Es una acción reversible.
+*   **Congela y Protege:** Marca cualquier Megalista como "congelada" para evitar que se pueda sincronizar. Perfecto para conservar una mezcla específica. Es una acción reversible.
+
+#### 🔴 Megalistas Vacías
+*   **Empieza desde Cero:** Crea una playlist vacía y añádele fuentes más tarde. Se activa y se vuelve sincronizable automáticamente al añadirle la primera playlist.
 
 #### 🟣 Listas Sorpresa (Mezclas Aleatorias)
 *   **Sorpresa desde Selección:** Crea una playlist con un número específico de canciones aleatorias a partir de una o varias playlists que hayas seleccionado.
 *   **Sorpresa Totalmente Aleatoria:** Genera una playlist aleatoria con un número de canciones a tu elección, usando hasta 50 playlists de tu librería escogidas al azar como fuente.
 
-### 🛠️ Herramientas Universales
-*   **Control Total Sobre el Orden:** Reordena cualquier playlist creada por la app cuando quieras, ya sea de forma individual, en lote o de forma global.
-*   **Vista de Canciones Optimizada:** Accede a una vista detallada de las canciones de CUALQUIER playlist. La vista está **optimizada para playlists enormes**, cargando las canciones de forma incremental con el scroll para una experiencia de usuario instantánea.
-*   **Edición Directa:** Edita el nombre y la descripción de cualquier playlist de tu propiedad directamente desde la aplicación.
-*   **Eliminación Múltiple:** Deja de seguir una o varias playlists a la vez de forma segura.
+### 🛠️ Herramientas de Descubrimiento y Gestión
+*   **Búsqueda Dual Optimizada:** La interfaz presenta dos barras de búsqueda: una para filtrar rápidamente tu biblioteca y otra para buscar en todo Spotify.
+*   **Resultados de Búsqueda Avanzados:** La búsqueda global muestra los resultados en un popover inteligente con:
+    *   **Lista Única:** Canciones, álbumes y playlists se muestran en una sola lista unificada.
+    *   **Ordenación Interna:** Puedes ordenar los resultados por relevancia o agruparlos por tipo.
+    *   **Identificación Visual:** Cada resultado muestra un icono de su tipo, y las playlists que ya sigues se marcan con un "check" en su carátula.
+*   **Vista de Canciones Optimizada:** Accede a una vista detallada de las canciones de CUALQUIER playlist. La vista está **optimizada para playlists enormes**, cargando las canciones de forma incremental.
+*   **Control Total Sobre el Orden:** Reordena cualquier playlist creada por la app cuando quieras, de forma individual o en lote.
+*   **Edición Directa y Eliminación Múltiple:** Edita el nombre/descripción o deja de seguir una o varias playlists a la vez de forma segura.
 
 ### 💻 Interfaz y Experiencia de Usuario
 *   **Carga Infinita y Virtualización:** Navega por miles de playlists sin esfuerzo gracias a `@tanstack/react-virtual`.
-*   **Selección de Búsqueda como Interruptor (Toggle):** El botón para seleccionar todos los resultados de una búsqueda ahora funciona como un interruptor, permitiendo seleccionar y deseleccionar masivamente.
-*   **Interacción Avanzada:** Búsqueda difusa, ordenación flexible y navegación completa por teclado.
+*   **Controles Integrados:** Los controles de ordenación están integrados directamente en las barras de búsqueda para una interfaz más limpia.
+*   **Interacción Avanzada:** Búsqueda difusa que perdona errores, ordenación flexible y navegación completa por teclado.
 *   **Manejo de Errores:** La aplicación gestiona el *rate limiting* de la API y proporciona feedback claro al usuario en todo momento.
 
 ---
@@ -63,7 +72,7 @@ La aplicación distingue entre varios tipos y estados de playlists inteligentes:
 *   **Autenticación:** [NextAuth.js (Auth.js v5)](https://next-auth.js.org/)
 *   **UI y Estilos:** [Tailwind CSS](https://tailwindcss.com/), [Shadcn/ui](https://ui.shadcn.com/)
 *   **Gestión de Estado:**
-    *   **Caché de Datos:** [Zustand](https://github.com/pmndrs/zustand). Uso de selectores optimizados con **`useShallow`** para prevenir re-renderizados innecesarios y bucles infinitos.
+    *   **Caché de Datos:** [Zustand](https://github.com/pmndrs/zustand). Uso de selectores optimizados con **`useShallow`** para prevenir re-renderizados innecesarios.
     *   **Estado de UI/Acciones:** [React `useReducer` & `Context`](https://react.dev/) para una gestión de estado centralizada y predecible de los flujos de usuario.
 *   **Notificaciones:** [Sonner](https://sonner.emilkowal.ski/)
 *   **Despliegue:** [Vercel](https://vercel.com/)
@@ -72,25 +81,23 @@ La aplicación distingue entre varios tipos y estados de playlists inteligentes:
 
 ## 🏛️ Arquitectura Refinada: "Cerebro vs. Renderizadores"
 
-Tras una refactorización integral, el proyecto sigue un patrón estricto que centraliza la lógica y simplifica los componentes.
+La arquitectura sigue un patrón estricto que centraliza la lógica y simplifica los componentes.
 
 1.  **Capa de Datos Inicial (`/app/dashboard/page.tsx`):**
     *   Un **Server Component** se encarga de la carga de datos inicial. Obtiene las playlists de Spotify y las cruza con la base de datos propia para enriquecerlas con metadatos (`isMegalist`, `playlistType`, `isFrozen`).
 
-2.  **El Cerebro de la UI (`/lib/hooks/usePlaylistActions.ts`):**
-    *   Este hook es la **Única Fuente de Verdad** para todo el estado interactivo.
-    *   Utiliza un `useReducer` con **uniones discriminadas de TypeScript** para un manejo de estado de diálogos 100% seguro y predecible.
-    *   Contiene **toda la lógica de negocio del cliente**: decide cuándo llamar a las Server Actions, qué `toast` mostrar, y cómo encadenar los pasos de un flujo.
-    *   Abstrae la lógica repetitiva en **`wrappers` de acción** (`executeAction`, `executeBatchAction`).
+2.  **Los "Cerebros" de la UI (`/lib/hooks/*.ts`):**
+    *   **`usePlaylistActions`:** Es la **Única Fuente de Verdad** para todo el estado interactivo de la biblioteca del usuario. Utiliza un `useReducer` con uniones discriminadas de TypeScript para un manejo de estado de diálogos 100% seguro y predecible.
+    *   **`useSpotifySearch`:** Un hook especializado que gestiona de forma autónoma la lógica de la búsqueda global en Spotify (input, debouncing, resultados).
 
 3.  **El Puente y los Renderizadores (`/lib/contexts/ActionProvider.tsx`):**
-    *   Este componente es un **"puente tonto"** que conecta el "cerebro" con la UI.
+    *   Este componente conecta el "cerebro" `usePlaylistActions` con la UI.
     *   Expone las funciones para iniciar acciones a través del hook `useActions`.
     *   Su `DialogRenderer` actúa como un **simple enrutador**: basándose en el estado del cerebro, renderiza el componente de diálogo apropiado.
 
 4.  **Consumidores de UI (`/components/custom/*`):**
-    *   Componentes como `FloatingActionBar.tsx` son "tontos": simplemente llaman a una función del contexto (ej: `useActions().openSyncDialog(selection)`).
-    *   Componentes como `ShuffleAllButton.tsx` demuestran un consumo de estado optimizado, usando `useShallow` de Zustand para leer datos derivados de forma eficiente y evitar bucles de renderizado.
+    *   Componentes como `DashboardClient.tsx` orquestan la UI, integrando los "cerebros" y pasando los datos a los componentes de visualización.
+    *   Componentes como `SearchResultsPopover.tsx` son ahora más inteligentes, gestionando su propio estado de UI (como la ordenación) para una mayor encapsulación.
 
 5.  **Backend (`/lib/actions/*.ts`):**
-    *   Las **Server Actions** son el corazón del backend. Han sido refactorizadas para no lanzar errores, sino devolver un objeto **`ActionResult`** estandarizado (`{ success, data }` o `{ success, error }`), haciendo la comunicación cliente-servidor robusta y predecible.
+    *   Las **Server Actions** son el corazón del backend. Devuelven un objeto **`ActionResult`** estandarizado (`{ success, data }` o `{ success, error }`), haciendo la comunicación cliente-servidor robusta y predecible.

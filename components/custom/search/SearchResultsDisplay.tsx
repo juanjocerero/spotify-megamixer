@@ -1,20 +1,73 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useActions } from '@/lib/contexts/ActionProvider';
 import { getAlbumTracksAction } from '@/lib/actions/spotify.actions';
 import { SearchResults } from '@/lib/actions/search.actions';
-import SearchResultItem from './SearchResultItem';
-import { SearchResultItemType } from './SearchResultItem';
+import { SpotifyAlbum, SpotifyPlaylist, SpotifyTrack } from '@/types/spotify';
+import SearchResultItem, { SearchResultItemType } from './SearchResultItem';
 
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 
-export default function SearchResultsDisplay({ results }: { results: SearchResults; }) {
+// Tipo para el nuevo array unificado
+type UnifiedSearchResult = {
+  id: string;
+  type: 'track' | 'album' | 'playlist';
+  // El tipo de `data` debe ser la unión de los posibles objetos
+  data: SpotifyTrack | SpotifyAlbum | SpotifyPlaylist;
+};
+
+// Props actualizadas para aceptar la opción de ordenación
+interface SearchResultsDisplayProps {
+  results: SearchResults;
+  followedPlaylistIds: string[];
+  spotifySortOption:
+  | 'relevance'
+  | 'playlists_first'
+  | 'albums_first'
+  | 'tracks_first';
+}
+
+export default function SearchResultsDisplay({
+  results,
+  spotifySortOption, 
+  followedPlaylistIds,
+}: SearchResultsDisplayProps) {
   
   const { openAddToMegalistDialog, openAddTracksDialog } = useActions();
   const [addingItemId, setAddingItemId] = useState<string | null>(null);
+  
+  const sortedAndUnifiedResults = useMemo(() => {
+    const unified: UnifiedSearchResult[] = [
+      ...results.tracks.map(item => ({ id: item.id, type: 'track' as const, data: item })),
+      ...results.albums.map(item => ({ id: item.id, type: 'album' as const, data: item })),
+      ...results.playlists.map(item => ({ id: item.id, type: 'playlist' as const, data: item })),
+    ];
+    // Nueva lógica de ordenación con switch
+    switch (spotifySortOption) {
+      case 'playlists_first': {
+        const typeOrder = { playlist: 1, album: 2, track: 3 };
+        unified.sort((a, b) => typeOrder[a.type] - typeOrder[b.type]);
+        break;
+      }
+      case 'albums_first': {
+        const typeOrder = { album: 1, track: 2, playlist: 3 };
+        unified.sort((a, b) => typeOrder[a.type] - typeOrder[b.type]);
+        break;
+      }
+      case 'tracks_first': {
+        const typeOrder = { track: 1, album: 2, playlist: 3 };
+        unified.sort((a, b) => typeOrder[a.type] - typeOrder[b.type]);
+        break;
+      }
+      case 'relevance':
+      default:
+      // No hacer nada, mantener el orden de la API
+      break;
+    }
+    
+    return unified;
+  }, [results, spotifySortOption]);
   
   // Acción de añadir
   const handleAdd = async (itemProps: SearchResultItemType) => {
@@ -49,67 +102,18 @@ export default function SearchResultsDisplay({ results }: { results: SearchResul
   
   if (!hasContent) return null;
   
-  const showAlbumSeparator =
-  results.tracks.length > 0 && results.albums.length > 0;
-  const showPlaylistSeparator =
-  (results.tracks.length > 0 || results.albums.length > 0) &&
-  results.playlists.length > 0;
-  
   return (
-    <ScrollArea className="max-h-[50vh] p-1">
     <div className="p-2">
-    {results.tracks.length > 0 && (
-      <div className="mb-2">
-      <h4 className="text-sm font-semibold text-muted-foreground px-2 py-1">
-      Canciones
-      </h4>
-      {results.tracks.map(track => (
-        <SearchResultItem 
-        isAdding={addingItemId === track.id}
-        key={track.id}
-        itemProps={{ type: 'track', item: track }}
-        onAdd={handleAdd}
-        />
-      ))}
-      </div>
-    )}
-    
-    {showAlbumSeparator && <Separator className="my-1" />}
-    
-    {results.albums.length > 0 && (
-      <div className="mb-2">
-      <h4 className="text-sm font-semibold text-muted-foreground px-2 py-1">
-      Álbumes
-      </h4>
-      {results.albums.map(album => (
-        <SearchResultItem 
-        isAdding={addingItemId === album.id}
-        key={album.id}
-        itemProps={{ type: 'album', item: album }}
-        onAdd={handleAdd}
-        />
-      ))}
-      </div>
-    )}
-    
-    {showPlaylistSeparator && <Separator className="my-1" />}
-    
-    {results.playlists.length > 0 && (
-      <div>
-      <h4 className="text-sm font-semibold text-muted-foreground px-2 py-1">
-      Listas de reproducción
-      </h4>
-      {results.playlists.map(playlist => (
-        <SearchResultItem 
-        isAdding={addingItemId === playlist.id}
-        key={playlist.id}
-        itemProps={{ type: 'playlist', item: playlist }}
-        onAdd={handleAdd}
-        />
-      ))}
-      </div>
-    )}
+    {sortedAndUnifiedResults.map(item => (
+      <SearchResultItem
+      isAdding={addingItemId === item.id}
+      key={`${item.type}-${item.id}`} // Clave más robusta para evitar colisiones
+      // Pasamos los datos en el formato que SearchResultItem espera
+      itemProps={{ type: item.type, item: item.data as any }}
+      onAdd={handleAdd} 
+      followedPlaylistIds={followedPlaylistIds}
+      />
+    ))}
     </div>
-    </ScrollArea>
   );
 }
