@@ -28,10 +28,15 @@ import { OpenActionPayload } from './useDialogManager';
 export type ActionPlaylist = { id: string; name: string };
 
 /**
-* Hook que encapsula TODA la lógica de negocio de las acciones sobre playlists.
-* NO gestiona el estado de los diálogos, solo ejecuta las operaciones y
-* actualiza el estado global (Zustand) y notifica al usuario.
-* @param dispatch - La función dispatch del gestor de diálogos para abrirlos.
+* Hook que encapsula TODA la lógica de negocio para las acciones sobre playlists.
+* No gestiona el estado de los diálogos, pero sí los abre a través del `dispatch`
+* que recibe. Su responsabilidad es ejecutar las Server Actions, manejar el estado
+* de carga (`isProcessing`), actualizar el store global (Zustand) y notificar
+* al usuario del resultado de las operaciones.
+*
+* @param dispatch La función dispatch del hook `useDialogManager` para abrir diálogos.
+* @returns Un objeto con el estado `isProcessing` y todas las funciones para
+* iniciar flujos de acción (tanto las que abren diálogos como las que ejecutan la lógica).
 */
 export function usePlaylistActions(
   dispatch: React.Dispatch<{ type: 'OPEN'; payload: OpenActionPayload } | { type: 'CLOSE' }>,
@@ -316,7 +321,7 @@ export function usePlaylistActions(
     updatePlaylistInCache(targetId, { playlistType: 'MEGALIST' });
     return { success: true, name: playlistName };
   };
-
+  
   const handleCreateOrUpdateMegalist = async (props: {
     sourceIds: string[];
     playlistName: string;

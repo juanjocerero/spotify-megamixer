@@ -40,6 +40,16 @@ interface DashboardHeaderProps {
   followedPlaylistIds: string[];
 }
 
+/**
+* Componente que renderiza la cabecera "sticky" del dashboard.
+* Encapsula todos los controles de usuario para la interacción principal:
+* - Filtro local de playlists.
+* - Menú de ordenación de playlists locales.
+* - Búsqueda global en Spotify (usando `useSpotifySearch`).
+* - Conmutador para mostrar solo las playlists seleccionadas.
+*
+* @param {DashboardHeaderProps} props - El estado y los callbacks gestionados por `DashboardClient`.
+*/
 export default function DashboardHeader({
   searchTerm,
   setSearchTerm,

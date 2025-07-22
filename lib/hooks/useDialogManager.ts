@@ -69,8 +69,10 @@ function dialogReducer(state: DialogState, action: ReducerAction): DialogState {
 }
 
 /**
-* Hook dedicado a gestionar el estado de los diálogos en toda la aplicación.
-* @returns El estado actual del diálogo y la función `dispatch` para alterarlo.
+* Hook dedicado exclusivamente a gestionar el estado de los diálogos en
+* toda la aplicación. Actúa como una máquina de estados para la UI modal.
+* @returns El estado actual del diálogo (`dialogState`) y la función `dispatch`
+* para abrir o cerrar diálogos.
 */
 export function useDialogManager() {
   const [dialogState, dispatch] = useReducer(dialogReducer, initialDialogState);

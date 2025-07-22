@@ -31,6 +31,14 @@ interface DashboardClientProps {
   initialNextUrl: string | null;
 }
 
+/**
+* Componente orquestador principal de la vista del dashboard.
+* - Es el propietario del estado compartido entre la cabecera y la lista (término de búsqueda, ordenación, etc.).
+* - Gestiona la carga paginada (scroll infinito) de las playlists.
+* - Renderiza los componentes `DashboardHeader` y `PlaylistDisplay`, pasándoles el estado y los callbacks necesarios.
+* @param {object} props
+* @param {string | null} props.initialNextUrl - La URL para la siguiente página de playlists, obtenida del servidor.
+*/
 export default function DashboardClient({ initialNextUrl }: DashboardClientProps) {
   const {
     selectedPlaylistIds,
