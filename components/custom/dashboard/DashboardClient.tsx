@@ -5,25 +5,28 @@ import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import { usePlaylistStore } from '@/lib/store';
+import { useNowPlaying } from '@/lib/hooks/useNowPlaying';
+import { cn } from '@/lib/utils';
 import { fetchMorePlaylists } from '@/lib/actions/spotify.actions';
 import PlaylistDisplay from '../playlist/PlaylistDisplay';
 import FloatingActionBar from '../FloatingActionBar';
+import NowPlayingBar from '../NowPlayingBar';
 import DashboardHeader from './DashboardHeader';
 
 /**
 * Define las opciones de ordenación disponibles para la lista de playlists.
 */
 export type SortOption =
-  | 'custom'
-  | 'megalist_first'
-  | 'frozen_first'
-  | 'empty_first'
-  | 'name_asc'
-  | 'name_desc'
-  | 'tracks_desc'
-  | 'tracks_asc'
-  | 'owner_asc'
-  | 'owner_desc';
+| 'custom'
+| 'megalist_first'
+| 'frozen_first'
+| 'empty_first'
+| 'name_asc'
+| 'name_desc'
+| 'tracks_desc'
+| 'tracks_asc'
+| 'owner_asc'
+| 'owner_desc';
 
 /**
 * Mapea los identificadores de las opciones de ordenación a etiquetas legibles por humanos.
@@ -71,24 +74,28 @@ interface DashboardClientProps {
 */
 export default function DashboardClient({ initialNextUrl, userId }: DashboardClientProps) {
   
+  useNowPlaying();
+  
   // Estado del store de Zustand
-const {
+  const {
     selectedPlaylistIds,
     addMultipleToSelection,
     removeMultipleFromSelection,
     showOnlySelected,
     setShowOnlySelected,
     playlistCache,
-    addMoreToCache,
-} = usePlaylistStore(useShallow((state) => ({
+    addMoreToCache, 
+    currentlyPlayingTrack, 
+  } = usePlaylistStore(useShallow((state) => ({
     selectedPlaylistIds: state.selectedPlaylistIds,
     addMultipleToSelection: state.addMultipleToSelection,
     removeMultipleFromSelection: state.removeMultipleFromSelection,
     showOnlySelected: state.showOnlySelected,
     setShowOnlySelected: state.setShowOnlySelected,
     playlistCache: state.playlistCache,
-    addMoreToCache: state.addMoreToCache,
-})));
+    addMoreToCache: state.addMoreToCache, 
+    currentlyPlayingTrack: state.currentlyPlayingTrack, 
+  })));
   
   // Estado para la paginación
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
@@ -153,7 +160,13 @@ const {
   };
   
   return (
-    <div className="relative">
+    // Se añade padding-bottom condicional si hay una canción sonando
+    // para que la FloatingActionBar se "eleve" y no se solape con la NowPlayingBar.
+    <div
+    className={cn('relative', {
+      'pb-20': !!currentlyPlayingTrack,
+    })}
+    >
     <DashboardHeader
     searchTerm={searchTerm}
     setSearchTerm={setSearchTerm}
@@ -182,6 +195,7 @@ const {
     </div>
     
     <FloatingActionBar />
+    <NowPlayingBar />
     </div>
   );
 }

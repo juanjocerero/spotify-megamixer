@@ -2,12 +2,12 @@
 import { createStore, useStore } from 'zustand';
 import { useContext } from 'react';
 import { PlaylistStoreContext } from './contexts/PlaylistStoreProvider';
-import type { SpotifyPlaylist } from '@/types/spotify';
+import type { SpotifyPlaylist, SpotifyTrack } from '@/types/spotify';
 
 /**
- * Define la "forma" del estado global de la aplicación, incluyendo las
- * propiedades de estado y las funciones (acciones) para modificarlo.
- */
+* Define la "forma" del estado global de la aplicación, incluyendo las
+* propiedades de estado y las funciones (acciones) para modificarlo.
+*/
 export interface PlaylistStore {
   /** Array de IDs de las playlists actualmente seleccionadas por el usuario. */
   selectedPlaylistIds: string[];
@@ -15,6 +15,8 @@ export interface PlaylistStore {
   showOnlySelected: boolean;
   /** Caché en el cliente de todas las playlists del usuario cargadas hasta el momento. */
   playlistCache: SpotifyPlaylist[];
+  /** Canción que el usuario está reproduciendo en este momento. */
+  currentlyPlayingTrack: SpotifyTrack | null;
   
   // Acciones
   /** Alterna la selección de una playlist por su ID. */
@@ -37,33 +39,36 @@ export interface PlaylistStore {
   /** Añade una única playlist nueva al principio de la caché, si no existe ya. */
   addPlaylistToCache: (playlist: SpotifyPlaylist) => void;
   /**
-   * Actualiza propiedades específicas de una playlist en la caché.
-   * @param playlistId - El ID de la playlist a actualizar.
-   * @param updates - Un objeto con las propiedades a cambiar. Incluye un `trackCount` opcional.
-   */
+  * Actualiza propiedades específicas de una playlist en la caché.
+  * @param playlistId - El ID de la playlist a actualizar.
+  * @param updates - Un objeto con las propiedades a cambiar. Incluye un `trackCount` opcional.
+  */
   updatePlaylistInCache: (playlistId: string, updates: Partial<Omit<SpotifyPlaylist, 'id' | 'tracks'> & { trackCount?: number }>) => void;
   /** Elimina una playlist de la caché y de la selección. */
   removePlaylistFromCache: (playlistId: string) => void;
   /** Elimina múltiples playlists de la caché y de la selección. */
   removeMultipleFromCache: (playlistIds: string[]) => void;
+  /** Establecer en memoria la canción que el usuario está reproduciendo en este momento. */
+  setCurrentlyPlayingTrack: (track: SpotifyTrack | null) => void;
 }
 
 /**
- * @returns El objeto con el estado inicial por defecto para un nuevo store.
- */
+* @returns El objeto con el estado inicial por defecto para un nuevo store.
+*/
 const getDefaultInitialState = () => ({
   selectedPlaylistIds: [],
   showOnlySelected: false,
   playlistCache: [],
+  currentlyPlayingTrack: null,
 });
 
 /**
- * Fábrica de Stores de Zustand. Crea y devuelve una nueva instancia del store.
- * Esto es clave para el patrón SSR, permitiendo crear un store por cada petición
- * en el servidor y evitar el estado singleton global.
- * @param initState - Estado inicial opcional para hidratar el store en el momento de su creación.
- * @returns Una nueva instancia del store de Zustand.
- */
+* Fábrica de Stores de Zustand. Crea y devuelve una nueva instancia del store.
+* Esto es clave para el patrón SSR, permitiendo crear un store por cada petición
+* en el servidor y evitar el estado singleton global.
+* @param initState - Estado inicial opcional para hidratar el store en el momento de su creación.
+* @returns Una nueva instancia del store de Zustand.
+*/
 export const createPlaylistStore = (
   initState: Partial<PlaylistStore> = {},
 ) => {
@@ -145,20 +150,23 @@ export const createPlaylistStore = (
         selectedPlaylistIds: state.selectedPlaylistIds.filter((id) => !idSet.has(id)),
       }));
     },
+    setCurrentlyPlayingTrack: (track) => {
+      set({ currentlyPlayingTrack: track });
+    },
   }));
 };
 
 /**
- * Hook personalizado para acceder al store de playlists.
- * **Importante:** Este hook DEBE ser usado dentro de un `<PlaylistStoreProvider>`.
- * Extrae la instancia del store del Context de React y se suscribe a una parte del estado
- * usando un selector.
- * @template T El tipo de dato que el selector va a devolver.
- * @param selector Una función que recibe el estado completo y devuelve una porción de él.
- * (ej. `state => state.playlistCache`). El uso de selectores es obligatorio y
- * optimiza el rendimiento al evitar re-renders innecesarios.
- * @returns La parte del estado seleccionada.
- */
+* Hook personalizado para acceder al store de playlists.
+* **Importante:** Este hook DEBE ser usado dentro de un `<PlaylistStoreProvider>`.
+* Extrae la instancia del store del Context de React y se suscribe a una parte del estado
+* usando un selector.
+* @template T El tipo de dato que el selector va a devolver.
+* @param selector Una función que recibe el estado completo y devuelve una porción de él.
+* (ej. `state => state.playlistCache`). El uso de selectores es obligatorio y
+* optimiza el rendimiento al evitar re-renders innecesarios.
+* @returns La parte del estado seleccionada.
+*/
 export const usePlaylistStore = <T>(
   selector: (store: PlaylistStore) => T,
 ): T => {
