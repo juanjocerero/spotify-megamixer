@@ -15,10 +15,7 @@ const getEnv = (name: string) => {
 // -----------------------------------------------------------------------------
 
 const scopes =
-"user-read-email playlist-read-private playlist-read-collaborative " +
-"playlist-modify-private playlist-modify-public user-read-playback-state " +
-"user-modify-playback-state user-read-currently-playing user-library-read " +
-"user-library-modify";
+"user-read-email playlist-read-private playlist-read-collaborative playlist-modify-private playlist-modify-public user-read-currently-playing user-library-read user-library-modify";
 
 const authorization = `https://accounts.spotify.com/authorize?scope=${encodeURIComponent(
   scopes
