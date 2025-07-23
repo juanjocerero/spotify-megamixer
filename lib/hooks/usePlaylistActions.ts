@@ -16,6 +16,7 @@ import {
   createEmptyMegalistAction,
   addTracksToPlaylistAction,
   getUniqueTrackCountFromPlaylistsAction,
+  convertToMegalistAction,
 } from '@/lib/actions/playlist.actions';
 import { getTrackUris } from '@/lib/actions/spotify.actions';
 import {
@@ -48,7 +49,7 @@ export function usePlaylistActions(
   dispatch: React.Dispatch<{ type: 'OPEN'; payload: OpenActionPayload } | { type: 'CLOSE' }>,
 ) {
   const [isProcessing, setIsProcessing] = useState(false);
-
+  
   // Usamos un selector con `useShallow` para optimizar re-renderizados.
   const {
     addPlaylistToCache,
@@ -282,6 +283,29 @@ export function usePlaylistActions(
         },
       },
     );
+  };
+  
+  /**
+  * Ejecuta conversión de una lista no marcada como Megalista en una que sí lo es.
+  * @param playlist - La lista que convertir.
+  */
+  const handleConfirmConvertToMegalist = async (playlist: SpotifyPlaylist) => {
+    dispatch({ type: 'CLOSE' });
+    await executeAction(convertToMegalistAction, [playlist], {
+      loading: `Convirtiendo "${playlist.name}"...`,
+      success: '¡Lista convertida a Megalista con éxito!',
+      error: 'No se pudo convertir la lista.',
+      onSuccess: (result) => {
+        if (result.success) {
+          updatePlaylistInCache(result.data.id, {
+            isMegalist: true, // Marcarla como gestionada
+            playlistType: 'MEGALIST',
+            isSyncable: true,
+            isFrozen: false,
+          });
+        }
+      },
+    });
   };
   
   // Flujo de Creación/Actualización de Megalistas
@@ -674,6 +698,17 @@ export function usePlaylistActions(
     dispatch({ type: 'OPEN', payload: { variant: 'addTracksToMegalist', props: { trackUris } } });
   };
   
+  /**
+  * Abre el diálogo para convertir en una Megalista una lista que no lo es.
+  * @param playlist - El objeto de la Playlist para convertir.
+  */
+  const openConvertToMegalistDialog = (playlist: SpotifyPlaylist) => {
+    dispatch({
+      type: 'OPEN',
+      payload: { variant: 'convertToMegalist', props: { playlist } },
+    });
+  };
+  
   return {
     isProcessing,
     // Handlers de Lógica (internos al patrón, llamados por ActionProvider)
@@ -686,6 +721,7 @@ export function usePlaylistActions(
     handleCreateOrUpdateMegalist,
     handleCreateSurpriseMix,
     handleConfirmAddTracks,
+    handleConfirmConvertToMegalist,
     // Openers de Diálogos (API pública para los componentes de UI)
     openCreateEmptyMegalistDialog,
     openEditDialog,
@@ -697,5 +733,6 @@ export function usePlaylistActions(
     openAddToMegalistDialog,
     openSurpriseMixDialog,
     openAddTracksDialog,
+    openConvertToMegalistDialog,
   };
 }

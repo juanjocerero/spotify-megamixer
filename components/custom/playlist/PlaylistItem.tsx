@@ -27,7 +27,8 @@ import {
   Sun,
   ListPlus,
   CheckSquare,
-  Square
+  Square, 
+  GitMerge
 } from 'lucide-react';
 
 interface PlaylistItemProps {
@@ -57,7 +58,8 @@ function PlaylistItem({
     openShuffleDialog,
     openDeleteDialog,
     openSurpriseMixDialog,
-    openFreezeDialog,
+    openFreezeDialog, 
+    openConvertToMegalistDialog,
   } = useActions();
   
   const isSyncable = playlist.isSyncable ?? false;
@@ -164,6 +166,21 @@ function PlaylistItem({
     )}
     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openAddToMegalistDialog([playlist.id]); }} >
     <ListPlus className="mr-2 h-4 w-4 text-blue-500" /> <span>Añadir a Megalista</span>
+    
+    {/* Opción para convertir cualquier lista a Megalista */}
+    {!playlist.isMegalist && (
+      <DropdownMenuItem
+      disabled={isProcessing}
+      onClick={(e) => {
+        e.stopPropagation();
+        openConvertToMegalistDialog(playlist);
+      }}
+      >
+      <GitMerge className="mr-2 h-4 w-4 text-green-500" />
+      <span>Convertir a Megalista</span>
+      </DropdownMenuItem>
+    )}
+    
     </DropdownMenuItem>
     {isSyncable && (
       <DropdownMenuItem disabled={isProcessing} onClick={(e) => { e.stopPropagation(); openSyncDialog([playlist]); }}>

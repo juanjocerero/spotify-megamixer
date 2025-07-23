@@ -4,7 +4,7 @@
 import { auth } from '@/auth';
 import { db } from '../db';
 import { shuffleArray } from '../utils';
-import { ActionResult, SpotifyPlaylist } from '@/types/spotify';
+import { ActionResult, PlaylistType, SpotifyPlaylist } from '@/types/spotify';
 import {
   getAllPlaylistTracks,
   findUserPlaylistByName,
@@ -604,5 +604,52 @@ export async function createEmptyMegalistAction(
     const errorMessage =
     error instanceof Error ? error.message : 'Error al crear la playlist.';
     return { success: false, error: errorMessage };
+  }
+}
+
+export async function convertToMegalistAction(
+  playlist: { id: string; tracks: { total: number } }
+): Promise<ActionResult<{ id: string; type: PlaylistType; isFrozen: boolean }>> {
+  const { id: playlistId, tracks } = playlist;
+  console.log(`[ACTION] Convirtiendo la playlist ${playlistId} a Megalista.`);
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Usuario no autenticado.' };
+    }
+    
+    const megalist = await db.megalist.upsert({
+      where: { id: playlistId },
+      // Si ya existe (era una 'SURPRISE'), la actualizamos.
+      update: {
+        type: 'MEGALIST',
+        isFrozen: false,
+      },
+      // Si no existe, la creamos y "adoptamos".
+      create: {
+        id: playlistId,
+        spotifyUserId: session.user.id,
+        // La fuente de una lista adoptada es ella misma.
+        sourcePlaylistIds: [playlistId],
+        trackCount: tracks.total,
+        type: 'MEGALIST',
+        isFrozen: false,
+      },
+    });
+    
+    return {
+      success: true,
+      data: {
+        id: megalist.id,
+        type: megalist.type,
+        isFrozen: megalist.isFrozen,
+      },
+    };
+  } catch (error) {
+    console.error(`[ACTION_ERROR:convertToMegalistAction]`, error);
+    return {
+      success: false,
+      error: 'No se pudo convertir la playlist a Megalista.',
+    };
   }
 }

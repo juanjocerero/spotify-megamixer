@@ -57,7 +57,8 @@ export type DialogState =
     isOverwrite?: boolean;
     overwriteId?: string;
   };
-};
+}
+| { variant: 'convertToMegalist'; props: { playlist: SpotifyPlaylist } };
 
 /**
 * Representa la carga útil (`payload`) para una acción de apertura de diálogo.

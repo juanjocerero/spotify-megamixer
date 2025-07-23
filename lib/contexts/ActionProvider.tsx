@@ -38,6 +38,7 @@ import { SpotifyPlaylist } from '@/types/spotify';
   openAddToMegalistDialog: (sourceIds: string[]) => void;
   openSurpriseMixDialog: (sourceIds?: string[]) => Promise<void>;
   openAddTracksDialog: (trackUris: string[]) => void;
+  openConvertToMegalistDialog: (playlist: SpotifyPlaylist) => void;
 }
 
 /**
@@ -68,6 +69,7 @@ export interface DialogCallbacks {
   onConfirmSurpriseTargeted: (trackCount: number) => void;
   onConfirmSurpriseName: (playlistName: string) => void;
   onConfirmFreeze: () => void;
+  onConfirmConvertToMegalist: () => void;
 }
 
 /**
@@ -116,6 +118,27 @@ const DialogRenderer: React.FC<{ dialogState: DialogState; dialogCallbacks: Dial
     return <SurpriseTargetedDialog isOpen={true} uniqueTrackCount={dialogState.props.uniqueTrackCount} onClose={dialogCallbacks.onClose} onConfirm={dialogCallbacks.onConfirmSurpriseTargeted} />;
     case 'surpriseName':
     return <SurpriseNameDialog isOpen={true} isOverwrite={!!dialogState.props.isOverwrite} overwriteId={dialogState.props.overwriteId} onClose={dialogCallbacks.onClose} onConfirm={dialogCallbacks.onConfirmSurpriseName} />;
+    case 'convertToMegalist': {
+      const { playlist } = dialogState.props;
+      const description = (
+        <>
+        La lista sorpresa{' '}
+        <strong className="text-white">"{playlist.name}"</strong> se
+        convertirá en una Megalista. <br />
+        Podrás añadirle otras playlists y sincronizarla. Esta acción no se puede deshacer.
+        </>
+      );
+      return (
+        <ConfirmationDialog
+        isOpen={true}
+        onClose={dialogCallbacks.onClose}
+        onConfirm={dialogCallbacks.onConfirmConvertToMegalist}
+        title="¿Convertir a Megalista?"
+        description={description}
+        confirmButtonText="Sí, convertir"
+        />
+      );
+    }
     default:
     return null;
   }
@@ -220,6 +243,11 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
         actions.handleCreateSurpriseMix({ ...dialogState.props, playlistName });
       }
     },
+    onConfirmConvertToMegalist: () => {
+      if (dialogState.variant === 'convertToMegalist') {
+        actions.handleConfirmConvertToMegalist(dialogState.props.playlist);
+      }
+    },
   };
   
   const contextValue = useMemo(() => ({
@@ -234,6 +262,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     openAddToMegalistDialog: actions.openAddToMegalistDialog,
     openSurpriseMixDialog: actions.openSurpriseMixDialog,
     openAddTracksDialog: actions.openAddTracksDialog,
+    openConvertToMegalistDialog: actions.openConvertToMegalistDialog,
   }), [actions]);
   
   return (
