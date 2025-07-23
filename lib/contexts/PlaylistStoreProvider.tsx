@@ -37,7 +37,6 @@ export interface PlaylistStoreProviderProps {
  */
 export const PlaylistStoreProvider = ({
   initialPlaylists,
-  initialNextUrl,
   children,
 }: PlaylistStoreProviderProps) => {
   const storeRef = useRef<StoreApi<PlaylistStore> | null>(null);

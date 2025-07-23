@@ -713,7 +713,7 @@ export function usePlaylistActions(
       // Iniciar el bucle con el `nextUrl` del estado suscrito
       let currentNextUrl = nextUrl;
       // Hacemos una copia local de la caché para llevar la cuenta
-      let accumulatedPlaylists = [...playlistCache];
+      const accumulatedPlaylists = [...playlistCache];
       
       while (currentNextUrl) {
         const result = await fetchMorePlaylists(currentNextUrl);
