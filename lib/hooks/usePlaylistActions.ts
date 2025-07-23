@@ -579,7 +579,7 @@ export function usePlaylistActions(
       },
     );
   };
-
+  
   const handleGlobalSurpriseCountSelected = async (count: number) => {
     setIsProcessing(true);
     const toastId = toast.loading('Calculando canciones disponibles...');
@@ -588,13 +588,13 @@ export function usePlaylistActions(
       // 1. Obtener todas las playlists del caché y barajarlas
       const allPlaylistIds = playlistCache.map((p) => p.id);
       const shuffledIds = shuffleArray(allPlaylistIds);
-
+      
       // 2. Seleccionar el subconjunto de playlists solicitado
       const sourceIds = shuffledIds.slice(0, count);
-
+      
       // 3. Calcular las canciones únicas de ese subconjunto
       const uniqueTrackCount = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
-
+      
       if (uniqueTrackCount === 0) {
         toast.error('No se encontraron canciones en las playlists seleccionadas al azar.', { id: toastId });
         setIsProcessing(false);
@@ -611,14 +611,14 @@ export function usePlaylistActions(
           props: { sourceIds, uniqueTrackCount },
         },
       });
-
+      
     } catch (error) {
       const message = error instanceof Error ? error.message : "No se pudo preparar la lista sorpresa.";
       toast.error(message, { id: toastId });
     } finally {
       setIsProcessing(false);
     }
-};
+  };
   
   // Funciones para abrir diálogos (API pública del hook)
   
@@ -765,6 +765,10 @@ export function usePlaylistActions(
         // Actualizamos nuestras variables locales para el bucle y el conteo final
         accumulatedPlaylists.push(...result.items);
         currentNextUrl = result.next;
+        
+        if (currentNextUrl) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
       }
       
       toast.dismiss(toastId);
