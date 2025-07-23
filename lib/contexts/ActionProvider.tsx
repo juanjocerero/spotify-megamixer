@@ -172,7 +172,6 @@ const DialogRenderer: React.FC<{ dialogState: DialogState; dialogCallbacks: Dial
 export function ActionProvider({ children }: { children: React.ReactNode }) {
   const { dialogState, dispatch } = useDialogManager();
   const { startPolling } = usePlaylistPoller();
-  const playlistCache = usePlaylistStore((state) => state.playlistCache);
   const actions = usePlaylistActions(dispatch, startPolling);
   
   // Construcción de los callbacks
