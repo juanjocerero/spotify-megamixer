@@ -7,13 +7,12 @@ import Fuse, { type IFuseOptions } from 'fuse.js';
 import { useShallow } from 'zustand/react/shallow';
 
 import { ListFooterLoader } from '../skeletons/ListFooterLoader';
+import TrackDetailSheet from './TrackDetailSheet';
 
 import { SpotifyPlaylist } from '@/types/spotify';
 import { usePlaylistStore } from '@/lib/store';
 import { usePlaylistKeyboardNavigation } from '@/lib/hooks/usePlaylistKeyboardNavigation';
-import TrackDetailView from '../TrackDetailView';
 import PlaylistItem from './PlaylistItem';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 
 type SortOption = 
 'custom' 
@@ -271,17 +270,11 @@ export default function PlaylistDisplay({
     </div>
     </div>
     
-    <Sheet open={trackSheetState.open} onOpenChange={(isOpen) => setTrackSheetState({ open: isOpen, playlist: null })}>
-    <SheetContent className="w-full sm:max-w-[500px] flex flex-col p-0">
-    <SheetHeader className="p-4 pb-0">
-    <SheetTitle className="text-white">{trackSheetState.playlist ? `Canciones en "${trackSheetState.playlist.name}"` : "Cargando canciones..."}</SheetTitle>
-    <SheetDescription>Aquí se muestran todas las canciones de esta playlist.</SheetDescription>
-    </SheetHeader>
-    {trackSheetState.playlist && (
-      <TrackDetailView playlistId={trackSheetState.playlist.id} playlistName={trackSheetState.playlist.name || ''} />
-    )}
-    </SheetContent>
-    </Sheet>
+    <TrackDetailSheet 
+    isOpen={trackSheetState.open}
+    onOpenChange={(isOpen) => setTrackSheetState({ open: isOpen, playlist: isOpen ? trackSheetState.playlist : null })}
+    playlist={trackSheetState.playlist}
+    />
     </div>
   );
 }

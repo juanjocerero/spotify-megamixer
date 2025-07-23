@@ -139,9 +139,13 @@ export async function fetchMorePlaylists(
 */
 export async function getPlaylistTracksDetailsAction(
   playlistId: string,
-  fetchUrl?: string | null
-): Promise<{ tracks: { name: string; artists: string }[]; next: string | null }> {
-  console.log(`[ACTION:getPlaylistTracksDetailsAction] Obteniendo página de tracks para ${playlistId}`);
+  fetchUrl?: string | null,
+): Promise<{ tracks: { uri: string; name: string; artists: string }[]; next: string | null }> {
+
+  console.log(
+    `[ACTION:getPlaylistTracksDetailsAction] Obteniendo página de tracks para ${playlistId}`,
+  );
+
   try {
     const session = await auth();
     if (!session?.accessToken) {
@@ -149,24 +153,25 @@ export async function getPlaylistTracksDetailsAction(
     }
     const { accessToken } = session;
     
-    // Construye la URL inicial si no se proporciona una. Limitamos a 75 para una carga rápida.
     const urlToFetch =
     fetchUrl ||
-    `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=items(track(name,artists(name),type,uri)),next&limit=75`;
+    `https://api.spotify.com/v1/playlists/${playlistId}/tracks?fields=items(track(uri,name,artists(name),type)),next&limit=100`;
     
-    const { tracks: detailedTracks, next } = await getPlaylistTracksPage(accessToken, urlToFetch);
+    const { tracks: detailedTracks, next } = await getPlaylistTracksPage(
+      accessToken,
+      urlToFetch,
+    );
+    console.log(
+      `[ACTION:getPlaylistTracksDetailsAction] Obtenidos ${detailedTracks.length} tracks.`,
+    );
     
-    console.log(`[ACTION:getPlaylistTracksDetailsAction] Obtenidos ${detailedTracks.length} tracks.`);
-    
-    const tracksForClient = detailedTracks.map(track => ({
-      name: track.name,
-      artists: track.artists
-    }));
-    
-    return { tracks: tracksForClient, next };
-    
+    // Ya no mapeamos para quitar la URI. Pasamos los datos tal cual.
+    return { tracks: detailedTracks, next };
   } catch (error) {
-    console.error(`[ACTION_ERROR:getPlaylistTracksDetailsAction] Fallo al obtener página de tracks para ${playlistId}.`, error);
+    console.error(
+      `[ACTION_ERROR:getPlaylistTracksDetailsAction] Fallo al obtener página de tracks para ${playlistId}.`,
+      error,
+    );
     throw error;
   }
 }
