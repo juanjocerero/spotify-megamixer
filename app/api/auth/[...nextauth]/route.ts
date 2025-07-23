@@ -5,3 +5,5 @@ import { handlers } from "@/auth";
 
 // 2. Desestructura 'handlers' para exportar sus propiedades GET y POST
 export const { GET, POST } = handlers;
+
+export const maxDuration = 30;
