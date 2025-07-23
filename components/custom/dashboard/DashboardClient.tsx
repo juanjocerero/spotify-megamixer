@@ -167,14 +167,31 @@ export default function DashboardClient({ initialNextUrl, userId }: DashboardCli
     }
   };
   
+  // Lógica para determinar el padding dinámico
+  const getPaddingClass = () => {
+    const isFloatingBarVisible = selectedPlaylistIds.length > 0;
+    const isNowPlayingBarVisible = !!currentlyPlayingTrack;
+    
+    if (isFloatingBarVisible && isNowPlayingBarVisible) {
+      // Ambas barras son visibles. La altura total es h-20 (NowPlaying) + h-20 (Floating) = 10rem.
+      // En Tailwind, 10rem es `pb-40`.
+      return 'pb-40';
+    }
+    if (isFloatingBarVisible) {
+      // Solo la barra flotante es visible. Su altura es h-20/h-24. Usamos pb-24 para el caso más grande.
+      return 'pb-20 sm:pb-24';
+    }
+    if (isNowPlayingBarVisible) {
+      // Solo la barra de reproducción es visible. Su altura es h-20.
+      return 'pb-20';
+    }
+    return '';
+  };
+  
   return (
     // Se añade padding-bottom condicional si hay una canción sonando
     // para que la FloatingActionBar se "eleve" y no se solape con la NowPlayingBar.
-    <div
-    className={cn('relative', {
-      'pb-20': !!currentlyPlayingTrack,
-    })}
-    >
+    <div className={cn('relative', getPaddingClass())}>
     <DashboardHeader
     searchTerm={searchTerm}
     setSearchTerm={setSearchTerm}

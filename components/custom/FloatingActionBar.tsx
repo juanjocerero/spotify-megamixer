@@ -6,6 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { usePlaylistStore } from '@/lib/store';
 import { useActions } from '@/lib/contexts/ActionProvider';
 import ActionBarButton from '@/components/custom/buttons/ActionBarButton';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   XCircle,
@@ -32,6 +33,11 @@ import {
 * - Muestra un estado de carga en botones de larga duración como "Sincronizar".
 */
 export default function FloatingActionBar() {
+  
+  // Obtenemos el estado de la canción en reproducción
+  const currentlyPlayingTrack = usePlaylistStore(
+    (state) => state.currentlyPlayingTrack,
+  );
   
   const { selectedPlaylistIds, clearSelection, playlistCache } = usePlaylistStore(
     useShallow((state) => ({
@@ -72,7 +78,14 @@ export default function FloatingActionBar() {
   
   return (
     // Envolvemos toda la barra en un único TooltipProvider
-    <div className="fixed bottom-0 left-0 right-0 z-20 flex h-20 items-center justify-center border-t border-gray-700 bg-gray-800/95 px-4 shadow-lg backdrop-blur-sm sm:h-24">
+    <div
+    className={cn(
+      'fixed left-0 right-0 z-20 flex h-20 items-center justify-center border-t border-gray-700 bg-gray-800/95 px-4 shadow-lg backdrop-blur-sm sm:h-24 transition-transform duration-300 ease-in-out',
+      // Si hay una canción sonando, movemos la barra hacia arriba (la altura de NowPlayingBar es h-20)
+      // Si no, la dejamos en su posición original en el fondo.
+      currentlyPlayingTrack ? 'bottom-20' : 'bottom-0'
+    )}
+    >
     <div className="flex w-full max-w-4xl items-center justify-between">
     <div className="hidden text-sm text-gray-300 sm:block">
     <p className="font-bold text-white">{selectedPlaylistIds.length} playlist(s)</p>
