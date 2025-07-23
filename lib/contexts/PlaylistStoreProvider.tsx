@@ -37,14 +37,16 @@ export interface PlaylistStoreProviderProps {
  */
 export const PlaylistStoreProvider = ({
   initialPlaylists,
+  initialNextUrl,
   children,
 }: PlaylistStoreProviderProps) => {
   const storeRef = useRef<StoreApi<PlaylistStore> | null>(null);
   
   if (!storeRef.current) {
-    // Crea el store con el estado inicial que viene del servidor
+    // La pasamos aquí para que el estado inicial del store contenga la URL
     storeRef.current = createPlaylistStore({
       playlistCache: initialPlaylists,
+      nextUrl: initialNextUrl,
     });
   }
   

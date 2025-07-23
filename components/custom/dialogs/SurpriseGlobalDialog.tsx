@@ -8,10 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 interface SurpriseGlobalDialogProps {
   /** Controla si el diálogo está visible. */
@@ -49,23 +49,26 @@ export default function SurpriseGlobalDialog({
     <DialogHeader>
     <DialogTitle>Megalista Sorpresa Global</DialogTitle>
     </DialogHeader>
-    <Label>¿De cuántas de tus playlists (elegidas al azar entre un total de{' '}<strong>{totalPlaylists}</strong>) quieres tomar las canciones?</Label>
-    <Input
-    type="number"
-    value={count}
-    onChange={(e) => setCount(e.target.value)}
-    placeholder="Por defecto: 50" 
-    max={totalPlaylists}
-    autoFocus
-    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-    />
-    <DialogFooter>
-    <Button variant="outline" onClick={onClose}>
-    Cancelar
-    </Button>
-    <Button onClick={handleConfirm}>Crear</Button>
-    </DialogFooter>
-    </DialogContent>
-    </Dialog>
-  );
-}
+    <DialogDescription>
+    Elige de cuántas de tus playlists (seleccionadas al azar de un total de{' '}
+      <strong>{totalPlaylists}</strong>) quieres tomar las canciones.
+      </DialogDescription>
+      <Input
+      type="number"
+      value={count}
+      onChange={(e) => setCount(e.target.value)}
+      placeholder="Por defecto: 50" 
+      max={totalPlaylists}
+      autoFocus
+      className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+      />
+      <DialogFooter>
+      <Button variant="outline" onClick={onClose}>
+      Cancelar
+      </Button>
+      <Button onClick={handleConfirm}>Crear</Button>
+      </DialogFooter>
+      </DialogContent>
+      </Dialog>
+    );
+  }
