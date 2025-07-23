@@ -12,6 +12,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
 import {
   MoreHorizontal,
@@ -158,17 +159,9 @@ function PlaylistItem({
     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditDialog(playlist); }}>
     <Pencil className="mr-2 h-4 w-4" /> <span>Editar detalles</span>
     </DropdownMenuItem>
-    {playlistType === 'MEGALIST' && (
-      <DropdownMenuItem disabled={isProcessing} onClick={(e) => { e.stopPropagation(); openFreezeDialog(playlist); }} >
-      {playlist.isFrozen ? ( <Sun className="mr-2 h-4 w-4 text-yellow-500" /> ) : ( <Snowflake className="mr-2 h-4 w-4 text-blue-500" /> )}
-      <span>{playlist.isFrozen ? 'Descongelar' : 'Congelar'}</span>
-      </DropdownMenuItem>
-    )}
-    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openAddToMegalistDialog([playlist.id]); }} >
-    <ListPlus className="mr-2 h-4 w-4 text-blue-500" /> <span>Añadir a Megalista</span>
     
     {/* Opción para convertir cualquier lista a Megalista */}
-    {!playlist.isMegalist && (
+    {playlist.playlistType !== 'MEGALIST' && (
       <DropdownMenuItem
       disabled={isProcessing}
       onClick={(e) => {
@@ -181,6 +174,17 @@ function PlaylistItem({
       </DropdownMenuItem>
     )}
     
+    {playlistType === 'MEGALIST' && (
+      <DropdownMenuItem disabled={isProcessing} onClick={(e) => { e.stopPropagation(); openFreezeDialog(playlist); }} >
+      {playlist.isFrozen ? ( <Sun className="mr-2 h-4 w-4 text-yellow-500" /> ) : ( <Snowflake className="mr-2 h-4 w-4 text-blue-500" /> )}
+      <span>{playlist.isFrozen ? 'Descongelar' : 'Congelar'}</span>
+      </DropdownMenuItem>
+    )}
+    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openAddToMegalistDialog([playlist.id]); }} >
+    <ListPlus className="mr-2 h-4 w-4 text-blue-500" /> <span>Añadir a Megalista</span>
+
+    <DropdownMenuSeparator />
+
     </DropdownMenuItem>
     {isSyncable && (
       <DropdownMenuItem disabled={isProcessing} onClick={(e) => { e.stopPropagation(); openSyncDialog([playlist]); }}>

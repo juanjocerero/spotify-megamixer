@@ -289,6 +289,7 @@ export function usePlaylistActions(
   * Ejecuta conversión de una lista no marcada como Megalista en una que sí lo es.
   * @param playlist - La lista que convertir.
   */
+  // Ajustamos la llamada a la acción y la actualización del estado
   const handleConfirmConvertToMegalist = async (playlist: SpotifyPlaylist) => {
     dispatch({ type: 'CLOSE' });
     await executeAction(convertToMegalistAction, [playlist], {
