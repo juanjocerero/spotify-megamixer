@@ -28,9 +28,10 @@ export default async function DashboardPage() {
   const initialNextUrl = initialDataResult.success
   ? initialDataResult.data.nextUrl
   : null;
+  const userId = session.user.id;
   
   return (
-    // FIX: PlaylistStoreProvider ahora envuelve a ActionProvider
+    // FPlaylistStoreProvider ahora envuelve a ActionProvider
     <PlaylistStoreProvider initialPlaylists={initialPlaylists}>
     <ActionProvider>
     <TooltipProvider delayDuration={100}>
@@ -50,7 +51,7 @@ export default async function DashboardPage() {
     </div>
     </header>
     
-    <DashboardClient initialNextUrl={initialNextUrl} />
+    <DashboardClient initialNextUrl={initialNextUrl} userId={userId} />
     <Footer />
     </div>
     </div>

@@ -47,6 +47,11 @@ interface DashboardClientProps {
   * Si es `null`, significa que no hay más páginas para cargar.
   */
   initialNextUrl: string | null;
+  /**
+  * El id del usuario actual para pasarlo a PlaylistDisplay.
+  * El objetivo es ocultar el nombre del creador de una lista si es el propio usuario.
+  */
+  userId: string;
 }
 
 /**
@@ -64,7 +69,7 @@ interface DashboardClientProps {
 *
 * @param {DashboardClientProps} props - Las props del componente.
 */
-export default function DashboardClient({ initialNextUrl }: DashboardClientProps) {
+export default function DashboardClient({ initialNextUrl, userId }: DashboardClientProps) {
   
   // Estado del store de Zustand
 const {
@@ -163,7 +168,8 @@ const {
     />
     
     <div className="pt-6">
-    <PlaylistDisplay
+    <PlaylistDisplay 
+    userId={userId} 
     isLoadingMore={isLoadingMore}
     nextUrl={nextUrl}
     searchTerm={searchTerm}

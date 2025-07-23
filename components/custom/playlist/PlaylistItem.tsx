@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 
 interface PlaylistItemProps {
+  currentUserId: string;
   playlist: SpotifyPlaylist;
   isSelected: boolean;
   isFocused: boolean;
@@ -40,6 +41,7 @@ interface PlaylistItemProps {
 }
 
 function PlaylistItem({
+  currentUserId, 
   playlist,
   isSelected,
   isFocused,
@@ -123,9 +125,11 @@ function PlaylistItem({
     )}
     <span className="text-xs sm:text-sm font-medium text-white truncate">{playlist.name}</span>
     </div>
-    <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
-    de {playlist.owner.display_name}
-    </p>
+    {playlist.owner.id !== currentUserId && (
+      <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
+      de {playlist.owner.display_name}
+      </p>
+    )}
     </div>
     
     {/* SECCIÓN DERECHA: CONTEO Y MENÚ */}

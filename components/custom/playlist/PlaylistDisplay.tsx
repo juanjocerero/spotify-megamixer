@@ -27,6 +27,7 @@ type SortOption =
 | 'owner_desc';
 
 interface PlaylistDisplayProps {
+  userId: string;
   isLoadingMore: boolean; 
   nextUrl: string | null;
   searchTerm: string;
@@ -58,6 +59,7 @@ interface PlaylistDisplayProps {
 * @param {PlaylistDisplayProps} props - El estado y los callbacks del `DashboardClient`.
 */
 export default function PlaylistDisplay({
+  userId, 
   isLoadingMore, 
   nextUrl,
   searchTerm,           
@@ -232,7 +234,8 @@ export default function PlaylistDisplay({
       return (
         <PlaylistItem
         key={playlist.id}
-        playlist={playlist}
+        playlist={playlist} 
+        currentUserId={userId} 
         isSelected={isSelected(playlist.id)}
         isFocused={virtualRow.index === focusedIndex}
         style={{
