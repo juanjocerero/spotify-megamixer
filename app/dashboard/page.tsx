@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getInitialDashboardDataAction } from '@/lib/actions/playlist.actions';
 import { ActionProvider } from '@/lib/contexts/ActionProvider';
