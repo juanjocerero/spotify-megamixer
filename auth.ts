@@ -9,25 +9,23 @@ export const {
   signIn,
   signOut
 } = NextAuth({
-  // Usamos las firmas de función correctas para cada evento del logger.
   logger: {
-    // El evento 'error' solo recibe un objeto 'Error'.
     error(error) {
       console.error(`[AUTH.JS ERROR]`, error);
     },
-    // 'warn' recibe un código de tipo string.
     warn(code: string) {
       console.warn(`[AUTH.JS WARNING] Código: ${code}`);
     },
-    // 'debug' recibe un código y metadatos opcionales.
     debug(code: string, metadata: unknown) {
       console.log(`[AUTH.JS DEBUG] Código: ${code}`, metadata);
     }
   },
   providers: [
+    // Simplificamos el proveedor.
+    // Auth.js v5 encontrará automáticamente las variables AUTH_SPOTIFY_ID
+    // y AUTH_SPOTIFY_SECRET si no especificamos clientId y clientSecret.
+    // Esto es más limpio y menos propenso a errores.
     Spotify({
-      clientId: process.env.AUTH_SPOTIFY_CLIENT_ID,
-      clientSecret: process.env.AUTH_SPOTIFY_CLIENT_SECRET,
       authorization: {
         params: {
           scope: 'user-read-email playlist-read-private playlist-modify-public playlist-modify-private user-read-currently-playing',
@@ -37,7 +35,6 @@ export const {
   ],
   
   callbacks: {
-    // Las callbacks anteriores son correctas, las mantenemos.
     async jwt({ token, account }) {
       if (account) {
         token.accessToken = account.access_token;
@@ -58,7 +55,8 @@ export const {
           method: "POST",
           headers: {
             "Content-Type": "application/x-form-urlencoded",
-            Authorization: `Basic ${Buffer.from(`${process.env.AUTH_SPOTIFY_CLIENT_ID}:${process.env.AUTH_SPOTIFY_CLIENT_SECRET}`).toString("base64")}`,
+            // Usamos los nombres de variable correctos para la v5.
+            Authorization: `Basic ${Buffer.from(`${process.env.AUTH_SPOTIFY_ID}:${process.env.AUTH_SPOTIFY_SECRET}`).toString("base64")}`,
           },
           body: new URLSearchParams({
             grant_type: "refresh_token",

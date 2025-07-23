@@ -58,6 +58,6 @@
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5",
-    "vercel": "^44.4.3"
+    "vercel": "^44.5.3"
   }
 }
