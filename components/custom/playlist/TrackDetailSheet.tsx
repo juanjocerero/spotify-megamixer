@@ -20,17 +20,34 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 
+/**
+ * Representa la estructura de datos simplificada de una canción para su visualización en el cliente.
+ * @property {string} uri - El Identificador de Recurso Uniforme (URI) de Spotify para la canción.
+ * @property {string} name - El nombre de la canción.
+ * @property {string} artists - Una cadena de texto con los nombres de los artistas, separados por comas.
+ */
 interface Track {
   uri: string;
   name: string;
   artists: string;
 }
 
+/**
+ * Define las props para el componente interno TrackList.
+ * @property {string} playlistId - El ID de la playlist de Spotify de la que se cargarán las canciones.
+ * @property {string} playlistName - El nombre de la playlist, usado para mensajes y logs.
+ */
 interface TrackListProps {
   playlistId: string;
   playlistName: string;
 }
 
+/**
+ * Componente interno responsable de obtener, renderizar y gestionar la paginación
+ * infinita de la lista de canciones de una playlist.
+ * @param {TrackListProps} props - Las props para el componente.
+ * @returns {React.ReactElement} Un componente que muestra una lista de canciones con scroll infinito.
+ */
 function TrackList({ playlistId, playlistName }: TrackListProps) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [nextUrl, setNextUrl] = useState<string | null>(null);
@@ -165,13 +182,25 @@ function TrackList({ playlistId, playlistName }: TrackListProps) {
   );
 }
 
-
+/**
+ * Define las props para el componente principal TrackDetailSheet.
+ * @property {boolean} isOpen - Controla si el Sheet está visible o no.
+ * @property {(isOpen: boolean) => void} onOpenChange - Callback que se ejecuta cuando el estado de apertura del Sheet cambia (ej. al cerrar).
+ * @property {SpotifyPlaylist | null} playlist - El objeto completo de la playlist a mostrar. Es `null` si no hay ninguna seleccionada.
+ */
 interface TrackDetailSheetProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   playlist: SpotifyPlaylist | null;
 }
 
+/**
+ * Componente Sheet que encapsula la vista de detalle de una playlist.
+ * Muestra la carátula, el título y una lista virtualizada de todas las canciones,
+ * permitiendo al usuario añadir canciones individuales a otras megalistas.
+ * @param {TrackDetailSheetProps} props - Las props para el componente.
+ * @returns {React.ReactElement} Un componente `Sheet` de shadcn/ui configurado para mostrar los detalles de la playlist.
+ */
 export default function TrackDetailSheet({ isOpen, onOpenChange, playlist }: TrackDetailSheetProps) {
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
