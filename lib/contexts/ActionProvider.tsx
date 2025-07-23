@@ -58,7 +58,7 @@ export interface DialogCallbacks {
   onConfirmDelete: () => void;
   onConfirmShuffle: () => void;
   onConfirmSyncPreview: () => void;
-  onConfirmSyncShuffleChoice: (shouldShuffle: boolean) => void;
+  onConfirmShuffleChoice: (shouldShuffle: boolean) => void;
   onConfirmCreateName: (playlistName: string) => void;
   onConfirmCreateShuffleChoice: (shouldShuffle: boolean) => void;
   onConfirmOverwrite: (mode: 'update' | 'replace') => void;
@@ -103,7 +103,13 @@ const DialogRenderer: React.FC<{ dialogState: DialogState; dialogCallbacks: Dial
     case 'syncShuffleChoice':
     case 'createShuffleChoice':
     case 'addToShuffleChoice':
-    return <ShuffleChoiceDialog isOpen={true} onClose={dialogCallbacks.onClose} onConfirm={dialogCallbacks.onConfirmSyncShuffleChoice} />;
+    return (
+      <ShuffleChoiceDialog
+      isOpen={true}
+      onClose={dialogCallbacks.onClose}
+      onConfirm={dialogCallbacks.onConfirmShuffleChoice}
+      />
+    );
     case 'createName':
     return <CreateMegalistNameDialog isOpen={true} onClose={dialogCallbacks.onClose} onConfirm={dialogCallbacks.onConfirmCreateName} />;
     case 'createOverwrite':
@@ -187,11 +193,30 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     },
     onConfirmSyncPreview: () => {
       if (dialogState.variant === 'syncPreview') {
-        dispatch({ type: 'OPEN', payload: { variant: 'syncShuffleChoice', props: { playlists: dialogState.props.playlists } }});
+        dispatch({
+          type: 'OPEN',
+          payload: {
+            variant: 'syncShuffleChoice',
+            props: { playlists: dialogState.props.playlists },
+          },
+        });
       }
     },
-    onConfirmSyncShuffleChoice: (shouldShuffle) => {
-      if (dialogState.variant === 'syncShuffleChoice') {
+    onConfirmShuffleChoice: (shouldShuffle) => {
+      if (dialogState.variant === 'createShuffleChoice') {
+        actions.handleCreateOrUpdateMegalist({
+          ...dialogState.props,
+          shouldShuffle,
+          mode: 'create',
+        });
+      } else if (dialogState.variant === 'addToShuffleChoice') {
+        actions.handleCreateOrUpdateMegalist({
+          ...dialogState.props,
+          shouldShuffle,
+          mode: 'update',
+          playlistName: '' // No es necesario para el modo 'update'
+        });
+      } else if (dialogState.variant === 'syncShuffleChoice') {
         actions.handleExecuteSync(dialogState.props.playlists, shouldShuffle);
       }
     },
