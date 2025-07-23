@@ -19,9 +19,11 @@ export const {
   signIn,
   signOut
 } = NextAuth({
-  // Mantenemos la configuración simplificada y correcta
+  
   providers: [
     Spotify({
+      clientId: process.env.AUTH_SPOTIFY_ID,
+      clientSecret: process.env.AUTH_SPOTIFY_SECRET,
       authorization: {
         params: {
           scope: 'user-read-email playlist-read-private playlist-modify-public playlist-modify-private user-read-currently-playing',
@@ -51,7 +53,7 @@ export const {
         const response = await fetch("https://accounts.spotify.com/api/token", {
           method: "POST",
           headers: {
-            "Content-Type": "application/x-form-urlencoded",
+            "Content-Type": "application/x-www-form-urlencoded",
             Authorization: `Basic ${Buffer.from(`${process.env.AUTH_SPOTIFY_ID}:${process.env.AUTH_SPOTIFY_SECRET}`).toString("base64")}`,
           },
           body: new URLSearchParams({
