@@ -123,7 +123,7 @@ const DialogRenderer: React.FC<{ dialogState: DialogState; dialogCallbacks: Dial
       const description = (
         <>
         La lista sorpresa{' '}
-        <strong className="text-white">"{playlist.name}"</strong> se
+        <strong className="text-white">&quot;{playlist.name}&quot;</strong> se
         convertirá en una Megalista. <br />
         Podrás añadirle otras playlists y sincronizarla. Esta acción no se puede deshacer.
         </>
