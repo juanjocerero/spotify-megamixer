@@ -2,7 +2,6 @@
 'use client';
 
 import React, { createContext, useContext, useMemo } from 'react';
-import { usePlaylistStore } from '../store';
 import { SpotifyPlaylist } from '@/types/spotify';
 
 // Importa todos los componentes de diálogo para el renderer
