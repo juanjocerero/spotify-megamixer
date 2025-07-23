@@ -579,6 +579,46 @@ export function usePlaylistActions(
       },
     );
   };
+
+  const handleGlobalSurpriseCountSelected = async (count: number) => {
+    setIsProcessing(true);
+    const toastId = toast.loading('Calculando canciones disponibles...');
+    
+    try {
+      // 1. Obtener todas las playlists del caché y barajarlas
+      const allPlaylistIds = playlistCache.map((p) => p.id);
+      const shuffledIds = shuffleArray(allPlaylistIds);
+
+      // 2. Seleccionar el subconjunto de playlists solicitado
+      const sourceIds = shuffledIds.slice(0, count);
+
+      // 3. Calcular las canciones únicas de ese subconjunto
+      const uniqueTrackCount = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
+
+      if (uniqueTrackCount === 0) {
+        toast.error('No se encontraron canciones en las playlists seleccionadas al azar.', { id: toastId });
+        setIsProcessing(false);
+        dispatch({ type: 'CLOSE' });
+        return;
+      }
+      
+      // 4. Abrir el diálogo correcto (el de seleccionar número de canciones)
+      toast.dismiss(toastId);
+      dispatch({
+        type: 'OPEN',
+        payload: {
+          variant: 'surpriseTargeted',
+          props: { sourceIds, uniqueTrackCount },
+        },
+      });
+
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo preparar la lista sorpresa.";
+      toast.error(message, { id: toastId });
+    } finally {
+      setIsProcessing(false);
+    }
+};
   
   // Funciones para abrir diálogos (API pública del hook)
   
@@ -785,6 +825,7 @@ export function usePlaylistActions(
     handleExecuteSync,
     handleCreateOrUpdateMegalist,
     handleCreateSurpriseMix,
+    handleGlobalSurpriseCountSelected,
     handleConfirmAddTracks,
     handleConfirmConvertToMegalist,
     // Openers de Diálogos (API pública para los componentes de UI)

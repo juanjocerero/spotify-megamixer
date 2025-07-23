@@ -265,26 +265,16 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
       }
     },
     onConfirmSurpriseGlobal: (count: number) => {
-      // Obtenemos todos los IDs de la caché, que ahora está completa
-      const allPlaylistIds = playlistCache.map((p) => p.id);
-      // Despachamos el siguiente diálogo del flujo, pasando los datos necesarios
-      dispatch({
-        type: 'OPEN',
-        payload: {
-          variant: 'surpriseName',
-          props: {
-            sourceIds: allPlaylistIds,
-            targetTrackCount: count,
-          },
-        },
-      });
+      // Cerramos el diálogo actual y llamamos a la nueva lógica
+      dispatch({ type: 'CLOSE' });
+      actions.handleGlobalSurpriseCountSelected(count);
     },
     onConfirmSurpriseTargeted: (trackCount: number) => {
       if (dialogState.variant === 'surpriseTargeted') {
         dispatch({
           type: 'OPEN',
           payload: {
-            variant: 'surpriseName',
+            variant: 'surpriseName', // Ahora este es el siguiente paso correcto
             props: { ...dialogState.props, targetTrackCount: trackCount },
           },
         });
