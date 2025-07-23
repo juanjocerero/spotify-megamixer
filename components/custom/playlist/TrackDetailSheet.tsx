@@ -100,7 +100,7 @@ function TrackList({ playlistId, playlistName }: TrackListProps) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4">
       <Loader2 className="h-8 w-8 animate-spin mb-4" />
-      <p>Cargando canciones de "{playlistName}"...</p>
+      <p>Cargando canciones de &quot;{playlistName}&quot;...</p>
       </div>
     );
   }
