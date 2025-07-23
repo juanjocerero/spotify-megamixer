@@ -24,10 +24,10 @@ export function usePlaylistPoller() {
     if (finalData) {
       updatePlaylistInCache(finalData.id, {
         owner: finalData.owner,
-        trackCount: finalData.tracks.total
+        trackCount: finalData.tracks.total,
+        images: finalData.images, // Actualizamos la imagen
       });
     }
-    // Eliminamos la playlist del mapa de sondeo
     setPollingPlaylists(prev => {
       const newMap = new Map(prev);
       newMap.delete(id);
@@ -53,9 +53,10 @@ export function usePlaylistPoller() {
           const playlist = result.data;
           const ownerExists = !!playlist.owner?.id;
           const hasTracks = playlist.tracks.total > 0;
+          const imageExists = playlist.images && playlist.images.length > 0;
           
           // Condición de parada: El owner existe y (tiene canciones O es una lista que empezó vacía)
-          const shouldStop = ownerExists && (hasTracks || config.isInitiallyEmpty);
+          const shouldStop = imageExists && ownerExists && (hasTracks || config.isInitiallyEmpty);
           
           if (shouldStop) {
             console.log(`Polling para ${id} completado. Datos consistentes recibidos.`);
