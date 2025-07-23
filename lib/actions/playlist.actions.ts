@@ -607,6 +607,11 @@ export async function createEmptyMegalistAction(
   }
 }
 
+/**
+* Convierte una lista a Megalista.
+* @param name - La playlist a convertir.
+* @returns Un `ActionResult` con el objeto de la playlist con tipos
+*/
 export async function convertToMegalistAction(
   playlist: { id: string; tracks: { total: number } }
 ): Promise<ActionResult<{ id: string; type: PlaylistType; isFrozen: boolean }>> {
@@ -651,5 +656,31 @@ export async function convertToMegalistAction(
       success: false,
       error: 'No se pudo convertir la playlist a Megalista.',
     };
+  }
+}
+
+/**
+* Obtiene nuevos datos para una playlist recién creada.
+* Para el sistema de polling con nuevas playlists.
+* @param id - El id de la playlist sobre la que hace la consulta.
+* @returns Un `ActionResult` con la playlist actualizada
+*/
+export async function getFreshPlaylistDetailsAction(
+  playlistId: string
+): Promise<ActionResult<SpotifyPlaylist>> {
+  const session = await auth();
+  if (!session?.accessToken) {
+    return { success: false, error: 'No autenticado.' };
+  }
+  try {
+    const playlist = await getPlaylistDetails(session.accessToken, playlistId);
+    return { success: true, data: playlist };
+  } catch (error) {
+    console.error(`[ACTION_ERROR:getFreshPlaylistDetailsAction]`, error);
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : 'No se pudieron obtener los detalles de la playlist.';
+    return { success: false, error: errorMessage };
   }
 }

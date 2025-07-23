@@ -27,6 +27,7 @@ import { createOrUpdateSurpriseMixAction } from '@/lib/actions/surprise.actions'
 import { shuffleArray } from '../utils';
 import { ActionResult, SpotifyPlaylist } from '@/types/spotify';
 import { OpenActionPayload } from './useDialogManager';
+import { usePlaylistPoller } from './usePlaylistPoller';
 
 /**
 * Define la estructura mínima de una playlist necesaria para realizar una acción.
@@ -47,6 +48,7 @@ export type ActionPlaylist = { id: string; name: string };
 */
 export function usePlaylistActions(
   dispatch: React.Dispatch<{ type: 'OPEN'; payload: OpenActionPayload } | { type: 'CLOSE' }>,
+  startPolling: (id: string, config: { isInitiallyEmpty: boolean }) => void
 ) {
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -162,7 +164,11 @@ export function usePlaylistActions(
       success: '¡Lista vacía creada con éxito!',
       error: 'No se pudo crear la lista.',
       onSuccess: result => {
-        if (result.success) addPlaylistToCache(result.data);
+        if (result.success) {
+          addPlaylistToCache(result.data);
+          // Iniciamos polling (es vacía, así que isInitiallyEmpty: true)
+          startPolling(result.data.id, { isInitiallyEmpty: true });
+        }
       },
     });
   };
@@ -407,6 +413,8 @@ export function usePlaylistActions(
     }
     
     addPlaylistToCache(playlist);
+    
+    startPolling(playlist.id, { isInitiallyEmpty: false });
     await _populateNewOrReplacedMegalist(playlist.id, tracksToMix, playlistName, toastId);
     return { success: true, name: playlistName };
   };
@@ -522,6 +530,8 @@ export function usePlaylistActions(
         toast.success(`Lista Sorpresa "${newPlaylist.name}" actualizada.`, { id: toastId });
       } else {
         addPlaylistToCache(newPlaylist);
+        // Iniciamos polling
+        startPolling(newPlaylist.id, { isInitiallyEmpty: false });
         toast.success(`Lista Sorpresa "${newPlaylist.name}" creada con éxito.`, { id: toastId });
       }
       clearSelection();

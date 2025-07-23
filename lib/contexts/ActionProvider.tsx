@@ -2,6 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useMemo } from 'react';
+import { SpotifyPlaylist } from '@/types/spotify';
 
 // Importa todos los componentes de diálogo para el renderer
 import AddToMegalistDialog from '@/components/custom/dialogs/AddToMegalistDialog';
@@ -19,8 +20,7 @@ import SyncPreviewDialog from '@/components/custom/dialogs/SyncPreviewDialog';
 
 import { usePlaylistActions, ActionPlaylist } from '@/lib/hooks/usePlaylistActions';
 import { useDialogManager, DialogState } from '@/lib/hooks/useDialogManager';
-import { SpotifyPlaylist } from '@/types/spotify';
-
+import { usePlaylistPoller } from '@/lib/hooks/usePlaylistPoller';
 
 /**
 * Define la forma del objeto que `ActionContext` proveerá.
@@ -157,7 +157,8 @@ const DialogRenderer: React.FC<{ dialogState: DialogState; dialogCallbacks: Dial
 */
 export function ActionProvider({ children }: { children: React.ReactNode }) {
   const { dialogState, dispatch } = useDialogManager();
-  const actions = usePlaylistActions(dispatch);
+  const { startPolling } = usePlaylistPoller();
+  const actions = usePlaylistActions(dispatch, startPolling);
   
   // Construcción de los callbacks
   // Este es el punto de conexión: se une el estado del diálogo con la lógica de las acciones.
