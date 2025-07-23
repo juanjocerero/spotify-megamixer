@@ -7,7 +7,7 @@ const ROOT = path.resolve(__dirname, '..');
 
 // 1. Lista explícita de ficheros fijos
 const EXPLICIT = [
-  'auth.js',
+  'auth.ts',
   'middleware.ts',
   'types/spotify.d.ts',
   'prisma/schema.prisma',
