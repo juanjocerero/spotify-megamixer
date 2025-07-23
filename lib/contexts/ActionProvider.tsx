@@ -2,6 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useMemo } from 'react';
+import { usePlaylistStore } from '../store';
 import { SpotifyPlaylist } from '@/types/spotify';
 
 // Importa todos los componentes de diálogo para el renderer
@@ -119,7 +120,14 @@ const DialogRenderer: React.FC<{ dialogState: DialogState; dialogCallbacks: Dial
     case 'addTracksToMegalist':
     return <AddToMegalistDialog isOpen={true} onClose={dialogCallbacks.onClose} onConfirm={dialogCallbacks.onConfirmAddTracks} isAddingTracks={true} />;
     case 'surpriseGlobal':
-    return <SurpriseGlobalDialog isOpen={true} onClose={dialogCallbacks.onClose} onConfirm={dialogCallbacks.onConfirmSurpriseGlobal} />;
+    return (
+      <SurpriseGlobalDialog
+      isOpen={true}
+      onClose={dialogCallbacks.onClose}
+      onConfirm={dialogCallbacks.onConfirmSurpriseGlobal}
+      totalPlaylists={dialogState.props.totalPlaylists}
+      />
+    );
     case 'surpriseTargeted':
     return <SurpriseTargetedDialog isOpen={true} uniqueTrackCount={dialogState.props.uniqueTrackCount} onClose={dialogCallbacks.onClose} onConfirm={dialogCallbacks.onConfirmSurpriseTargeted} />;
     case 'surpriseName':
@@ -164,6 +172,7 @@ const DialogRenderer: React.FC<{ dialogState: DialogState; dialogCallbacks: Dial
 export function ActionProvider({ children }: { children: React.ReactNode }) {
   const { dialogState, dispatch } = useDialogManager();
   const { startPolling } = usePlaylistPoller();
+  const playlistCache = usePlaylistStore((state) => state.playlistCache);
   const actions = usePlaylistActions(dispatch, startPolling);
   
   // Construcción de los callbacks
@@ -255,13 +264,30 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
         actions.handleConfirmAddTracks(targetPlaylistId, dialogState.props.trackUris);
       }
     },
-    onConfirmSurpriseGlobal: () => {
-      // La lógica para este diálogo simple se maneja directamente en el 'opener'
-      // ya que no depende de estado previo del diálogo.
+    onConfirmSurpriseGlobal: (count: number) => {
+      // Obtenemos todos los IDs de la caché, que ahora está completa
+      const allPlaylistIds = playlistCache.map((p) => p.id);
+      // Despachamos el siguiente diálogo del flujo, pasando los datos necesarios
+      dispatch({
+        type: 'OPEN',
+        payload: {
+          variant: 'surpriseName',
+          props: {
+            sourceIds: allPlaylistIds,
+            targetTrackCount: count,
+          },
+        },
+      });
     },
     onConfirmSurpriseTargeted: (trackCount: number) => {
       if (dialogState.variant === 'surpriseTargeted') {
-        dispatch({ type: 'OPEN', payload: { variant: 'surpriseName', props: { ...dialogState.props, targetTrackCount: trackCount } }});
+        dispatch({
+          type: 'OPEN',
+          payload: {
+            variant: 'surpriseName',
+            props: { ...dialogState.props, targetTrackCount: trackCount },
+          },
+        });
       }
     },
     onConfirmSurpriseName: (playlistName: string) => {
