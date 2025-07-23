@@ -1,7 +1,7 @@
 // /components/custom/DashboardClient.tsx
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import { usePlaylistStore } from '@/lib/store';
@@ -100,6 +100,14 @@ export default function DashboardClient({ initialNextUrl, userId }: DashboardCli
   // Estado para la paginación
   const [nextUrl, setNextUrl] = useState<string | null>(initialNextUrl);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  
+  // En una carga exitosa del dashboard, limpiamos la bandera de recuperación.
+  // Esto asegura que el mecanismo de recarga automática esté disponible para futuras sesiones.
+  useEffect(() => {
+    if (sessionStorage.getItem('recovery_attempted')) {
+      sessionStorage.removeItem('recovery_attempted');
+    }
+  }, []); // El array vacío asegura que se ejecute solo una vez.
   
   /**
   * Carga la siguiente página de playlists desde la API de Spotify y la añade a la caché.

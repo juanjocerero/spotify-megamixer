@@ -12,12 +12,13 @@ import ShuffleAllButton from '@/components/custom/buttons/ShuffleAllButton';
 import SyncAllButton from '@/components/custom/buttons/SyncAllButton';
 import CreateEmptyMegalistButton from '@/components/custom/buttons/CreateEmptyMegalistButton';
 import LogoutButton from '@/components/custom/buttons/LogoutButton';
+import SessionRecoveryUI from '@/components/custom/SessionRecoveryUI';
 
 export default async function DashboardPage() {
   const session = await auth();
   
   if (session?.error === 'RefreshAccessTokenError' || !session?.accessToken) {
-    redirect('/');
+    return <SessionRecoveryUI />;
   }
   
   const initialDataResult = await getInitialDashboardDataAction();
