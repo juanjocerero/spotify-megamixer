@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 
@@ -43,13 +44,25 @@ export default function SurpriseTargetedDialog({
     onConfirm(sliderValue[0]);
   };
   
+  // Handler para el cambio en el input numérico
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const numValue = value === '' ? 0 : parseInt(value, 10);
+    if (!isNaN(numValue)) {
+      // Forzamos que el valor esté dentro de los límites (1 y el máximo)
+      const clampedValue = Math.max(1, Math.min(numValue, uniqueTrackCount));
+      setSliderValue([clampedValue]);
+    }
+  };
+  
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
     <DialogContent>
     <DialogHeader>
     <DialogTitle>Crear Lista Sorpresa</DialogTitle>
     </DialogHeader>
-    <Label>¿Cuántas canciones aleatorias quieres en tu nueva lista?</Label>
+    <div className="grid gap-4 pt-2">
+    <Label htmlFor="track-count">¿Cuántas canciones aleatorias quieres en tu nueva lista?</Label>
     <div className="text-center font-bold text-lg">{sliderValue[0]}</div>
     <Slider
     value={sliderValue}
@@ -59,8 +72,18 @@ export default function SurpriseTargetedDialog({
     onValueChange={setSliderValue}
     disabled={uniqueTrackCount === 0}
     />
-    <div className="text-xs text-muted-foreground text-center">
-    Total de canciones únicas disponibles: {uniqueTrackCount}
+    <div className="flex items-center gap-2 justify-center">
+    <Input
+    id="track-count"
+    type="number"
+    // Mostramos el valor del slider. Usamos [0] porque el estado es un array.
+    value={sliderValue[0]}
+    onChange={handleInputChange}
+    className="w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+    disabled={uniqueTrackCount === 0}
+    />
+    <span className="text-sm text-muted-foreground">/ {uniqueTrackCount}</span>
+    </div>
     </div>
     <DialogFooter>
     <Button variant="outline" onClick={onClose}>
