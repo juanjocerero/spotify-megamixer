@@ -1,7 +1,17 @@
-// Fichero: /auth.ts
+// Fichero: /auth.ts (Versión de Diagnóstico)
 
 import NextAuth from 'next-auth';
 import Spotify from 'next-auth/providers/spotify';
+
+// --- BLOQUE DE DIAGNÓSTICO ---
+// Este bloque se ejecutará en el servidor cuando se inicialice la ruta de la API.
+console.log("--- VERIFYING ENVIRONMENT VARIABLES ---");
+console.log(`AUTH_URL: ${process.env.AUTH_URL}`);
+console.log(`AUTH_SECRET Exists: ${!!process.env.AUTH_SECRET}, Length: ${process.env.AUTH_SECRET?.length}`);
+console.log(`AUTH_SPOTIFY_ID Exists: ${!!process.env.AUTH_SPOTIFY_ID}, Value (start): ${process.env.AUTH_SPOTIFY_ID?.substring(0, 4)}`);
+console.log(`AUTH_SPOTIFY_SECRET Exists: ${!!process.env.AUTH_SPOTIFY_SECRET}, Length: ${process.env.AUTH_SPOTIFY_SECRET?.length}`);
+console.log("-------------------------------------");
+// -----------------------------
 
 export const {
   handlers,
@@ -9,22 +19,8 @@ export const {
   signIn,
   signOut
 } = NextAuth({
-  logger: {
-    error(error) {
-      console.error(`[AUTH.JS ERROR]`, error);
-    },
-    warn(code: string) {
-      console.warn(`[AUTH.JS WARNING] Código: ${code}`);
-    },
-    debug(code: string, metadata: unknown) {
-      console.log(`[AUTH.JS DEBUG] Código: ${code}`, metadata);
-    }
-  },
+  // Mantenemos la configuración simplificada y correcta
   providers: [
-    // Simplificamos el proveedor.
-    // Auth.js v5 encontrará automáticamente las variables AUTH_SPOTIFY_ID
-    // y AUTH_SPOTIFY_SECRET si no especificamos clientId y clientSecret.
-    // Esto es más limpio y menos propenso a errores.
     Spotify({
       authorization: {
         params: {
@@ -35,6 +31,7 @@ export const {
   ],
   
   callbacks: {
+    // ...tus callbacks correctos...
     async jwt({ token, account }) {
       if (account) {
         token.accessToken = account.access_token;
@@ -55,7 +52,6 @@ export const {
           method: "POST",
           headers: {
             "Content-Type": "application/x-form-urlencoded",
-            // Usamos los nombres de variable correctos para la v5.
             Authorization: `Basic ${Buffer.from(`${process.env.AUTH_SPOTIFY_ID}:${process.env.AUTH_SPOTIFY_SECRET}`).toString("base64")}`,
           },
           body: new URLSearchParams({
