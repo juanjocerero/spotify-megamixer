@@ -23,6 +23,7 @@ export const PlaylistStoreContext = createContext<StoreApi<PlaylistStore> | unde
 export interface PlaylistStoreProviderProps {
   initialPlaylists: SpotifyPlaylist[];
   children: ReactNode;
+  initialNextUrl: string | null;
 }
 
 /**
@@ -36,6 +37,7 @@ export interface PlaylistStoreProviderProps {
  */
 export const PlaylistStoreProvider = ({
   initialPlaylists,
+  initialNextUrl,
   children,
 }: PlaylistStoreProviderProps) => {
   const storeRef = useRef<StoreApi<PlaylistStore> | null>(null);

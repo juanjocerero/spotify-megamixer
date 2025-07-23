@@ -44,7 +44,7 @@ export type DialogState =
   props: { sourceIds: string[]; targetId: string };
 }
 | { variant: 'addTracksToMegalist'; props: { trackUris: string[] } }
-| { variant: 'surpriseGlobal' }
+| { variant: 'surpriseGlobal'; props: { totalPlaylists: number } }
 | {
   variant: 'surpriseTargeted';
   props: { sourceIds: string[]; uniqueTrackCount: number };

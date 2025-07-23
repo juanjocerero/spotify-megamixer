@@ -17,7 +17,7 @@ export interface PlaylistStore {
   playlistCache: SpotifyPlaylist[];
   /** Canción que el usuario está reproduciendo en este momento. */
   currentlyPlayingTrack: SpotifyTrack | null;
-  
+  nextUrl: string | null;
   // Acciones
   /** Alterna la selección de una playlist por su ID. */
   togglePlaylist: (id: string) => void;
@@ -36,6 +36,7 @@ export interface PlaylistStore {
   initializeCache: (playlists: SpotifyPlaylist[]) => void;
   /** Añade un nuevo lote de playlists al final de la caché existente (para scroll infinito). */
   addMoreToCache: (playlists: SpotifyPlaylist[]) => void;
+  setNextUrl: (url: string | null) => void;
   /** Añade una única playlist nueva al principio de la caché, si no existe ya. */
   addPlaylistToCache: (playlist: SpotifyPlaylist) => void;
   /**
@@ -60,6 +61,7 @@ const getDefaultInitialState = () => ({
   showOnlySelected: false,
   playlistCache: [],
   currentlyPlayingTrack: null,
+  nextUrl: null,
 });
 
 /**
@@ -72,9 +74,11 @@ const getDefaultInitialState = () => ({
 export const createPlaylistStore = (
   initState: Partial<PlaylistStore> = {},
 ) => {
+
+  const initialState = { ...getDefaultInitialState(), ...initState };
+
   return createStore<PlaylistStore>((set, get) => ({
-    ...getDefaultInitialState(),
-    ...initState,
+    ...initialState,
     
     // Implementación de acciones
     togglePlaylist: (id: string) => {
@@ -115,6 +119,9 @@ export const createPlaylistStore = (
       set((state) => ({
         playlistCache: [...state.playlistCache, ...playlists],
       }));
+    },
+    setNextUrl: (url) => {
+      set({ nextUrl: url });
     },
     addPlaylistToCache: (playlist) => {
       const existingCache = get().playlistCache;

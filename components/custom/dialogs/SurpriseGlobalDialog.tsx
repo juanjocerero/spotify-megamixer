@@ -16,6 +16,8 @@ import { Label } from '@/components/ui/label';
 interface SurpriseGlobalDialogProps {
   /** Controla si el diálogo está visible. */
   isOpen: boolean;
+  /** Número total de playlists del usuario */
+  totalPlaylists: number;
   /** Función a llamar cuando el diálogo se cierra. */
   onClose: () => void;
   /** Función a llamar al confirmar, pasando el número de playlists a usar. */
@@ -31,12 +33,14 @@ export default function SurpriseGlobalDialog({
   isOpen,
   onClose,
   onConfirm,
+  totalPlaylists,
 }: SurpriseGlobalDialogProps) {
   const [count, setCount] = useState('50'); // Usamos string para el input
   
   const handleConfirm = () => {
-    // Usamos 50 como valor por defecto si el input está vacío o es inválido.
-    onConfirm(parseInt(count, 10) || 50);
+    const numCount = parseInt(count, 10) || 50;
+    // Aseguramos que el valor no exceda el máximo
+    onConfirm(Math.min(numCount, totalPlaylists));
   };
   
   return (
@@ -45,14 +49,13 @@ export default function SurpriseGlobalDialog({
     <DialogHeader>
     <DialogTitle>Megalista Sorpresa Global</DialogTitle>
     </DialogHeader>
-    <Label>
-    ¿De cuántas de tus playlists (elegidas al azar) quieres tomar las canciones?
-    </Label>
+    <Label>¿De cuántas de tus playlists (elegidas al azar entre un total de{' '}<strong>{totalPlaylists}</strong>) quieres tomar las canciones?</Label>
     <Input
     type="number"
     value={count}
     onChange={(e) => setCount(e.target.value)}
-    placeholder="Por defecto: 50"
+    placeholder="Por defecto: 50" 
+    max={totalPlaylists}
     autoFocus
     className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
     />

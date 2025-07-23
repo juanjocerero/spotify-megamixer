@@ -16,9 +16,9 @@ import {
   createEmptyMegalistAction,
   addTracksToPlaylistAction,
   getUniqueTrackCountFromPlaylistsAction,
-  convertToMegalistAction,
+  convertToMegalistAction
 } from '@/lib/actions/playlist.actions';
-import { getTrackUris } from '@/lib/actions/spotify.actions';
+import { getTrackUris, fetchMorePlaylists } from '@/lib/actions/spotify.actions';
 import {
   previewBatchSync,
   executeMegalistSync,
@@ -27,7 +27,6 @@ import { createOrUpdateSurpriseMixAction } from '@/lib/actions/surprise.actions'
 import { shuffleArray } from '../utils';
 import { ActionResult, SpotifyPlaylist } from '@/types/spotify';
 import { OpenActionPayload } from './useDialogManager';
-import { usePlaylistPoller } from './usePlaylistPoller';
 
 /**
 * Define la estructura mínima de una playlist necesaria para realizar una acción.
@@ -59,6 +58,9 @@ export function usePlaylistActions(
     removeMultipleFromCache,
     clearSelection,
     playlistCache,
+    addMoreToCache,
+    nextUrl, 
+    setNextUrl, 
   } = usePlaylistStore(
     useShallow((state) => ({
       addPlaylistToCache: state.addPlaylistToCache,
@@ -66,6 +68,9 @@ export function usePlaylistActions(
       removeMultipleFromCache: state.removeMultipleFromCache,
       clearSelection: state.clearSelection,
       playlistCache: state.playlistCache,
+      addMoreToCache: state.addMoreToCache,
+      nextUrl: state.nextUrl,
+      setNextUrl: state.setNextUrl,
     })),
   );
   
@@ -676,21 +681,70 @@ export function usePlaylistActions(
   * Si se proporcionan, calcula las pistas únicas y abre el diálogo específico.
   * @param sourceIds - (Opcional) IDs de las playlists fuente.
   */
-  
   const openSurpriseMixDialog = async (sourceIds?: string[]) => {
-    setIsProcessing(true);
-    const toastId = toast.loading("Preparando el generador de sorpresas...");
-    try {
-      if (!sourceIds || sourceIds.length === 0) {
-        dispatch({ type: 'OPEN', payload: { variant: 'surpriseGlobal' } });
-      } else {
+    // Caso 1: Flujo "dirigido" (no cambia)
+    if (sourceIds && sourceIds.length > 0) {
+      setIsProcessing(true);
+      const toastId = toast.loading('Preparando el generador de sorpresas...');
+      try {
         const count = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
-        dispatch({ type: 'OPEN', payload: { variant: 'surpriseTargeted', props: { sourceIds, uniqueTrackCount: count } } });
+        dispatch({
+          type: 'OPEN',
+          payload: {
+            variant: 'surpriseTargeted',
+            props: { sourceIds, uniqueTrackCount: count },
+          },
+        });
+        toast.dismiss(toastId);
+      } catch (err) {
+        console.error('Error obteniendo la información de las playlists', err);
+        toast.error('No se pudo obtener la información de las playlists.', { id: toastId });
+      } finally {
+        setIsProcessing(false);
       }
+      return;
+    }
+    
+    // Caso 2: Flujo "Global" (corregido para no usar getState)
+    setIsProcessing(true);
+    const toastId = toast.loading('Calculando total de playlists...');
+    
+    try {
+      // Iniciar el bucle con el `nextUrl` del estado suscrito
+      let currentNextUrl = nextUrl;
+      // Hacemos una copia local de la caché para llevar la cuenta
+      let accumulatedPlaylists = [...playlistCache];
+      
+      while (currentNextUrl) {
+        const result = await fetchMorePlaylists(currentNextUrl);
+        
+        // Actualizamos el store central con las acciones del hook
+        addMoreToCache(result.items);
+        setNextUrl(result.next);
+        
+        // Actualizamos nuestras variables locales para el bucle y el conteo final
+        accumulatedPlaylists.push(...result.items);
+        currentNextUrl = result.next;
+      }
+      
       toast.dismiss(toastId);
-    } catch (err) {
-      console.error('Error obteniendo la información de las playlists', err);
-      toast.error('No se pudo obtener la información de las playlists.', { id: toastId });
+      
+      const finalPlaylistCount = accumulatedPlaylists.length;
+      
+      dispatch({
+        type: 'OPEN',
+        payload: {
+          variant: 'surpriseGlobal',
+          props: { totalPlaylists: finalPlaylistCount },
+        },
+      });
+      
+    } catch (error) {
+      const message =
+      error instanceof Error
+      ? error.message
+      : 'No se pudo cargar la lista completa de playlists.';
+      toast.error(message, { id: toastId });
     } finally {
       setIsProcessing(false);
     }

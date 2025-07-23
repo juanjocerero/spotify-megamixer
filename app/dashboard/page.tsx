@@ -31,8 +31,11 @@ export default async function DashboardPage() {
   const userId = session.user.id;
   
   return (
-    // FPlaylistStoreProvider ahora envuelve a ActionProvider
-    <PlaylistStoreProvider initialPlaylists={initialPlaylists}>
+    // PlaylistStoreProvider ahora envuelve a ActionProvider
+    <PlaylistStoreProvider
+      initialPlaylists={initialPlaylists}
+      initialNextUrl={initialNextUrl}
+    >
     <ActionProvider>
     <TooltipProvider delayDuration={100}>
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6 md:p-8">
