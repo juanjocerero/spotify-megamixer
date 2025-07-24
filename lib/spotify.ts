@@ -143,15 +143,26 @@ export async function getUserPlaylists(accessToken: string): Promise<PlaylistsAp
   const fields = "items(id,name,description,images,owner,tracks(total)),next";
   const url = `${SPOTIFY_API_BASE}/me/playlists?limit=50&fields=${encodeURIComponent(fields)}`;
   
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+  const response = await fetch(url, { 
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
   
   if (!response.ok) {
-    // En el futuro, manejaremos los errores de forma más elegante
-    throw new Error("Failed to fetch playlists");
+    // --- INICIO DE LA MODIFICACIÓN PARA DEPURACIÓN ---
+    // Intentamos leer el cuerpo del error de Spotify para obtener más detalles.
+    try {
+      const errorData = await response.json();
+      console.error('[DEBUG:getUserPlaylists] Spotify API Error Body:', JSON.stringify(errorData, null, 2));
+      throw new Error(
+        `Failed to fetch playlists. Status: ${response.status}. Message: ${errorData.error?.message || 'No specific error message from API.'}`
+      );
+    } catch (e) {
+      // Si el cuerpo del error no es un JSON válido, leemos como texto.
+      const errorText = await response.text();
+      console.error('[DEBUG:getUserPlaylists] Spotify API Error Text:', errorText);
+      throw new Error(`Failed to fetch playlists. Status: ${response.status}. Response: ${errorText}`);
+    }
+    // --- FIN DE LA MODIFICACIÓN ---
   }
   
   return response.json();
