@@ -21,6 +21,7 @@ import SyncPreviewDialog from '@/components/custom/dialogs/SyncPreviewDialog';
 import { usePlaylistActions, ActionPlaylist } from '@/lib/hooks/usePlaylistActions';
 import { useDialogManager, DialogState } from '@/lib/hooks/useDialogManager';
 import { usePlaylistPoller } from '@/lib/hooks/usePlaylistPoller';
+import { usePlaylistStore } from '@/lib/store';
 
 /**
 * Define la forma del objeto que `ActionContext` proveerá.
@@ -39,6 +40,7 @@ import { usePlaylistPoller } from '@/lib/hooks/usePlaylistPoller';
   openSurpriseMixDialog: (sourceIds?: string[]) => Promise<void>;
   openAddTracksDialog: (trackUris: string[]) => void;
   openConvertToMegalistDialog: (playlist: SpotifyPlaylist) => void;
+  openIsolateDialog: (playlists: SpotifyPlaylist[]) => void;
 }
 
 /**
@@ -69,6 +71,7 @@ export interface DialogCallbacks {
   onConfirmSurpriseTargeted: (trackCount: number) => void;
   onConfirmSurpriseName: (playlistName: string) => void;
   onConfirmFreeze: () => void;
+  onConfirmIsolate: () => void;
   onConfirmConvertToMegalist: () => void;
 }
 
@@ -131,6 +134,7 @@ const DialogRenderer: React.FC<{ dialogState: DialogState; dialogCallbacks: Dial
     return <SurpriseTargetedDialog isOpen={true} uniqueTrackCount={dialogState.props.uniqueTrackCount} onClose={dialogCallbacks.onClose} onConfirm={dialogCallbacks.onConfirmSurpriseTargeted} />;
     case 'surpriseName':
     return <SurpriseNameDialog isOpen={true} isOverwrite={!!dialogState.props.isOverwrite} overwriteId={dialogState.props.overwriteId} onClose={dialogCallbacks.onClose} onConfirm={dialogCallbacks.onConfirmSurpriseName} />;
+    
     case 'convertToMegalist': {
       const { playlist } = dialogState.props;
       const description = (
@@ -152,6 +156,18 @@ const DialogRenderer: React.FC<{ dialogState: DialogState; dialogCallbacks: Dial
         />
       );
     }
+    case 'isolateConfirmation': {
+      const { playlists, isolate } = dialogState.props;
+      const count = playlists.length;
+      const singleName = count === 1 ? `"${playlists[0].name}"` : '';
+      const title = isolate ? `¿Aislar ${count > 1 ? `${count} playlists` : singleName}?` : `¿Quitar aislamiento de ${count > 1 ? `${count} playlists` : singleName}?`;
+      const description = isolate
+      ? 'Las playlists aisladas no se incluirán en la creación de nuevas Listas Sorpresa.'
+      : 'Las playlists volverán a estar disponibles para crear Listas Sorpresa.';
+      const confirmText = isolate ? 'Sí, aislar' : 'Quitar aislamiento';
+      
+      return <ConfirmationDialog isOpen={true} onClose={dialogCallbacks.onClose} onConfirm={dialogCallbacks.onConfirmIsolate} title={title} description={description} confirmButtonText={confirmText} />;
+    }
     default:
     return null;
   }
@@ -171,6 +187,7 @@ const DialogRenderer: React.FC<{ dialogState: DialogState; dialogCallbacks: Dial
 export function ActionProvider({ children }: { children: React.ReactNode }) {
   const { dialogState, dispatch } = useDialogManager();
   const { startPolling } = usePlaylistPoller();
+  const playlistCache = usePlaylistStore(state => state.playlistCache);
   const actions = usePlaylistActions(dispatch, startPolling);
   
   // Construcción de los callbacks
@@ -257,6 +274,14 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
         actions.handleCreateOrUpdateMegalist({ ...dialogState.props, shouldShuffle, mode: 'update', playlistName: '' });
       }
     },
+    onConfirmIsolate: () => {
+      if (dialogState.variant === 'isolateConfirmation') {
+        const fullPlaylists = dialogState.props.playlists
+        .map(p => playlistCache.find(cached => cached.id === p.id))
+        .filter((p): p is SpotifyPlaylist => !!p);
+        actions.handleConfirmIsolate(fullPlaylists, dialogState.props.isolate);
+      }
+    },
     onConfirmAddTracks: (targetPlaylistId: string) => {
       if (dialogState.variant === 'addTracksToMegalist') {
         actions.handleConfirmAddTracks(targetPlaylistId, dialogState.props.trackUris);
@@ -294,6 +319,7 @@ export function ActionProvider({ children }: { children: React.ReactNode }) {
     isProcessing: actions.isProcessing,
     openCreateEmptyMegalistDialog: actions.openCreateEmptyMegalistDialog,
     openFreezeDialog: actions.openFreezeDialog,
+    openIsolateDialog: actions.openIsolateDialog,
     openEditDialog: actions.openEditDialog,
     openDeleteDialog: actions.openDeleteDialog,
     openShuffleDialog: actions.openShuffleDialog,

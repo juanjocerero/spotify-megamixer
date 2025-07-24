@@ -50,6 +50,8 @@ export interface MegalistClientData {
   type: PlaylistType;
   /** `true` si la Megalista está congelada y no participa en sincronizaciones. */
   isFrozen: boolean;
+  /** `true` si la Megalista está aislada y no participa en listas sorpresa. */
+  isIsolated: boolean;
 }
 
 
@@ -58,7 +60,7 @@ export interface MegalistClientData {
 * - `MEGALIST`: Una playlist que se puede sincronizar con otras.
 * - `SURPRISE`: Una playlist generada aleatoriamente que no se sincroniza.
 */
-export type PlaylistType = 'MEGALIST' | 'SURPRISE';
+export type PlaylistType = 'MEGALIST' | 'SURPRISE' | 'ADOPTED';
 
 /**
 * La interfaz consolidada y unificada para una playlist dentro de la aplicación.
@@ -83,6 +85,8 @@ export interface SpotifyPlaylist {
   isSyncable?: boolean;
   /** `true` si la Megalista está "congelada", es decir, no se puede sincronizar. */
   isFrozen?: boolean;
+  /** `true` si la Megalista está "congelada", es decir, no puede formar parte de listas sorpresa. */
+  isIsolated?: boolean;
   /** Define si es una 'MEGALIST' o una 'SURPRISE'. */
   playlistType?: PlaylistType;
 }

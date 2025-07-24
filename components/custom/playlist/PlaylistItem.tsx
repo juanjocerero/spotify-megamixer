@@ -29,7 +29,9 @@ import {
   ListPlus,
   CheckSquare,
   Square, 
-  GitMerge
+  GitMerge, 
+  Shield, 
+  ShieldOff, 
 } from 'lucide-react';
 
 interface PlaylistItemProps {
@@ -61,12 +63,14 @@ function PlaylistItem({
     openSurpriseMixDialog,
     openFreezeDialog, 
     openConvertToMegalistDialog,
+    openIsolateDialog,
   } = useActions();
   
   const isSyncable = playlist.isSyncable ?? false;
   const playlistType = playlist.playlistType;
   
   const getBadgeVariant = () => {
+    if (playlist.isIsolated) return 'border-orange-500 text-orange-500';
     if (playlistType === 'MEGALIST') {
       if (playlist.tracks.total === 0) return 'border-red-500 text-red-500';
       return playlist.isFrozen ? 'border-blue-500 text-blue-500' : 'border-green-500 text-green-500';
@@ -76,6 +80,7 @@ function PlaylistItem({
   };
   
   const getBadgeText = () => {
+    if (playlist.isIsolated) return 'Aislada';
     if (playlistType === 'MEGALIST') {
       if (playlist.tracks.total === 0) return 'Vacía';
       return playlist.isFrozen ? 'Congelada' : 'Megalista';
@@ -182,15 +187,33 @@ function PlaylistItem({
     )}
     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openAddToMegalistDialog([playlist.id]); }} >
     <ListPlus className="mr-2 h-4 w-4 text-blue-500" /> <span>Añadir a Megalista</span>
-
+    
     <DropdownMenuSeparator />
-
+    
     </DropdownMenuItem>
     {isSyncable && (
       <DropdownMenuItem disabled={isProcessing} onClick={(e) => { e.stopPropagation(); openSyncDialog([playlist]); }}>
       <RefreshCw className="mr-2 h-4 w-4" /> <span>Sincronizar</span>
       </DropdownMenuItem>
     )}
+    
+    <DropdownMenuItem
+    disabled={isProcessing}
+    onClick={(e) => {
+      e.stopPropagation();
+      openIsolateDialog([playlist]);
+    }}
+    >
+    {playlist.isIsolated ? (
+      <ShieldOff className="mr-2 h-4 w-4 text-orange-500" />
+    ) : (
+      <Shield className="mr-2 h-4 w-4 text-orange-500" />
+    )}
+    <span>
+    {playlist.isIsolated ? 'Quitar Aislamiento' : 'Aislar'}
+    </span>
+    </DropdownMenuItem>
+    
     <DropdownMenuItem disabled={isProcessing} onClick={(e) => { e.stopPropagation(); openShuffleDialog([playlist]); }}>
     <Shuffle className="mr-2 h-4 w-4" /> <span>Reordenar</span>
     </DropdownMenuItem>

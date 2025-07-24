@@ -16,7 +16,9 @@ import {
   createEmptyMegalistAction,
   addTracksToPlaylistAction,
   getUniqueTrackCountFromPlaylistsAction,
-  convertToMegalistAction
+  convertToMegalistAction, 
+  toggleIsolateStateAction, 
+  ActionablePlaylist, 
 } from '@/lib/actions/playlist.actions';
 import { getTrackUris, fetchMorePlaylists } from '@/lib/actions/spotify.actions';
 import {
@@ -232,6 +234,38 @@ export function usePlaylistActions(
         }
       },
     });
+  };
+  
+  /**
+  * Maneja el cambio de estado de "aislamiento" de una lista.
+  * @param playlists - El conjunto de listas.
+  * @param isolate - `true` para aislar, `false` para anular.
+  */
+  const handleConfirmIsolate = async (
+    playlists: ActionablePlaylist[],
+    isolate: boolean,
+  ) => {
+    dispatch({ type: 'CLOSE' });
+    const actionText = isolate ? 'Aislando' : 'Quitando aislamiento de';
+    const successText = isolate ? 'aisladas' : 'ya no están aisladas';
+    await executeAction(
+      toggleIsolateStateAction,
+      [playlists, isolate],
+      {
+        loading: `${actionText} ${playlists.length} playlist(s)...`,
+        success: `Las playlists ahora están ${successText}.`,
+        error: `No se pudo completar la acción.`,
+        onSuccess: result => {
+          if (result.success) {
+            result.data.forEach(id => {
+              const playlistInCache = playlistCache.find(p => p.id === id);
+              const typeUpdate = !playlistInCache?.playlistType ? { playlistType: 'ADOPTED' as const } : {};
+              updatePlaylistInCache(id, { isIsolated: isolate, ...typeUpdate });
+            });
+          }
+        },
+      },
+    );
   };
   
   /**
@@ -525,6 +559,7 @@ export function usePlaylistActions(
     }
     setIsProcessing(true);
     dispatch({ type: 'CLOSE' });
+    
     const toastId = toast.loading(`Creando tu Lista Sorpresa "${playlistName}"...`);
     const result = await createOrUpdateSurpriseMixAction(sourceIds, targetTrackCount, playlistName, overwriteId);
     
@@ -535,314 +570,337 @@ export function usePlaylistActions(
         toast.success(`Lista Sorpresa "${newPlaylist.name}" actualizada.`, { id: toastId });
       } else {
         addPlaylistToCache(newPlaylist);
-        // Iniciamos polling
         startPolling(newPlaylist.id, { isInitiallyEmpty: false });
         toast.success(`Lista Sorpresa "${newPlaylist.name}" creada con éxito.`, { id: toastId });
       }
       clearSelection();
     } else {
       const errorMessage = result.error;
-      // Si la playlist ya existe, la app ofrece sobrescribirla
       if (errorMessage.startsWith('PLAYLIST_EXISTS::')) {
         const existingId = errorMessage.split('::')[1];
         toast.dismiss(toastId);
-        dispatch({ type: 'OPEN', payload: { 
-          variant: 'surpriseName', 
-          props: { sourceIds, targetTrackCount, isOverwrite: true, overwriteId: existingId },
-        }});
-      } else {
-        toast.error(errorMessage, { id: toastId });
+        dispatch({
+          type: 'OPEN',
+          payload: {
+            variant: 'surpriseName',
+            props: {
+              sourceIds,
+              targetTrackCount,
+              isOverwrite: true,
+              overwriteId: existingId
+            },
+          }});
+        } else {
+          toast.error(errorMessage, { id: toastId });
+        }
       }
-    }
-    setIsProcessing(false);
-  };
-  
-  /**
-  * Maneja la adición de un conjunto de URIs de tracks a una Megalista específica.
-  * @param targetPlaylistId - La Megalista de destino.
-  * @param trackUris - Las URIs de las canciones a añadir.
-  */
-  const handleConfirmAddTracks = async (targetPlaylistId: string, trackUris: string[]) => {
-    dispatch({ type: 'CLOSE' });
-    await executeAction(
-      addTracksToPlaylistAction,
-      [{ playlistId: targetPlaylistId, trackUris }],
-      {
-        loading: 'Añadiendo canciones...',
-        success: `${trackUris.length} cancion(es) añadidas con éxito.`,
-        error: 'No se pudieron añadir las canciones.',
-        onSuccess: (result) => {
-          if (result.success) {
-            updatePlaylistInCache(targetPlaylistId, { trackCount: result.data.newTrackCount });
-          }
-        },
-      },
-    );
-  };
-  
-  const handleGlobalSurpriseCountSelected = async (count: number) => {
-    setIsProcessing(true);
-    const toastId = toast.loading('Calculando canciones disponibles...');
+      setIsProcessing(false);
+    };
     
-    try {
-      // 1. Obtener todas las playlists del caché y barajarlas
-      const allPlaylistIds = playlistCache.map((p) => p.id);
-      const shuffledIds = shuffleArray(allPlaylistIds);
-      
-      // 2. Seleccionar el subconjunto de playlists solicitado
-      const sourceIds = shuffledIds.slice(0, count);
-      
-      // 3. Calcular las canciones únicas de ese subconjunto
-      const uniqueTrackCount = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
-      
-      if (uniqueTrackCount === 0) {
-        toast.error('No se encontraron canciones en las playlists seleccionadas al azar.', { id: toastId });
-        setIsProcessing(false);
-        dispatch({ type: 'CLOSE' });
-        return;
-      }
-      
-      // 4. Abrir el diálogo correcto (el de seleccionar número de canciones)
-      toast.dismiss(toastId);
-      dispatch({
-        type: 'OPEN',
-        payload: {
-          variant: 'surpriseTargeted',
-          props: { sourceIds, uniqueTrackCount },
+    /**
+    * Maneja la adición de un conjunto de URIs de tracks a una Megalista específica.
+    * @param targetPlaylistId - La Megalista de destino.
+    * @param trackUris - Las URIs de las canciones a añadir.
+    */
+    const handleConfirmAddTracks = async (targetPlaylistId: string, trackUris: string[]) => {
+      dispatch({ type: 'CLOSE' });
+      await executeAction(
+        addTracksToPlaylistAction,
+        [{ playlistId: targetPlaylistId, trackUris }],
+        {
+          loading: 'Añadiendo canciones...',
+          success: `${trackUris.length} cancion(es) añadidas con éxito.`,
+          error: 'No se pudieron añadir las canciones.',
+          onSuccess: (result) => {
+            if (result.success) {
+              updatePlaylistInCache(targetPlaylistId, { trackCount: result.data.newTrackCount });
+            }
+          },
         },
-      });
-      
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "No se pudo preparar la lista sorpresa.";
-      toast.error(message, { id: toastId });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-  
-  // Funciones para abrir diálogos (API pública del hook)
-  
-  /**
-  * Abre el diálogo para nombrar y crear una nueva Megalista vacía.
-  */
-  const openCreateEmptyMegalistDialog = () => dispatch({ type: 'OPEN', payload: { variant: 'createEmpty' } });
-  
-  /**
-  * Abre el diálogo para editar los detalles de una playlist.
-  * @param playlist - El objeto completo de la playlist a editar.
-  */
-  const openEditDialog = (playlist: SpotifyPlaylist) => dispatch({ type: 'OPEN', payload: { variant: 'edit', props: { playlist } } });
-  
-  /**
-  * Abre el diálogo de confirmación para eliminar una o varias playlists.
-  * @param playlists - Array de playlists a eliminar.
-  */
-  const openDeleteDialog = (playlists: ActionPlaylist[]) => {
-    if (playlists.length === 0) return;
-    dispatch({ type: 'OPEN', payload: { variant: 'delete', props: { playlists } } });
-  };
-  
-  /**
-  * Abre el diálogo de confirmación para reordenar las canciones de una o varias playlists.
-  * @param playlists - Array de playlists a reordenar.
-  */
-  const openShuffleDialog = (playlists: ActionPlaylist[]) => {
-    if (playlists.length === 0) return;
-    dispatch({ type: 'OPEN', payload: { variant: 'shuffle', props: { playlists } } });
-  };
-  
-  /**
-  * Abre el diálogo para confirmar la congelación o descongelación de una Megalista.
-  * @param playlist - La Megalista sobre la que se actuará.
-  */
-  const openFreezeDialog = (playlist: SpotifyPlaylist) => {
-    if (!playlist.isMegalist || playlist.playlistType !== 'MEGALIST') {
-      toast.error('Esta acción solo está disponible para Megalistas.');
-      return;
-    }
-    dispatch({ type: 'OPEN', payload: { variant: 'freezeConfirmation', props: { playlist } } });
-  };
-  
-  /**
-  * Inicia el flujo de sincronización: calcula los cambios y, si hay, abre el diálogo de previsualización.
-  * @param playlists - Array de Megalistas a sincronizar.
-  */
-  const openSyncDialog = async (playlists: ActionPlaylist[]) => {
-    if (playlists.length === 0) return;
-    setIsProcessing(true);
-    const toastId = toast.loading(`Calculando cambios para ${playlists.length} playlist(s)...`);
-    try {
-      const idsToPreview = playlists.map((p) => p.id);
-      const { totalAdded, totalRemoved } = await previewBatchSync(idsToPreview);
-      if (totalAdded === 0 && totalRemoved === 0) {
-        toast.success("¡Todo al día!", { id: toastId, description: "Las playlists seleccionadas ya están sincronizadas." });
-        setIsProcessing(false);
-        return;
-      }
-      toast.dismiss(toastId);
-      dispatch({ type: 'OPEN', payload: { variant: 'syncPreview', props: { playlists, syncStats: { added: totalAdded, removed: totalRemoved } } } });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "No se pudo previsualizar la sincronización.";
-      toast.error(message, { id: toastId });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-  
-  /**
-  * Abre el diálogo para nombrar una nueva Megalista a partir de una selección.
-  * @param sourceIds - IDs de las playlists fuente.
-  */
-  const openCreateMegalistDialog = (sourceIds: string[]) => {
-    if (sourceIds.length < 2) {
-      toast.info('Selecciona al menos 2 playlists para crear una Megalista.');
-      return;
-    }
-    dispatch({ type: 'OPEN', payload: { variant: 'createName', props: { sourceIds } } });
-  };
-  
-  /**
-  * Abre el diálogo para seleccionar una Megalista existente a la cual añadir otras playlists.
-  * @param sourceIds - IDs de las playlists que se añadirán como fuente.
-  */
-  const openAddToMegalistDialog = (sourceIds: string[]) => {
-    if (sourceIds.length === 0) return;
-    const existingMegalists = playlistCache.filter(p => p.playlistType === 'MEGALIST');
-    if (existingMegalists.length === 0) {
-      toast.info('No tienes ninguna Megalista creada por la app a la que añadir canciones.');
-      return;
-    }
-    dispatch({ type: 'OPEN', payload: { variant: 'addToSelect', props: { sourceIds } } });
-  };
-  
-  /**
-  * Inicia el flujo para crear una "Lista Sorpresa".
-  * Si no se proporcionan IDs, abre el diálogo global.
-  * Si se proporcionan, calcula las pistas únicas y abre el diálogo específico.
-  * @param sourceIds - (Opcional) IDs de las playlists fuente.
-  */
-  const openSurpriseMixDialog = async (sourceIds?: string[]) => {
-    // Caso 1: Flujo "dirigido" (no cambia)
-    if (sourceIds && sourceIds.length > 0) {
+      );
+    };
+    
+    const handleGlobalSurpriseCountSelected = async (count: number) => {
       setIsProcessing(true);
-      const toastId = toast.loading('Preparando el generador de sorpresas...');
+      const toastId = toast.loading('Calculando canciones disponibles...');
       try {
-        const count = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
+        const nonIsolatedPlaylists = playlistCache.filter(p => !p.isIsolated);
+        const allPlaylistIds = nonIsolatedPlaylists.map((p) => p.id);
+        const shuffledIds = shuffleArray(allPlaylistIds);
+        const sourceIds = shuffledIds.slice(0, count);
+        
+        const uniqueTrackCount = await getUniqueTrackCountFromPlaylistsAction(sourceIds);
+        if (uniqueTrackCount === 0) {
+          toast.error('No se encontraron canciones en las playlists seleccionadas al azar.', { id: toastId });
+          setIsProcessing(false);
+          dispatch({ type: 'CLOSE' });
+          return;
+        }
+        toast.dismiss(toastId);
+        
         dispatch({
           type: 'OPEN',
           payload: {
             variant: 'surpriseTargeted',
-            props: { sourceIds, uniqueTrackCount: count },
+            props: { sourceIds, uniqueTrackCount },
           },
         });
-        toast.dismiss(toastId);
-      } catch (err) {
-        console.error('Error obteniendo la información de las playlists', err);
-        toast.error('No se pudo obtener la información de las playlists.', { id: toastId });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "No se pudo preparar la lista sorpresa.";
+        toast.error(message, { id: toastId });
       } finally {
         setIsProcessing(false);
       }
-      return;
-    }
+    };
     
-    // Caso 2: Flujo "Global" (corregido para no usar getState)
-    setIsProcessing(true);
-    const toastId = toast.loading('Calculando total de playlists...');
+    // Funciones para abrir diálogos (API pública del hook)
     
-    try {
-      // Iniciar el bucle con el `nextUrl` del estado suscrito
-      let currentNextUrl = nextUrl;
-      // Hacemos una copia local de la caché para llevar la cuenta
-      const accumulatedPlaylists = [...playlistCache];
-      
-      while (currentNextUrl) {
-        const result = await fetchMorePlaylists(currentNextUrl);
-        
-        // Actualizamos el store central con las acciones del hook
-        addMoreToCache(result.items);
-        setNextUrl(result.next);
-        
-        // Actualizamos nuestras variables locales para el bucle y el conteo final
-        accumulatedPlaylists.push(...result.items);
-        currentNextUrl = result.next;
-        
-        if (currentNextUrl) {
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
+    /**
+    * Abre el diálogo para nombrar y crear una nueva Megalista vacía.
+    */
+    const openCreateEmptyMegalistDialog = () => dispatch({ type: 'OPEN', payload: { variant: 'createEmpty' } });
+    
+    /**
+    * Abre el diálogo para editar los detalles de una playlist.
+    * @param playlist - El objeto completo de la playlist a editar.
+    */
+    const openEditDialog = (playlist: SpotifyPlaylist) => dispatch({ type: 'OPEN', payload: { variant: 'edit', props: { playlist } } });
+    
+    /**
+    * Abre el diálogo de confirmación para eliminar una o varias playlists.
+    * @param playlists - Array de playlists a eliminar.
+    */
+    const openDeleteDialog = (playlists: ActionPlaylist[]) => {
+      if (playlists.length === 0) return;
+      dispatch({ type: 'OPEN', payload: { variant: 'delete', props: { playlists } } });
+    };
+    
+    /**
+    * Abre el diálogo de confirmación para reordenar las canciones de una o varias playlists.
+    * @param playlists - Array de playlists a reordenar.
+    */
+    const openShuffleDialog = (playlists: ActionPlaylist[]) => {
+      if (playlists.length === 0) return;
+      dispatch({ type: 'OPEN', payload: { variant: 'shuffle', props: { playlists } } });
+    };
+    
+    /**
+    * Abre el diálogo para confirmar la congelación o descongelación de una Megalista.
+    * @param playlist - La Megalista sobre la que se actuará.
+    */
+    const openFreezeDialog = (playlist: SpotifyPlaylist) => {
+      if (!playlist.isMegalist || playlist.playlistType !== 'MEGALIST') {
+        toast.error('Esta acción solo está disponible para Megalistas.');
+        return;
       }
-      
-      toast.dismiss(toastId);
-      
-      const finalPlaylistCount = accumulatedPlaylists.length;
-      
+      dispatch({ type: 'OPEN', payload: { variant: 'freezeConfirmation', props: { playlist } } });
+    };
+    
+    /**
+    * Abre el diálogo para confirmar el aislamiento de una o varias listas.
+    * @param playlists - Ls listas sobre la que se actuará.
+    */
+    const openIsolateDialog = (playlists: SpotifyPlaylist[]) => {
+      if (playlists.length === 0) return;
+      // Si *alguna* de las seleccionadas no está aislada, la acción es AISLAR.
+      // Si *todas* están ya aisladas, la acción es QUITAR AISLAMIENTO.
+      const shouldIsolate = playlists.some(p => !p.isIsolated);
       dispatch({
         type: 'OPEN',
         payload: {
-          variant: 'surpriseGlobal',
-          props: { totalPlaylists: finalPlaylistCount },
+          variant: 'isolateConfirmation',
+          props: {
+            playlists: playlists.map(p => ({ id: p.id, name: p.name })),
+            isolate: shouldIsolate,
+          },
         },
       });
+    };
+    
+    /**
+    * Inicia el flujo de sincronización: calcula los cambios y, si hay, abre el diálogo de previsualización.
+    * @param playlists - Array de Megalistas a sincronizar.
+    */
+    const openSyncDialog = async (playlists: ActionPlaylist[]) => {
+      if (playlists.length === 0) return;
+      setIsProcessing(true);
+      const toastId = toast.loading(`Calculando cambios para ${playlists.length} playlist(s)...`);
+      try {
+        const idsToPreview = playlists.map((p) => p.id);
+        const { totalAdded, totalRemoved } = await previewBatchSync(idsToPreview);
+        if (totalAdded === 0 && totalRemoved === 0) {
+          toast.success("¡Todo al día!", { id: toastId, description: "Las playlists seleccionadas ya están sincronizadas." });
+          setIsProcessing(false);
+          return;
+        }
+        toast.dismiss(toastId);
+        dispatch({ type: 'OPEN', payload: { variant: 'syncPreview', props: { playlists, syncStats: { added: totalAdded, removed: totalRemoved } } } });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "No se pudo previsualizar la sincronización.";
+        toast.error(message, { id: toastId });
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+    
+    /**
+    * Abre el diálogo para nombrar una nueva Megalista a partir de una selección.
+    * @param sourceIds - IDs de las playlists fuente.
+    */
+    const openCreateMegalistDialog = (sourceIds: string[]) => {
+      if (sourceIds.length < 2) {
+        toast.info('Selecciona al menos 2 playlists para crear una Megalista.');
+        return;
+      }
+      dispatch({ type: 'OPEN', payload: { variant: 'createName', props: { sourceIds } } });
+    };
+    
+    /**
+    * Abre el diálogo para seleccionar una Megalista existente a la cual añadir otras playlists.
+    * @param sourceIds - IDs de las playlists que se añadirán como fuente.
+    */
+    const openAddToMegalistDialog = (sourceIds: string[]) => {
+      if (sourceIds.length === 0) return;
+      const existingMegalists = playlistCache.filter(p => p.playlistType === 'MEGALIST');
+      if (existingMegalists.length === 0) {
+        toast.info('No tienes ninguna Megalista creada por la app a la que añadir canciones.');
+        return;
+      }
+      dispatch({ type: 'OPEN', payload: { variant: 'addToSelect', props: { sourceIds } } });
+    };
+    
+    /**
+    * Inicia el flujo para crear una "Lista Sorpresa".
+    * Si no se proporcionan IDs, abre el diálogo global.
+    * Si se proporcionan, calcula las pistas únicas y abre el diálogo específico.
+    * @param sourceIds - (Opcional) IDs de las playlists fuente.
+    */
+    const openSurpriseMixDialog = async (sourceIds?: string[]) => {
+      if (sourceIds && sourceIds.length > 0) {
+        setIsProcessing(true);
+        const toastId = toast.loading('Preparando el generador de sorpresas...');
+        try {
+          const selectedPlaylists = playlistCache.filter(p => sourceIds.includes(p.id));
+          const nonIsolatedPlaylists = selectedPlaylists.filter(p => !p.isIsolated);
+          
+          if (nonIsolatedPlaylists.length === 0) {
+            toast.error("Todas las playlists seleccionadas están aisladas y no pueden usarse.", { id: toastId });
+            setIsProcessing(false);
+            return;
+          }
+          
+          if (nonIsolatedPlaylists.length < selectedPlaylists.length) {
+            toast.info("Se excluyeron las playlists aisladas de la selección.", { id: toastId });
+          }
+          
+          const finalSourceIds = nonIsolatedPlaylists.map(p => p.id);
+          const count = await getUniqueTrackCountFromPlaylistsAction(finalSourceIds);
+          
+          dispatch({
+            type: 'OPEN',
+            payload: {
+              variant: 'surpriseTargeted',
+              props: { sourceIds: finalSourceIds, uniqueTrackCount: count },
+            },
+          });
+          
+          // <-- LÍNEA CORREGIDA -->
+          toast.success('Listo para crear tu sorpresa.', { id: toastId });
+          
+        } catch (err) {
+          console.error('Error obteniendo la información de las playlists', err);
+          toast.error('No se pudo obtener la información de las playlists.', { id: toastId });
+        } finally {
+          setIsProcessing(false);
+        }
+        return;
+      }
       
-    } catch (error) {
-      const message =
-      error instanceof Error
-      ? error.message
-      : 'No se pudo cargar la lista completa de playlists.';
-      toast.error(message, { id: toastId });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-  
-  /**
-  * Abre el diálogo para seleccionar una Megalista a la que añadir un conjunto de canciones.
-  * @param trackUris - URIs de las canciones a añadir.
-  */
-  const openAddTracksDialog = (trackUris: string[]) => {
-    const existingMegalists = playlistCache.filter(p => p.playlistType === 'MEGALIST');
-    if (existingMegalists.length === 0) {
-      toast.info('No tienes ninguna Megalista creada para añadir canciones.');
-      return;
-    }
-    dispatch({ type: 'OPEN', payload: { variant: 'addTracksToMegalist', props: { trackUris } } });
-  };
-  
-  /**
-  * Abre el diálogo para convertir en una Megalista una lista que no lo es.
-  * @param playlist - El objeto de la Playlist para convertir.
-  */
-  const openConvertToMegalistDialog = (playlist: SpotifyPlaylist) => {
-    dispatch({
-      type: 'OPEN',
-      payload: { variant: 'convertToMegalist', props: { playlist } },
-    });
-  };
-  
-  return {
-    isProcessing,
-    // Handlers de Lógica (internos al patrón, llamados por ActionProvider)
-    handleConfirmCreateEmpty,
-    handleConfirmEdit,
-    handleConfirmDelete,
-    handleConfirmShuffle,
-    handleConfirmFreeze,
-    handleExecuteSync,
-    handleCreateOrUpdateMegalist,
-    handleCreateSurpriseMix,
-    handleGlobalSurpriseCountSelected,
-    handleConfirmAddTracks,
-    handleConfirmConvertToMegalist,
-    // Openers de Diálogos (API pública para los componentes de UI)
-    openCreateEmptyMegalistDialog,
-    openEditDialog,
-    openDeleteDialog,
-    openShuffleDialog,
-    openFreezeDialog,
-    openSyncDialog,
-    openCreateMegalistDialog,
-    openAddToMegalistDialog,
-    openSurpriseMixDialog,
-    openAddTracksDialog,
-    openConvertToMegalistDialog,
-  };
-}
+      setIsProcessing(true);
+      const toastId = toast.loading('Calculando total de playlists...');
+      try {
+        let currentNextUrl = nextUrl;
+        const accumulatedPlaylists = [...playlistCache];
+        while (currentNextUrl) {
+          const result = await fetchMorePlaylists(currentNextUrl);
+          addMoreToCache(result.items);
+          setNextUrl(result.next);
+          accumulatedPlaylists.push(...result.items);
+          if (currentNextUrl) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+        }
+        toast.dismiss(toastId);
+        
+        const nonIsolatedPlaylists = accumulatedPlaylists.filter(p => !p.isIsolated);
+        const finalPlaylistCount = nonIsolatedPlaylists.length;
+        
+        dispatch({
+          type: 'OPEN',
+          payload: {
+            variant: 'surpriseGlobal',
+            props: { totalPlaylists: finalPlaylistCount },
+          },
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'No se pudo cargar la lista completa de playlists.';
+        toast.error(message, { id: toastId });
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+    
+    /**
+    * Abre el diálogo para seleccionar una Megalista a la que añadir un conjunto de canciones.
+    * @param trackUris - URIs de las canciones a añadir.
+    */
+    const openAddTracksDialog = (trackUris: string[]) => {
+      const existingMegalists = playlistCache.filter(p => p.playlistType === 'MEGALIST');
+      if (existingMegalists.length === 0) {
+        toast.info('No tienes ninguna Megalista creada para añadir canciones.');
+        return;
+      }
+      dispatch({ type: 'OPEN', payload: { variant: 'addTracksToMegalist', props: { trackUris } } });
+    };
+    
+    /**
+    * Abre el diálogo para convertir en una Megalista una lista que no lo es.
+    * @param playlist - El objeto de la Playlist para convertir.
+    */
+    const openConvertToMegalistDialog = (playlist: SpotifyPlaylist) => {
+      dispatch({
+        type: 'OPEN',
+        payload: { variant: 'convertToMegalist', props: { playlist } },
+      });
+    };
+    
+    return {
+      isProcessing,
+      // Handlers de Lógica (internos al patrón, llamados por ActionProvider)
+      handleConfirmCreateEmpty,
+      handleConfirmEdit,
+      handleConfirmDelete,
+      handleConfirmShuffle,
+      handleConfirmFreeze,
+      handleExecuteSync,
+      handleCreateOrUpdateMegalist,
+      handleCreateSurpriseMix,
+      handleGlobalSurpriseCountSelected,
+      handleConfirmAddTracks,
+      handleConfirmConvertToMegalist,
+      handleConfirmIsolate,
+      // Openers de Diálogos (API pública para los componentes de UI)
+      openCreateEmptyMegalistDialog,
+      openEditDialog,
+      openDeleteDialog,
+      openShuffleDialog,
+      openFreezeDialog,
+      openSyncDialog,
+      openCreateMegalistDialog,
+      openAddToMegalistDialog,
+      openSurpriseMixDialog,
+      openAddTracksDialog,
+      openConvertToMegalistDialog,
+      openIsolateDialog,
+    };
+  }

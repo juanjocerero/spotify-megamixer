@@ -101,6 +101,7 @@ export async function fetchMorePlaylists(
           isSyncable: m.type === 'MEGALIST' && !m.isFrozen,
           type: m.type,
           isFrozen: m.isFrozen,
+          isIsolated: m.isIsolated,
         },
       ])
     );

@@ -51,6 +51,7 @@ ActionResult<{
           isSyncable: m.type === 'MEGALIST' && !m.isFrozen,
           type: m.type,
           isFrozen: m.isFrozen,
+          isIsolated: m.isIsolated,
         },
       ])
     );
@@ -678,9 +679,80 @@ export async function getFreshPlaylistDetailsAction(
   } catch (error) {
     console.error(`[ACTION_ERROR:getFreshPlaylistDetailsAction]`, error);
     const errorMessage =
-      error instanceof Error
-        ? error.message
-        : 'No se pudieron obtener los detalles de la playlist.';
+    error instanceof Error
+    ? error.message
+    : 'No se pudieron obtener los detalles de la playlist.';
     return { success: false, error: errorMessage };
+  }
+}
+
+export type ActionablePlaylist = {
+  id: string;
+  tracks: { total: number };
+};
+
+/**
+* Marca y desmarca una lista como aislada.
+* Las listas aisladas no forman parte del pool para hacer listas sorpresas.
+* @param playlists - El conjunto de playlists
+* @param isolate - El valor del aislamiento: true o false
+* @returns Un `ActionResult` con la playlist actualizada
+*/
+export async function toggleIsolateStateAction(
+  playlists: ActionablePlaylist[],
+  isolate: boolean,
+): Promise<ActionResult<string[]>> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: 'Usuario no autenticado.' };
+  }
+  const { user } = session;
+  const playlistIds = playlists.map(p => p.id);
+  
+  try {
+    // Primero, actualiza en bloque todas las playlists que ya existen en nuestra BBDD
+    await db.megalist.updateMany({
+      where: {
+        id: { in: playlistIds },
+      },
+      data: {
+        isIsolated: isolate,
+      },
+    });
+    
+    // Identifica las playlists que no existían para "adoptarlas"
+    const existingIds = await db.megalist
+    .findMany({
+      where: { id: { in: playlistIds } },
+      select: { id: true },
+    })
+    .then(results => new Set(results.map(r => r.id)));
+    
+    const playlistsToCreate = playlists.filter(p => !existingIds.has(p.id));
+    
+    // Si hay nuevas playlists que adoptar, créalas en bloque
+    if (playlistsToCreate.length > 0) {
+      await db.megalist.createMany({
+        data: playlistsToCreate.map(p => ({
+          id: p.id,
+          spotifyUserId: user.id,
+          sourcePlaylistIds: [p.id],
+          trackCount: p.tracks.total,
+          type: 'ADOPTED', // Usamos el nuevo tipo para no confundirlas con Megalistas
+          isFrozen: false,
+          isIsolated: isolate,
+        })),
+        skipDuplicates: true,
+      });
+    }
+    
+    return { success: true, data: playlistIds };
+  } catch (error) {
+    console.error(`[ACTION_ERROR:toggleIsolateStateAction]`, error);
+    const action = isolate ? 'aislar' : 'quitar el aislamiento de';
+    return {
+      success: false,
+      error: `No se pudo ${action} las playlists.`,
+    };
   }
 }

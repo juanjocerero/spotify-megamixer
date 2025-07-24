@@ -17,6 +17,8 @@ import {
   Wand2,
   ListPlus,
   PlusSquare,
+  Shield, 
+  ShieldOff, 
 } from 'lucide-react';
 
 /**
@@ -55,6 +57,7 @@ export default function FloatingActionBar() {
     openShuffleDialog,
     openSyncDialog,
     openDeleteDialog,
+    openIsolateDialog, 
   } = useActions();
   
   const playlistsInSelection = useMemo(
@@ -69,6 +72,11 @@ export default function FloatingActionBar() {
   
   const hasMegalistsInSelection = useMemo(
     () => playlistsInSelection.some(p => p.isMegalist),
+    [playlistsInSelection]
+  );
+  
+  const shouldIsolateSelection = useMemo(
+    () => playlistsInSelection.some(p => !p.isIsolated),
     [playlistsInSelection]
   );
   
@@ -140,6 +148,21 @@ export default function FloatingActionBar() {
       <span className="hidden sm:inline-block text-sm">Sincronizar</span>
       </ActionBarButton>
     )}
+    
+    {/* Botón de Aislar */}
+    <ActionBarButton
+    tooltipText={shouldIsolateSelection ? 'Aislar Selección' : 'Quitar Aislamiento'}
+    onClick={() => openIsolateDialog(playlistsInSelection)}
+    disabled={isProcessing}
+    className="text-orange-500 hover:bg-orange-500/10 hover:text-orange-500"
+    >
+    {shouldIsolateSelection ? (
+      <Shield className="h-6 w-6 sm:h-5 sm:w-5" />
+    ) : (
+      <ShieldOff className="h-6 w-6 sm:h-5 sm:w-5" />
+    )}
+    <span className="hidden sm:inline-block text-sm">{shouldIsolateSelection ? 'Aislar' : 'Quitar'}</span>
+    </ActionBarButton>
     
     {/* Botón de Crear Sorpresa */}
     <ActionBarButton

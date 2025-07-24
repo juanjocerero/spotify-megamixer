@@ -50,6 +50,10 @@ export type DialogState =
   props: { sourceIds: string[]; uniqueTrackCount: number };
 }
 | {
+  variant: 'isolateConfirmation';
+  props: { playlists: ActionPlaylist[]; isolate: boolean };
+}
+| {
   variant: 'surpriseName';
   props: {
     sourceIds: string[];

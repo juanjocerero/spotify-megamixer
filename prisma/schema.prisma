@@ -1,4 +1,4 @@
-// /prisma/schema.prisma
+// prisma/schema.prisma ===
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,33 +9,21 @@ datasource db {
   directUrl = env("POSTGRES_URL_NON_POOLING")
 }
 
-/// Define el tipo de playlist personalizada gestionada por la aplicación.
 enum PlaylistType {
-  /// Una playlist que se puede sincronizar con otras playlists fuente.
   MEGALIST
-  /// Una playlist generada aleatoriamente que no es sincronizable.
   SURPRISE
+  ADOPTED
 }
 
-/// Almacena metadatos adicionales para las playlists de Spotify que son
-/// gestionadas por esta aplicación (Megalists o Surprise Mixes).
 model Megalist {
-  /// El ID de la playlist de Spotify, que actúa como clave primaria.
   id                String   @id
-  /// El ID del usuario de Spotify al que pertenece esta Megalist.
   spotifyUserId     String
-  /// Para MEGALIST, un array de IDs de las playlists fuente para la sincronización.
-  /// Para SURPRISE, los IDs de las playlists usadas para generar la mezcla.
   sourcePlaylistIds String[]
-  /// Un caché del número total de canciones, para evitar llamadas a la API.
   trackCount        Int
-  /// El tipo de lista personalizada, según el enum PlaylistType.
-  type              PlaylistType @default(MEGALIST)
-  /// Si es `true`, esta MEGALIST no se incluirá en las operaciones de sincronización.
+  type              PlaylistType
   isFrozen          Boolean  @default(false)
-  /// La fecha y hora en que se creó el registro.
+  isIsolated        Boolean  @default(false)
   createdAt         DateTime @default(now())
-  /// La fecha y hora de la última actualización del registro.
   updatedAt         DateTime @updatedAt
 
   @@map("megalists")
