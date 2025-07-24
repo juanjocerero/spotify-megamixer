@@ -89,6 +89,16 @@ export interface SpotifyPlaylist {
   isIsolated?: boolean;
   /** Define si es una 'MEGALIST' o una 'SURPRISE'. */
   playlistType?: PlaylistType;
+  /** Id de la carpeta que la contiene, si existe. */
+  folderId?: string | null;
+}
+
+export interface Folder { 
+  id: string;
+  name: string;
+  userId: string; // Para consistencia, aunque no se use directamente en el cliente
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /**

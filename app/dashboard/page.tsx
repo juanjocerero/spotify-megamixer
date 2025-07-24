@@ -21,13 +21,10 @@ export default async function DashboardPage() {
   }
   
   const initialDataResult = await getInitialDashboardDataAction();
+  const initialPlaylists = initialDataResult.success ? initialDataResult.data.playlists : [];
+  const initialNextUrl = initialDataResult.success ? initialDataResult.data.nextUrl : null;
+  const initialFolders = initialDataResult.success ? initialDataResult.data.folders : [];
   
-  const initialPlaylists = initialDataResult.success
-  ? initialDataResult.data.playlists
-  : [];
-  const initialNextUrl = initialDataResult.success
-  ? initialDataResult.data.nextUrl
-  : null;
   const userId = session.user.id;
   
   return (
@@ -35,6 +32,7 @@ export default async function DashboardPage() {
     <PlaylistStoreProvider
       initialPlaylists={initialPlaylists}
       initialNextUrl={initialNextUrl}
+      initialFolders={initialFolders} 
     >
     <ActionProvider>
     <TooltipProvider delayDuration={100}>

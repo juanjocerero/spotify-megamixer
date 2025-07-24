@@ -2,7 +2,7 @@
 import { createStore, useStore } from 'zustand';
 import { useContext } from 'react';
 import { PlaylistStoreContext } from './contexts/PlaylistStoreProvider';
-import type { SpotifyPlaylist, SpotifyTrack } from '@/types/spotify';
+import type { SpotifyPlaylist, SpotifyTrack, Folder } from '@/types/spotify';
 
 /**
 * Define la "forma" del estado global de la aplicación, incluyendo las
@@ -18,6 +18,8 @@ export interface PlaylistStore {
   /** Canción que el usuario está reproduciendo en este momento. */
   currentlyPlayingTrack: SpotifyTrack | null;
   nextUrl: string | null;
+  /** Lista de carpetas del usuario */
+  folders: Folder[];
   // Acciones
   /** Alterna la selección de una playlist por su ID. */
   togglePlaylist: (id: string) => void;
@@ -33,9 +35,11 @@ export interface PlaylistStore {
   setShowOnlySelected: (value: boolean) => void;
   
   /** Reemplaza la caché de playlists con un nuevo conjunto. Usado para la carga inicial. */
-  initializeCache: (playlists: SpotifyPlaylist[]) => void;
+  initializeCache: (playlists: SpotifyPlaylist[], folders: Folder[]) => void;
   /** Añade un nuevo lote de playlists al final de la caché existente (para scroll infinito). */
   addMoreToCache: (playlists: SpotifyPlaylist[]) => void;
+  /** Añade una carpeta a la caché existente. */
+  addFolderToCache: (folder: Folder) => void;
   setNextUrl: (url: string | null) => void;
   /** Añade una única playlist nueva al principio de la caché, si no existe ya. */
   addPlaylistToCache: (playlist: SpotifyPlaylist) => void;
@@ -51,6 +55,10 @@ export interface PlaylistStore {
   removeMultipleFromCache: (playlistIds: string[]) => void;
   /** Establecer en memoria la canción que el usuario está reproduciendo en este momento. */
   setCurrentlyPlayingTrack: (track: SpotifyTrack | null) => void;
+  /** Actualiza los datos de una carpeta en la caché. */
+  updateFolderInCache: (folderId: string, updates: Partial<Folder>) => void;
+  /** Elimina una carpeta en la caché. */
+  removeFolderFromCache: (folderId: string) => void;
 }
 
 /**
@@ -62,6 +70,7 @@ const getDefaultInitialState = () => ({
   playlistCache: [],
   currentlyPlayingTrack: null,
   nextUrl: null,
+  folders: [],
 });
 
 /**
@@ -74,9 +83,9 @@ const getDefaultInitialState = () => ({
 export const createPlaylistStore = (
   initState: Partial<PlaylistStore> = {},
 ) => {
-
+  
   const initialState = { ...getDefaultInitialState(), ...initState };
-
+  
   return createStore<PlaylistStore>((set, get) => ({
     ...initialState,
     
@@ -112,8 +121,8 @@ export const createPlaylistStore = (
     setShowOnlySelected: (value) => {
       set({ showOnlySelected: value });
     },
-    initializeCache: (playlists) => {
-      set({ playlistCache: playlists });
+    initializeCache: (playlists, folders) => {
+      set({ playlistCache: playlists, folders: folders });
     },
     addMoreToCache: (playlists) => {
       set((state) => ({
@@ -133,10 +142,8 @@ export const createPlaylistStore = (
       set((state) => ({
         playlistCache: state.playlistCache.map((playlist) => {
           if (playlist.id !== playlistId) return playlist;
-          
           const { trackCount, ...otherUpdates } = updates;
           const updatedPlaylist = { ...playlist, ...otherUpdates };
-          
           if (trackCount !== undefined) {
             updatedPlaylist.tracks = { ...playlist.tracks, total: trackCount };
           }
@@ -160,7 +167,22 @@ export const createPlaylistStore = (
     setCurrentlyPlayingTrack: (track) => {
       set({ currentlyPlayingTrack: track });
     },
-  }));
+    addFolderToCache: (folder) => {
+      set((state) => ({ folders: [...state.folders, folder] }));
+    },
+    updateFolderInCache: (folderId, updates) => {
+      set((state) => ({
+        folders: state.folders.map((folder) =>
+          folder.id === folderId ? { ...folder, ...updates } : folder
+      ),
+    }));
+  },
+  removeFolderFromCache: (folderId) => {
+    set((state) => ({
+      folders: state.folders.filter((folder) => folder.id !== folderId),
+    }));
+  },
+}));
 };
 
 /**

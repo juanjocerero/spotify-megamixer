@@ -18,7 +18,7 @@ import {
 } from '../spotify';
 import { getTrackUris } from './spotify.actions';
 import { MegalistClientData } from '@/types/spotify';
-import { Megalist } from '@prisma/client';
+import { Megalist, Folder } from '@prisma/client';
 
 /**
 * Server Action para obtener los datos iniciales necesarios para el dashboard.
@@ -30,6 +30,7 @@ export async function getInitialDashboardDataAction(): Promise<
 ActionResult<{
   playlists: SpotifyPlaylist[];
   nextUrl: string | null;
+  folders: Folder[]; // Añadido
 }>
 > {
   const session = await auth();
@@ -38,12 +39,19 @@ ActionResult<{
   }
   
   try {
-    // Obtener megalistas de la DB para este usuario
-    const userMegalists = await db.megalist.findMany({
-      where: { spotifyUserId: session.user.id },
-    });
+    // Añadida la obtención de megalists y carpetas en paralelo
+    const [userFolders, userMegalists] = await Promise.all([
+      db.folder.findMany({
+        where: { userId: session.user.id },
+        orderBy: { name: 'asc' }, // Ordenar carpetas alfabéticamente
+      }),
+      db.megalist.findMany({
+        where: { spotifyUserId: session.user.id },
+      }),
+    ]);
     
-    const megalistDataMap = new Map<string, MegalistClientData>(
+    // El mapa de datos de Megalist ahora también incluye el folderId
+    const megalistDataMap = new Map<string, MegalistClientData & { folderId: string | null }>(
       userMegalists.map((m: Megalist) => [
         m.id,
         {
@@ -52,15 +60,15 @@ ActionResult<{
           type: m.type,
           isFrozen: m.isFrozen,
           isIsolated: m.isIsolated,
+          folderId: m.folderId, // Se añade el folderId
         },
       ])
     );
     
-    // Obtener la primera página de playlists de Spotify
     const initialData = await getUserPlaylists(session.accessToken);
     const initialPlaylists = initialData.items;
     
-    // Enriquecer los datos de Spotify con los de la DB
+    // El enriquecimiento de datos de la playlist ahora incluye el folderId
     const finalPlaylists: SpotifyPlaylist[] = initialPlaylists.map(p => {
       const megalistData = megalistDataMap.get(p.id);
       if (megalistData) {
@@ -70,14 +78,20 @@ ActionResult<{
           isSyncable: megalistData.isSyncable,
           playlistType: megalistData.type,
           isFrozen: megalistData.isFrozen,
+          folderId: megalistData.folderId, // Se añade el folderId
         };
       }
       return p;
     });
     
+    // Modificado el objeto de respuesta para incluir las carpetas
     return {
       success: true,
-      data: { playlists: finalPlaylists, nextUrl: initialData.next },
+      data: {
+        playlists: finalPlaylists,
+        nextUrl: initialData.next,
+        folders: userFolders,
+      },
     };
   } catch (error) {
     console.error('[ACTION_ERROR:getInitialDashboardData]', error);

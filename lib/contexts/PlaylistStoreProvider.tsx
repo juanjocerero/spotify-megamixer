@@ -5,7 +5,7 @@ import { type ReactNode, createContext, useRef } from 'react';
 import { type StoreApi } from 'zustand';
 
 import { type PlaylistStore, createPlaylistStore } from '@/lib/store';
-import type { SpotifyPlaylist } from '@/types/spotify';
+import type { SpotifyPlaylist, Folder } from '@/types/spotify';
 
 
 /**
@@ -24,6 +24,7 @@ export interface PlaylistStoreProviderProps {
   initialPlaylists: SpotifyPlaylist[];
   children: ReactNode;
   initialNextUrl: string | null;
+  initialFolders: Folder[];
 }
 
 /**
@@ -37,6 +38,7 @@ export interface PlaylistStoreProviderProps {
  */
 export const PlaylistStoreProvider = ({
   initialPlaylists,
+  initialFolders,
   initialNextUrl,
   children,
 }: PlaylistStoreProviderProps) => {
@@ -47,6 +49,7 @@ export const PlaylistStoreProvider = ({
     storeRef.current = createPlaylistStore({
       playlistCache: initialPlaylists,
       nextUrl: initialNextUrl,
+      folders: initialFolders,
     });
   }
   

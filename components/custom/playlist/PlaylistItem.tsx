@@ -39,6 +39,7 @@ interface PlaylistItemProps {
   playlist: SpotifyPlaylist;
   isSelected: boolean;
   isFocused: boolean;
+  isIndented?: boolean;
   style: React.CSSProperties;
   onToggleSelect: (id: string) => void;
   onShowTracks: (playlist: SpotifyPlaylist) => void;
@@ -49,6 +50,7 @@ function PlaylistItem({
   playlist,
   isSelected,
   isFocused,
+  isIndented = false,
   style,
   onToggleSelect,
   onShowTracks,
@@ -95,16 +97,19 @@ function PlaylistItem({
   return (
     <div
     style={style}
+    // Se añade la clase condicional para la indentación
     className={cn(
       'group absolute top-0 left-0 flex w-full items-center p-2 border-b border-gray-800 transition-colors duration-200 cursor-pointer',
       {
         'bg-green-900/40 hover:bg-green-900/60': isSelected,
         'hover:bg-white/5': !isSelected,
         'outline outline-2 outline-offset-[-2px] outline-blue-500': isFocused,
+        'pl-10 sm:pl-12': isIndented, // CLASE CLAVE PARA LA INDENTACIÓN
       }
     )}
     onClick={() => onToggleSelect(playlist.id)}
     >
+    
     {/* SECCIÓN IZQUIERDA: AVATAR Y CHECKBOX */}
     <div className="flex items-center flex-shrink-0 pr-3 sm:pr-4">
     <div className={cn(
