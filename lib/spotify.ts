@@ -139,12 +139,14 @@ export async function getPlaylistDetails(
 * @param accessToken - El token de acceso del usuario.
 * @returns La respuesta de la API con el primer lote de playlists y la URL para la siguiente página.
 */
-// /lib/spotify.ts
-
-// ... (otros imports y funciones del fichero) ...
-
-// REEMPLAZA LA FUNCIÓN getUserPlaylists EXISTENTE CON ESTA VERSIÓN CORREGIDA
-export async function getUserPlaylists(accessToken: string): Promise<PlaylistsApiResponse> {
+export async function getUserPlaylists(
+  accessToken: string,
+  retries = 3 // Añadimos un contador de reintentos para evitar bucles infinitos
+): Promise<PlaylistsApiResponse> {
+  if (retries <= 0) {
+    throw new Error("Failed to fetch playlists after multiple retries due to rate limiting.");
+  }
+  
   const fields = "items(id,name,description,images,owner,tracks(total)),next";
   const url = `${SPOTIFY_API_BASE}/me/playlists?limit=50&fields=${encodeURIComponent(fields)}`;
   
@@ -152,32 +154,37 @@ export async function getUserPlaylists(accessToken: string): Promise<PlaylistsAp
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   
-  // Si la respuesta NO es exitosa, entramos a depurar.
-  if (!response.ok) {
-    // --- INICIO DE LA CORRECCIÓN DEFINITIVA ---
-    // Leemos el cuerpo de la respuesta como texto UNA SOLA VEZ. Esto nunca falla.
-    const errorText = await response.text();
-    let errorMessage = `Failed to fetch playlists. Status: ${response.status}.`;
+  // Si recibimos un error de "Too Many Requests"
+  if (response.status === 429) {
+    // Spotify nos dice cuántos segundos esperar en la cabecera 'Retry-After'
+    const retryAfter = response.headers.get('Retry-After');
+    const waitSeconds = retryAfter ? parseInt(retryAfter, 10) : 5; // Usamos 5s como fallback
     
-    // Ahora intentamos interpretar ese texto como JSON para obtener un log más claro.
-    try {
-      const errorData = JSON.parse(errorText);
-      // Si tiene éxito, logueamos el objeto JSON completo.
-      console.error('[DEBUG:getUserPlaylists] Spotify API Error Body (parsed from text):', JSON.stringify(errorData, null, 2));
-      // Y construimos un mensaje de error más útil.
-      errorMessage += ` Message: ${errorData.error?.message || 'No specific error message from API.'}`;
-    } catch (jsonError) {
-      // Si no era un JSON válido, logueamos el texto plano que recibimos.
-      console.error('[DEBUG:getUserPlaylists] Spotify API Error Text (not valid JSON):', errorText);
-      errorMessage += ` Raw Response: ${errorText}`;
-    }
+    console.warn(
+      `[RATE_LIMIT] Spotify API rate limit hit. Retrying after ${waitSeconds} seconds... (${retries - 1} retries left)`
+    );
     
-    // Finalmente, lanzamos el error con toda la información que hemos recopilado.
-    throw new Error(errorMessage);
-    // --- FIN DE LA CORRECCIÓN DEFINITIVA ---
+    // Esperamos el tiempo especificado (más un pequeño margen)
+    await new Promise(resolve => setTimeout(resolve, waitSeconds * 1000 + 500));
+    
+    // Volvemos a llamar a la misma función, decrementando el contador de reintentos
+    return getUserPlaylists(accessToken, retries - 1);
   }
   
-  // Si la respuesta FUE exitosa (response.ok === true), esta línea se ejecuta sin problemas.
+  // Si la respuesta NO es exitosa por otra razón, lanzamos el error como antes
+  if (!response.ok) {
+    const errorText = await response.text();
+    let errorMessage = `Failed to fetch playlists. Status: ${response.status}.`;
+    try {
+      const errorData = JSON.parse(errorText);
+      errorMessage += ` Message: ${errorData.error?.message || 'No specific error message.'}`;
+    } catch {
+      errorMessage += ` Raw Response: ${errorText}`;
+    }
+    throw new Error(errorMessage);
+  }
+  
+  // Si la respuesta es exitosa, la devolvemos
   return response.json();
 }
 
