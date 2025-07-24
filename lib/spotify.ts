@@ -139,6 +139,11 @@ export async function getPlaylistDetails(
 * @param accessToken - El token de acceso del usuario.
 * @returns La respuesta de la API con el primer lote de playlists y la URL para la siguiente página.
 */
+// /lib/spotify.ts
+
+// ... (otros imports y funciones del fichero) ...
+
+// REEMPLAZA LA FUNCIÓN getUserPlaylists EXISTENTE CON ESTA VERSIÓN CORREGIDA
 export async function getUserPlaylists(accessToken: string): Promise<PlaylistsApiResponse> {
   const fields = "items(id,name,description,images,owner,tracks(total)),next";
   const url = `${SPOTIFY_API_BASE}/me/playlists?limit=50&fields=${encodeURIComponent(fields)}`;
@@ -147,24 +152,32 @@ export async function getUserPlaylists(accessToken: string): Promise<PlaylistsAp
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   
+  // Si la respuesta NO es exitosa, entramos a depurar.
   if (!response.ok) {
-    // --- INICIO DE LA MODIFICACIÓN PARA DEPURACIÓN ---
-    // Intentamos leer el cuerpo del error de Spotify para obtener más detalles.
+    // --- INICIO DE LA CORRECCIÓN DEFINITIVA ---
+    // Leemos el cuerpo de la respuesta como texto UNA SOLA VEZ. Esto nunca falla.
+    const errorText = await response.text();
+    let errorMessage = `Failed to fetch playlists. Status: ${response.status}.`;
+    
+    // Ahora intentamos interpretar ese texto como JSON para obtener un log más claro.
     try {
-      const errorData = await response.json();
-      console.error('[DEBUG:getUserPlaylists] Spotify API Error Body:', JSON.stringify(errorData, null, 2));
-      throw new Error(
-        `Failed to fetch playlists. Status: ${response.status}. Message: ${errorData.error?.message || 'No specific error message from API.'}`
-      );
-    } catch (e) {
-      // Si el cuerpo del error no es un JSON válido, leemos como texto.
-      const errorText = await response.text();
-      console.error('[DEBUG:getUserPlaylists] Spotify API Error Text:', errorText);
-      throw new Error(`Failed to fetch playlists. Status: ${response.status}. Response: ${errorText}`);
+      const errorData = JSON.parse(errorText);
+      // Si tiene éxito, logueamos el objeto JSON completo.
+      console.error('[DEBUG:getUserPlaylists] Spotify API Error Body (parsed from text):', JSON.stringify(errorData, null, 2));
+      // Y construimos un mensaje de error más útil.
+      errorMessage += ` Message: ${errorData.error?.message || 'No specific error message from API.'}`;
+    } catch (jsonError) {
+      // Si no era un JSON válido, logueamos el texto plano que recibimos.
+      console.error('[DEBUG:getUserPlaylists] Spotify API Error Text (not valid JSON):', errorText);
+      errorMessage += ` Raw Response: ${errorText}`;
     }
-    // --- FIN DE LA MODIFICACIÓN ---
+    
+    // Finalmente, lanzamos el error con toda la información que hemos recopilado.
+    throw new Error(errorMessage);
+    // --- FIN DE LA CORRECCIÓN DEFINITIVA ---
   }
   
+  // Si la respuesta FUE exitosa (response.ok === true), esta línea se ejecuta sin problemas.
   return response.json();
 }
 
