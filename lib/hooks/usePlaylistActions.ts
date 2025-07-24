@@ -819,7 +819,7 @@ export function usePlaylistActions(
       setIsProcessing(true);
       const toastId = toast.loading('Calculando total de playlists...');
       try {
-        let currentNextUrl = nextUrl;
+        const currentNextUrl = nextUrl;
         const accumulatedPlaylists = [...playlistCache];
         while (currentNextUrl) {
           const result = await fetchMorePlaylists(currentNextUrl);
