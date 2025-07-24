@@ -1,6 +1,7 @@
 // lib/actions/playlist.actions.ts
 
 'use server';
+import { cache } from 'react';
 import { auth } from '@/auth';
 import { db } from '../db';
 import { shuffleArray } from '../utils';
@@ -770,3 +771,5 @@ export async function toggleIsolateStateAction(
     };
   }
 }
+
+export const getCachedInitialData = cache(getInitialDashboardDataAction);
