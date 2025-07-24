@@ -1,5 +1,5 @@
 import { auth } from '@/auth';
-import { getInitialDashboardDataAction } from '@/lib/actions/playlist.actions';
+import { getCachedInitialData } from '@/lib/actions/playlist.actions';
 import { ActionProvider } from '@/lib/contexts/ActionProvider';
 import { PlaylistStoreProvider } from '@/lib/contexts/PlaylistStoreProvider';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -20,7 +20,7 @@ export default async function DashboardPage() {
     return <SessionRecoveryUI />;
   }
   
-  const initialDataResult = await getInitialDashboardDataAction();
+  const initialDataResult = await getCachedInitialData();
   const initialPlaylists = initialDataResult.success ? initialDataResult.data.playlists : [];
   const initialNextUrl = initialDataResult.success ? initialDataResult.data.nextUrl : null;
   const initialFolders = initialDataResult.success ? initialDataResult.data.folders : [];
