@@ -16,31 +16,95 @@ enum PlaylistType {
 }
 
 // NUEVO MODELO AÑADIDO
+
 model Folder {
   id        String   @id @default(cuid())
   name      String
   userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   playlists Megalist[]
+
   @@map("folders")
 }
 
 model Megalist {
-  id                String   @id
+  id                String       @id
   spotifyUserId     String
   sourcePlaylistIds String[]
   trackCount        Int
   type              PlaylistType
-  isFrozen          Boolean  @default(false)
-  isIsolated        Boolean  @default(false)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  isFrozen          Boolean      @default(false)
+  isIsolated        Boolean      @default(false)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   // NUEVOS CAMPOS DE RELACIÓN AÑADIDOS
-  folderId          String?
-  folder            Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  folderId String?
+  folder   Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   @@map("megalists")
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  folders       Folder[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id           String   @id
+  expires      DateTime @map("expiresAt")
+  sessionToken String   @map("token")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  ipAddress    String?
+  userAgent    String?
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionToken])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  providerAccountId     String    @map("accountId")
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  access_token          String?   @map("accessToken")
+  refresh_token         String?   @map("refreshToken")
+  id_token              String?   @map("idToken")
+  expires_at            DateTime? @map("accessTokenExpiresAt")
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
 }

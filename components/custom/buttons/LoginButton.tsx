@@ -1,7 +1,7 @@
 // components/custom/buttons/LoginButton.tsx
 'use client';
 
-import { signIn } from 'next-auth/react'; // Importa desde 'next-auth/react' en el cliente
+import { signIn } from '@/lib/auth-client';
 import { Button } from '@/components/ui/button';
 import { LogIn } from 'lucide-react';
 
@@ -10,7 +10,7 @@ export default function LoginButton() {
     try {
       // Intentamos iniciar el flujo de login
       console.log("Iniciando signIn con el proveedor 'spotify'...");
-      await signIn('spotify', { redirectTo: '/dashboard' });
+      await signIn.social({ provider: 'spotify', callbackURL: '/dashboard' });
       console.log("La función signIn se completó sin lanzar un error inmediato.");
       
     } catch (error) {
