@@ -4,8 +4,6 @@
 
 Lleva la gestión de tus playlists de Spotify al siguiente nivel. **Spotify Megamixer** es una herramienta web avanzada, construida con las últimas tecnologías, que te permite combinar, sincronizar y descubrir música de formas que la aplicación oficial no permite.
 
-**[➡️ Ver la aplicación en vivo](https://spotify-megamixer.vercel.app/)**
-
 ---
 
 ## ✨ Características Principales
@@ -28,7 +26,7 @@ Este proyecto utiliza un stack moderno, eficiente y escalable, enfocado en el re
 *   **Framework:** **Next.js 14+** (App Router)
 *   **Lenguaje:** **TypeScript**
 *   **Backend:** **Next.js Server Actions**
-*   **Base de Datos:** **Vercel Postgres** (proveído por Neon)
+*   **Base de Datos:** **PostgreSQL**
 *   **ORM:** **Prisma**
 *   **Autenticación:** **Auth.js** (NextAuth v5)
 *   **UI y Estilos:** **Tailwind CSS** y **Shadcn/ui**
@@ -68,6 +66,7 @@ Para clonar y ejecutar este proyecto en tu máquina local, sigue estos pasos:
 *   Node.js (v18 o superior)
 *   `pnpm`, `npm` o `yarn`
 *   Una cuenta de Spotify
+*   Una instancia de PostgreSQL
 
 #### 2. Clonar el Repositorio
 ```bash
@@ -82,26 +81,29 @@ npm install
 
 #### 4. Configurar Variables de Entorno
 
-Crea un fichero `.env.local` en la raíz del proyecto. Necesitarás obtener credenciales de la **API de Spotify** y una base de datos de **Vercel Postgres**.
+Crea un fichero `.env.local` en la raíz del proyecto a partir del fichero `.env.example`. Necesitarás obtener credenciales de la **API de Spotify** y una base de datos de **PostgreSQL**.
 
 1.  **Spotify:** Ve al [Spotify Developer Dashboard](https://developer.spotify.com/dashboard), crea una nueva aplicación y obtén tu `Client ID` y `Client Secret`. Asegúrate de añadir `http://localhost:3000/api/auth/callback/spotify` a las *Redirect URIs* en la configuración de tu app de Spotify.
-2.  **Base de Datos:** Crea un nuevo proyecto en [Vercel](https://vercel.com) y añade un almacenamiento de Vercel Postgres (proveído por Neon). Obtén las cadenas de conexión (pooling y non-pooling).
+2.  **Base de Datos:** Configura tu cadena de conexión de PostgreSQL.
 
 Copia el siguiente contenido en tu `.env.local` y rellénalo con tus credenciales:
 
 ```env
-# Autenticación con Auth.js y Spotify
-AUTH_SECRET="GENERATED_SECRET" # Genera un secreto con `openssl rand -base64 32`
+# PostgreSQL connection string
+# Example: postgresql://user:password@localhost:5432/mydatabase
+DATABASE_URL="TU_URL_DE_CONEXION_A_POSTGRESQL"
+
+# Spotify credentials for NextAuth.js
 AUTH_SPOTIFY_ID="TU_CLIENT_ID_DE_SPOTIFY"
 AUTH_SPOTIFY_SECRET="TU_CLIENT_SECRET_DE_SPOTIFY"
 
-# Base de Datos (Vercel/Neon)
-POSTGRES_PRISMA_URL="TU_URL_DE_CONEXION_CON_POOLING"
-POSTGRES_URL_NON_POOLING="TU_URL_DE_CONEXION_SIN_POOLING"
+# NextAuth.js secret
+# You can generate a secret with `openssl rand -hex 32`
+NEXTAUTH_SECRET="GENERATED_SECRET"
 
-# Email de Contacto (Opcional, con Resend)
-RESEND_API_KEY="TU_API_KEY_DE_RESEND"
-CONTACT_EMAIL_TO="email_destino@dominio.com"
+# The canonical URL of your production site
+# Example: https://example.com
+NEXTAUTH_URL="http://localhost:3000"
 ```
 
 #### 5. Sincronizar la Base de Datos
@@ -119,6 +121,68 @@ npm run dev
 ```
 
 Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la aplicación funcionando.
+
+## 🚀 Despliegue en un VPS (Nginx + PM2)
+
+Para desplegar esta aplicación en un servidor VPS, sigue estos pasos:
+
+#### 1. Prerrequisitos en el Servidor
+*   Node.js (v18 o superior)
+*   Nginx instalado
+*   PM2 instalado (`npm install pm2 -g`)
+*   Git
+
+#### 2. Clonar el Repositorio
+```bash
+git clone https://github.com/tu-usuario/spotify-megamixer.git
+cd spotify-megamixer
+```
+
+#### 3. Instalar Dependencias y Construir el Proyecto
+```bash
+npm install
+npm run build
+```
+
+#### 4. Configurar Variables de Entorno
+Crea un fichero `.env.production` en la raíz del proyecto. Rellena las variables como en el entorno local, pero asegúrate de que `NEXTAUTH_URL` apunte a tu dominio público.
+
+```env
+# PostgreSQL connection string
+DATABASE_URL="TU_URL_DE_CONEXION_A_POSTGRESQL"
+
+# Spotify credentials for NextAuth.js
+AUTH_SPOTIFY_ID="TU_CLIENT_ID_DE_SPOTIFY"
+AUTH_SPOTIFY_SECRET="TU_CLIENT_SECRET_DE_SPOTIFY"
+
+# NextAuth.js secret
+NEXTAUTH_SECRET="GENERATED_SECRET"
+
+# The canonical URL of your production site
+NEXTAUTH_URL="https://tu_dominio.com"
+```
+
+#### 5. Iniciar la Aplicación con PM2
+Usa el fichero `ecosystem.config.js` proporcionado para iniciar la aplicación:
+```bash
+pm2 start ecosystem.config.js
+```
+
+#### 6. Configurar Nginx como Reverse Proxy
+Usa el fichero `nginx.conf.example` como plantilla. Copia su contenido a un nuevo fichero de configuración en `/etc/nginx/sites-available/spotify-megamixer` y edítalo para usar tu dominio.
+
+```bash
+sudo cp nginx.conf.example /etc/nginx/sites-available/spotify-megamixer
+sudo ln -s /etc/nginx/sites-available/spotify-megamixer /etc/nginx/sites-enabled/
+```
+Edita el fichero `/etc/nginx/sites-available/spotify-megamixer` y cambia `your_domain.com` por tu dominio real.
+
+Finalmente, reinicia Nginx:
+```bash
+sudo systemctl restart nginx
+```
+
+¡Tu aplicación debería estar ahora disponible en tu dominio!
 
 ## 🗂️ Estructura del Proyecto
 
