@@ -17,7 +17,6 @@ export const {
       clientSecret: process.env.AUTH_SPOTIFY_SECRET,
       // Provide the authorization URL as a complete string to inject custom scopes.
       authorization: `https://accounts.spotify.com/authorize?scope=${spotifyScopes}`,
-      checks: ['state'], // Desactiva el check de PKCE, que puede fallar en cold starts de Vercel
     }),
   ],
   
