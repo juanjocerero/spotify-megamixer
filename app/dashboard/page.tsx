@@ -1,4 +1,6 @@
 import { auth } from '@/auth';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { getCachedInitialData } from '@/lib/actions/playlist.actions';
 import { ActionProvider } from '@/lib/contexts/ActionProvider';
 import { PlaylistStoreProvider } from '@/lib/contexts/PlaylistStoreProvider';
@@ -11,13 +13,12 @@ import ShuffleAllButton from '@/components/custom/buttons/ShuffleAllButton';
 import SyncAllButton from '@/components/custom/buttons/SyncAllButton';
 import CreateEmptyMegalistButton from '@/components/custom/buttons/CreateEmptyMegalistButton';
 import LogoutButton from '@/components/custom/buttons/LogoutButton';
-import SessionRecoveryUI from '@/components/custom/SessionRecoveryUI';
 
 export default async function DashboardPage() {
-  const session = await auth();
+  const session = await auth.api.getSession({ headers: headers() });
   
-  if (session?.error === 'RefreshAccessTokenError' || !session?.accessToken) {
-    return <SessionRecoveryUI />;
+  if (!session) {
+    redirect('/');
   }
   
   const initialDataResult = await getCachedInitialData();
