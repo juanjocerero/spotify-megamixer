@@ -15,7 +15,8 @@ import CreateEmptyMegalistButton from '@/components/custom/buttons/CreateEmptyMe
 import LogoutButton from '@/components/custom/buttons/LogoutButton';
 
 export default async function DashboardPage() {
-  const session = await auth.api.getSession({ headers: headers() });
+  const h = await headers();
+  const session = await auth.api.getSession({ headers: new Headers(h) });
   
   if (!session) {
     redirect('/');

@@ -1,6 +1,7 @@
 // lib/actions/surprise.actions.ts
 
 'use server';
+import { headers } from 'next/headers';
 import { auth } from '@/auth';
 import { db } from '../db';
 import { shuffleArray } from '../utils';
@@ -38,11 +39,15 @@ export async function createOrUpdateSurpriseMixAction(
     }`
   );
   
-  const session = await auth();
-  if (!session?.accessToken || !session.user?.id) {
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+  if (!session?.user?.id) {
     return { success: false, error: 'No autenticado, token o ID de usuario no disponible.' };
   }
-  const { accessToken, user } = session;
+  const { user } = session;
+  const { accessToken } = await auth.api.getAccessToken({
+    body: { providerId: 'spotify' },
+    headers: new Headers(await headers())
+  });
   
   try {
     // Validar si la playlist ya existe (solo en modo creación)

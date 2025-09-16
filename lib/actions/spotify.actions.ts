@@ -2,6 +2,7 @@
 
 'use server';
 
+import { headers } from 'next/headers';
 import { auth } from '@/auth';
 import { db } from '../db';
 import { getPlaylistTracksPage, getAllPlaylistTracks } from '../spotify';
@@ -35,11 +36,14 @@ interface AlbumTracksResponse {
 */
 export async function getTrackUris(playlistIds: string[]) {
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session) {
       throw new Error('No autenticado o token no disponible.');
     }
-    const { accessToken } = session;
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     
     const trackPromises = playlistIds.map((id) =>
       getAllPlaylistTracks(accessToken, id).then(tracks => tracks.map(t => t.uri)));
@@ -65,14 +69,18 @@ export async function fetchMorePlaylists(
   url: string
 ): Promise<PlaylistsApiResponse> {
   try {
-    const session = await auth();
-    if (!session?.accessToken || !session.user?.id) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session?.user?.id) {
       throw new Error('Not authenticated');
     }
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     
     const response = await fetch(url, {
       headers: {
-        Authorization: `Bearer ${session.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
     
@@ -148,11 +156,14 @@ export async function getPlaylistTracksDetailsAction(
   );
 
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session) {
       throw new Error('No autenticado o token no disponible.');
     }
-    const { accessToken } = session;
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     
     const urlToFetch =
     fetchUrl ||
@@ -185,11 +196,14 @@ export async function getPlaylistTracksDetailsAction(
 export async function getAlbumTracksAction(
   albumId: string
 ): Promise<ActionResult<string[]>> {
-  const session = await auth();
-  if (!session?.accessToken) {
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+  if (!session) {
     return { success: false, error: 'No autenticado.' };
   }
-  const { accessToken } = session;
+  const { accessToken } = await auth.api.getAccessToken({
+    body: { providerId: 'spotify' },
+    headers: new Headers(await headers())
+  });
   
   try {
     const response = await fetch(

@@ -2,6 +2,7 @@
 
 'use server';
 import { cache } from 'react';
+import { headers } from 'next/headers';
 import { auth } from '@/auth';
 import { db } from '../db';
 import { shuffleArray } from '../utils';
@@ -34,8 +35,8 @@ ActionResult<{
   folders: Folder[]; // Añadido
 }>
 > {
-  const session = await auth();
-  if (!session?.accessToken || !session.user?.id) {
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+  if (!session?.user?.id) {
     return { success: false, error: 'Not authenticated' };
   }
   
@@ -66,7 +67,11 @@ ActionResult<{
       ])
     );
     
-    const initialData = await getUserPlaylists(session.accessToken);
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
+    const initialData = await getUserPlaylists(accessToken);
     const initialPlaylists = initialData.items;
     
     // El enriquecimiento de datos de la playlist ahora incluye el folderId
@@ -118,11 +123,15 @@ export async function findOrCreatePlaylist(
   initialTrackCount: number 
 ): Promise<{ playlist: SpotifyPlaylist; exists: boolean }> {
   try {
-    const session = await auth();
-    if (!session?.accessToken || !session.user?.id) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session?.user?.id) {
       throw new Error('No autenticado, token o ID de usuario no disponible.');
     }
-    const { accessToken, user } = session;
+    const { user } = session;
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     
     const existingPlaylist = await findUserPlaylistByName(accessToken, name);
     
@@ -218,11 +227,14 @@ export async function addTracksToPlaylistAction({
     return { success: false, error: 'Faltan datos para realizar la acción.' };
   }
   
-  const session = await auth();
-  if (!session?.accessToken) {
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+  if (!session) {
     return { success: false, error: 'No autenticado.' };
   }
-  const { accessToken } = session;
+  const { accessToken } = await auth.api.getAccessToken({
+    body: { providerId: 'spotify' },
+    headers: new Headers(await headers())
+  });
   
   try {
     // 1. Añadir las canciones a la playlist en Spotify
@@ -264,11 +276,14 @@ export async function addTracksBatch(
   trackUrisBatch: string[]
 ) {
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session) {
       throw new Error('No autenticado o token no disponible.');
     }
-    const { accessToken } = session;
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     
     // Esta función ahora puede lanzar errores de rate-limiting, que serán capturados aquí
     await addTracksToPlaylist(accessToken, playlistId, trackUrisBatch);
@@ -292,11 +307,14 @@ export async function addTracksToMegalistAction(
   shouldShuffle: boolean
 ): Promise<ActionResult<{ finalCount: number; addedCount: number }>> {
   try {
-    const session = await auth();
-    if (!session?.accessToken || !session.user?.id) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session?.user?.id) {
       return { success: false, error: 'No autenticado o token no disponible.' };
     }
-    const { accessToken } = session;
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     
     // Obtiene el estado actual de la megalista y las nuevas canciones
     const megalist = await db.megalist.findUnique({
@@ -366,11 +384,14 @@ export async function addTracksToMegalistAction(
 */
 export async function unfollowPlaylist(playlistId: string): Promise<void> {
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session) {
       throw new Error('No autenticado o token no disponible.');
     }
-    const { accessToken } = session;
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     
     const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/followers`, {
       method: 'DELETE',
@@ -413,11 +434,14 @@ export async function unfollowPlaylist(playlistId: string): Promise<void> {
 */
 export async function unfollowPlaylistsBatch(playlistIds: string[]): Promise<void> {
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session) {
       throw new Error('No autenticado o token no disponible.');
     }
-    const { accessToken } = session;
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     
     // Ejecutamos las peticiones a la API de Spotify en paralelo
     const unfollowPromises = playlistIds.map(id =>
@@ -449,11 +473,14 @@ export async function unfollowPlaylistsBatch(playlistIds: string[]): Promise<voi
 export async function shufflePlaylistsAction(playlistIds: string[]): Promise<void> {
   console.log(`[ACTION:shufflePlaylistsAction] Iniciando reordenado para ${playlistIds.length} playlist(s).`);
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session) {
       throw new Error('No autenticado o token no disponible.');
     }
-    const { accessToken } = session;
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     
     const shufflePromises = playlistIds.map(async (playlistId) => {
       console.log(`[SHUFFLE] Obteniendo canciones para ${playlistId}...`);
@@ -494,13 +521,17 @@ export async function updatePlaylistDetailsAction(
   newDescription: string
 ): Promise<void> {
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session) {
       throw new Error('No autenticado o token no disponible.');
     }
     
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     // Reutilizamos la función helper que ya existe en lib/spotify.ts
-    await updatePlaylistDetails(session.accessToken, playlistId, {
+    await updatePlaylistDetails(accessToken, playlistId, {
       name: newName,
       description: newDescription,
     });
@@ -519,11 +550,15 @@ export async function updatePlaylistDetailsAction(
 */
 export async function clearPlaylist(playlistId: string) {
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session) {
       throw new Error('No autenticado o token no disponible.');
     }
-    await clearPlaylistTracks(session.accessToken, playlistId);
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
+    await clearPlaylistTracks(accessToken, playlistId);
   } catch (error) {
     console.error(`[ACTION_ERROR:clearPlaylist] Fallo al vaciar la playlist ${playlistId}.`, error);
     throw error;
@@ -543,7 +578,7 @@ export async function toggleFreezeStateAction(
 ): Promise<ActionResult<{ id: string; isFrozen: boolean }>> {
   console.log(`[ACTION] Cambiando estado de congelado a ${freeze} para la playlist ${playlistId}`);
   try {
-    const session = await auth();
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
     if (!session?.user?.id) {
       return { success: false, error: 'Usuario no autenticado.' };
     }
@@ -582,11 +617,15 @@ export async function toggleFreezeStateAction(
 export async function createEmptyMegalistAction(
   name: string
 ): Promise<ActionResult<SpotifyPlaylist>> {
-  const session = await auth();
-  if (!session?.accessToken || !session.user?.id) {
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+  if (!session?.user?.id) {
     return { success: false, error: 'No autenticado.' };
   }
-  const { accessToken, user } = session;
+  const { user } = session;
+  const { accessToken } = await auth.api.getAccessToken({
+    body: { providerId: 'spotify' },
+    headers: new Headers(await headers())
+  });
   
   try {
     // Crear la playlist en Spotify
@@ -634,7 +673,7 @@ export async function convertToMegalistAction(
   const { id: playlistId, tracks } = playlist;
   console.log(`[ACTION] Convirtiendo la playlist ${playlistId} a Megalista.`);
   try {
-    const session = await auth();
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
     if (!session?.user?.id) {
       return { success: false, error: 'Usuario no autenticado.' };
     }
@@ -684,12 +723,16 @@ export async function convertToMegalistAction(
 export async function getFreshPlaylistDetailsAction(
   playlistId: string
 ): Promise<ActionResult<SpotifyPlaylist>> {
-  const session = await auth();
-  if (!session?.accessToken) {
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+  if (!session) {
     return { success: false, error: 'No autenticado.' };
   }
   try {
-    const playlist = await getPlaylistDetails(session.accessToken, playlistId);
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
+    const playlist = await getPlaylistDetails(accessToken, playlistId);
     return { success: true, data: playlist };
   } catch (error) {
     console.error(`[ACTION_ERROR:getFreshPlaylistDetailsAction]`, error);
@@ -717,7 +760,7 @@ export async function toggleIsolateStateAction(
   playlists: ActionablePlaylist[],
   isolate: boolean,
 ): Promise<ActionResult<string[]>> {
-  const session = await auth();
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
   if (!session?.user?.id) {
     return { success: false, error: 'Usuario no autenticado.' };
   }

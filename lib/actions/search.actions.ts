@@ -2,6 +2,7 @@
 
 'use server';
 
+import { headers } from 'next/headers';
 import { auth } from '@/auth';
 import {
   ActionResult,
@@ -47,11 +48,15 @@ export async function searchSpotifyAction(
     };
   }
   
-  const session = await auth();
-  if (!session?.accessToken || !session.user?.id) {
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+  if (!session?.user?.id) {
     return { success: false, error: 'No autenticado.' };
   }
-  const { accessToken, user } = session;
+  const { user } = session;
+  const { accessToken } = await auth.api.getAccessToken({
+    body: { providerId: 'spotify' },
+    headers: new Headers(await headers())
+  });
   
   try {
     const params = new URLSearchParams({

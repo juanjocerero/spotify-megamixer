@@ -8,7 +8,7 @@ export default function LogoutButton() {
   return (
     <HeaderIconButton
     tooltipText="Cerrar Sesión"
-    onClick={() => signOut({ fetchOptions: { onSuccess: () => window.location.href = '/' } })}
+    onClick={() => signOut({ fetchOptions: { onSuccess: () => { window.location.href = '/'; } } })}
     >
     <LogOut className="h-5 w-5" />
     </HeaderIconButton>

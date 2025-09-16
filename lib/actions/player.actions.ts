@@ -2,6 +2,7 @@
 
 'use server';
 
+import { headers } from 'next/headers';
 import { auth } from '@/auth';
 import { ActionResult, SpotifyTrack } from '@/types/spotify';
 
@@ -39,18 +40,21 @@ interface CurrentlyPlayingData {
 export async function getCurrentlyPlayingAction(): Promise<
 ActionResult<CurrentlyPlayingData | null>
 > {
-  const session = await auth();
-  
-  if (!session?.accessToken) {
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+  if (!session) {
     return { success: false, error: 'No autenticado.' };
   }
   
   try {
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     const response = await fetch(
       'https://api.spotify.com/v1/me/player/currently-playing',
       {
         headers: {
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         // Se deshabilita la caché para esta petición para asegurar datos en tiempo real.
         cache: 'no-store',
