@@ -5,6 +5,7 @@
 import { headers } from 'next/headers';
 import { auth } from '@/auth';
 import { ActionResult, SpotifyTrack } from '@/types/spotify';
+import { db } from '@/lib/db';
 
 /**
 * @internal
@@ -41,15 +42,23 @@ export async function getCurrentlyPlayingAction(): Promise<
 ActionResult<CurrentlyPlayingData | null>
 > {
   const session = await auth.api.getSession({ headers: new Headers(await headers()) });
-  console.log('BETTER_AUTH_SESSION_DEBUG:', JSON.stringify(session, null, 2));
   if (!session) {
     return { success: false, error: 'No autenticado.' };
   }
   
   try {
+    const account = await db.account.findFirst({
+      where: { userId: session.user.id, providerId: 'spotify' },
+    });
+    console.log('ACCOUNT_DB_DEBUG:', JSON.stringify(account, null, 2));
+  } catch (e) {
+    console.log('ACCOUNT_DB_DEBUG_ERROR:', e);
+  } 
+  
+  try {
     const { accessToken } = await auth.api.getAccessToken({
-        body: { providerId: 'spotify' },
-        headers: new Headers(await headers())
+      body: { providerId: 'spotify' },
+      headers: new Headers(await headers())
     });
     const response = await fetch(
       'https://api.spotify.com/v1/me/player/currently-playing',
