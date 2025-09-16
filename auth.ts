@@ -18,6 +18,7 @@ interface SpotifyProfile {
 }
 
 export const auth = betterAuth({
+  authUrl: process.env.AUTH_URL,
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
