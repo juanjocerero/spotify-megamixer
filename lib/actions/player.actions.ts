@@ -41,6 +41,7 @@ export async function getCurrentlyPlayingAction(): Promise<
 ActionResult<CurrentlyPlayingData | null>
 > {
   const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+  console.log('BETTER_AUTH_SESSION_DEBUG:', JSON.stringify(session, null, 2));
   if (!session) {
     return { success: false, error: 'No autenticado.' };
   }
