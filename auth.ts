@@ -5,8 +5,8 @@ import { db } from "./lib/db";
 
 const spotifyScopes = 'user-read-email playlist-read-private playlist-modify-public playlist-modify-private user-read-currently-playing';
 
-if (!process.env.AUTH_SPOTIFY_ID || !process.env.AUTH_SPOTIFY_SECRET) {
-  throw new Error("Missing AUTH_SPOTIFY_ID or AUTH_SPOTIFY_SECRET environment variables");
+if (!process.env.AUTH_SPOTIFY_ID || !process.env.AUTH_SPOTIFY_SECRET || !process.env.AUTH_URL) {
+  throw new Error("Missing AUTH_SPOTIFY_ID, AUTH_SPOTIFY_SECRET, or AUTH_URL environment variables");
 }
 
 // Interfaz para tipar el perfil de usuario de Spotify y evitar el 'any'
@@ -18,7 +18,6 @@ interface SpotifyProfile {
 }
 
 export const auth = betterAuth({
-  authUrl: process.env.AUTH_URL,
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
@@ -33,12 +32,11 @@ export const auth = betterAuth({
           authorizationUrl: "https://accounts.spotify.com/authorize",
           tokenUrl: "https://accounts.spotify.com/api/token",
           userInfoUrl: "https://api.spotify.com/v1/me",
-          // La función 'profile' se ha eliminado de aquí
+          redirectURI: `${process.env.AUTH_URL}/api/auth/oauth2/callback/spotify`,
         },
       ],
     }),
   ],
-  // La lógica de mapeo de perfil se mueve a este nuevo bloque 'callbacks'
   callbacks: {
     profile: (profile: SpotifyProfile, providerId: string) => {
       if (providerId === "spotify") {
