@@ -44,3 +44,5 @@ next-env.d.ts
 
 # bundling for llms
 bundle.txt
+# Variables de entorno locales
+.env
