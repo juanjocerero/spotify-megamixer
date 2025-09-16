@@ -9,14 +9,6 @@ if (!process.env.AUTH_SPOTIFY_ID || !process.env.AUTH_SPOTIFY_SECRET || !process
   throw new Error("Missing AUTH_SPOTIFY_ID, AUTH_SPOTIFY_SECRET, or AUTH_URL environment variables");
 }
 
-// Interfaz para tipar el perfil de usuario de Spotify y evitar el 'any'
-interface SpotifyProfile {
-  id: string;
-  display_name: string;
-  email: string;
-  images?: Array<{ url: string; }>;
-}
-
 export const auth = betterAuth({
   database: prismaAdapter(db, {
     provider: "postgresql",
@@ -33,23 +25,22 @@ export const auth = betterAuth({
           tokenUrl: "https://accounts.spotify.com/api/token",
           userInfoUrl: "https://api.spotify.com/v1/me",
           redirectURI: `${process.env.AUTH_URL}/api/auth/oauth2/callback/spotify`,
+          
+          // Deshabilitamos la regla del linter para esta línea específica,
+          // ya que la librería better-auth requiere esta firma de tipo exacta.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          mapProfileToUser: (profile: Record<string, any>) => {
+            return {
+              id: profile.id,
+              name: profile.display_name || profile.id,
+              email: profile.email,
+              image: profile.images?.[0]?.url,
+            };
+          },
         },
       ],
     }),
   ],
-  callbacks: {
-    profile: (profile: SpotifyProfile, providerId: string) => {
-      if (providerId === "spotify") {
-        return {
-          id: profile.id,
-          name: profile.display_name,
-          email: profile.email,
-          image: profile.images?.[0]?.url,
-        };
-      }
-      return profile;
-    },
-  },
   account: {
     fields: {
       accountId: "providerAccountId",
