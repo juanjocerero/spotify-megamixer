@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // Carga las variables del fichero .env en el entorno de ESTE MISMO SCRIPT
 require('dotenv').config({ path: '/home/juanjocerero/apps/megamixer/.env' });
 =======
