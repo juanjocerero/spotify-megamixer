@@ -1,6 +1,7 @@
 // /lib/actions/folder.actions.ts
 'use server';
 
+import { headers } from 'next/headers';
 import { auth } from '@/auth';
 import { db } from '../db';
 import { ActionResult } from '@/types/spotify';
@@ -14,7 +15,7 @@ import { Folder } from '@prisma/client';
 export async function createFolderAction(
   name: string
 ): Promise<ActionResult<Folder>> {
-  const session = await auth();
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
   if (!session?.user?.id) {
     return { success: false, error: 'No autenticado.' };
   }
@@ -42,7 +43,7 @@ export async function assignPlaylistsToFolderAction(
   playlistIds: string[],
   folderId: string | null
 ): Promise<ActionResult<{ count: number }>> {
-  const session = await auth();
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
   if (!session?.user?.id) {
     return { success: false, error: 'No autenticado.' };
   }
@@ -73,7 +74,7 @@ export async function renameFolderAction(
   folderId: string,
   newName: string
 ): Promise<ActionResult<Folder>> {
-  const session = await auth();
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
   if (!session?.user?.id) {
     return { success: false, error: 'No autenticado.' };
   }
@@ -103,7 +104,7 @@ export async function renameFolderAction(
 export async function deleteFolderAction(
   folderId: string
 ): Promise<ActionResult<{ id: string }>> {
-  const session = await auth();
+  const session = await auth.api.getSession({ headers: new Headers(await headers()) });
   if (!session?.user?.id) {
     return { success: false, error: 'No autenticado.' };
   }

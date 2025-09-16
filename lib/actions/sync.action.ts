@@ -1,6 +1,7 @@
 // lib/actions/sync.actions.ts
 
 'use server';
+import { headers } from 'next/headers';
 import { auth } from '@/auth';
 import { db } from '../db';
 import { ActionResult } from '@/types/spotify';
@@ -88,11 +89,14 @@ async function _calculateSyncChanges(playlistId: string, accessToken: string) {
 export async function previewMegalistSync(playlistId: string) {
   console.log(`[ACTION:previewMegalistSync] Iniciando previsualización para ${playlistId}`);
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session) {
       throw new Error('No autenticado o token no disponible.');
     }
-    const { accessToken } = session;
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     
     const { megalist, addedCount, removedCount, validSourceIds, uniqueFinalTracks } = await _calculateSyncChanges(playlistId, accessToken);
     
@@ -122,11 +126,14 @@ export async function previewMegalistSync(playlistId: string) {
 export async function previewBatchSync(playlistIds: string[]) {
   console.log(`[ACTION:previewBatchSync] Iniciando previsualización para un lote de ${playlistIds.length} playlists.`);
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session) {
       throw new Error('No autenticado o token no disponible.');
     }
-    const { accessToken } = session;
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     
     let totalAdded = 0;
     let totalRemoved = 0;
@@ -164,11 +171,14 @@ export async function executeMegalistSync(
   console.log(`[ACTION:executeMegalistSync] Iniciando ejecución de sincronización para ${playlistId}`);
   
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
+    const session = await auth.api.getSession({ headers: new Headers(await headers()) });
+    if (!session) {
       return { success: false, error: 'No autenticado o token no disponible.' };
     }
-    const { accessToken } = session;
+    const { accessToken } = await auth.api.getAccessToken({
+        body: { providerId: 'spotify' },
+        headers: new Headers(await headers())
+    });
     
     const {
       megalist,
