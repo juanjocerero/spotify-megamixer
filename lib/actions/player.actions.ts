@@ -47,15 +47,6 @@ ActionResult<CurrentlyPlayingData | null>
   }
   
   try {
-    const account = await db.account.findFirst({
-      where: { userId: session.user.id, providerId: 'spotify' },
-    });
-    console.log('ACCOUNT_DB_DEBUG:', JSON.stringify(account, null, 2));
-  } catch (e) {
-    console.log('ACCOUNT_DB_DEBUG_ERROR:', e);
-  } 
-  
-  try {
     const { accessToken } = await auth.api.getAccessToken({
       body: { providerId: 'spotify' },
       headers: new Headers(await headers())
